@@ -1,0 +1,6 @@
+server:
+  port: 8101
+spring:
+  application:
+    name: svc-task-resource
+

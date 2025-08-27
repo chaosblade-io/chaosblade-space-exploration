@@ -1,0 +1,6 @@
+server:
+  port: 8106
+spring:
+  application:
+    name: svc-topo
+
