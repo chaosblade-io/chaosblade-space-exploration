@@ -3,6 +3,7 @@ package com.chaosblade.svc.topo;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -13,11 +14,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * 1. 支持OpenTelemetry trace文件上传
  * 2. 使用JGraphT构建拓扑图结构
  * 3. 前端可视化渲染
+ * 4. 定时刷新拓扑数据
  *
  * @author Topo Visualizer Team
  * @version 1.0.0
  */
 @SpringBootApplication
+@EnableScheduling
 public class TopoApplication {
 
     public static void main(String[] args) {

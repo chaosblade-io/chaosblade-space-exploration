@@ -10,6 +10,8 @@
 - **📊 统计分析**: 提供详细的拓扑统计信息和RED指标展示
 - **💾 多格式导出**: 支持JSON等多种格式导出
 - **🔄 前后端分离架构**: 前端使用React + XFlow，后端使用Spring Boot，通过RESTful API通信
+- **⏰ 自动刷新**: 支持每隔15秒自动从Jaeger查询最新trace数据并更新拓扑图
+- **🔧 动态配置**: 支持运行时修改Jaeger连接参数和刷新策略
 
 ## 🏗️ 技术架构
 
@@ -111,6 +113,21 @@ make dev
 3. 点击"上传并生成拓扑图"按钮
 4. 系统会自动解析文件并生成可视化图形
 
+### 自动刷新功能
+
+系统支持自动从Jaeger查询最新的trace数据并刷新拓扑图：
+
+1. **默认配置**：每隔15秒自动刷新
+2. **查询参数**：
+   - 服务名：frontend
+   - 操作名：all
+   - 时间范围：当前时间前15分钟
+3. **管理操作**：
+   - 查看刷新状态：`GET /api/xflow/auto-refresh/status`
+   - 手动触发刷新：`POST /api/xflow/auto-refresh/trigger`
+   - 启用/禁用刷新：`POST /api/xflow/auto-refresh/enable|disable`
+   - 更新配置：`POST /api/xflow/auto-refresh/config`
+
 ### 导出功能
 
 - **JSON格式**: 导出完整的拓扑数据结构
@@ -143,6 +160,16 @@ GET  /api/xflow/topology                   # 获取XFlow格式拓扑数据
 POST /api/xflow/refresh                    # 刷新拓扑数据
 GET  /api/xflow/nodes/{nodeId}             # 获取节点详情
 POST /api/xflow/layout                     # 应用布局算法
+```
+
+### 自动刷新管理接口
+
+```
+GET  /api/xflow/auto-refresh/status        # 获取自动刷新状态
+POST /api/xflow/auto-refresh/trigger       # 手动触发拓扑数据刷新
+POST /api/xflow/auto-refresh/enable        # 启用自动刷新功能
+POST /api/xflow/auto-refresh/disable       # 禁用自动刷新功能
+POST /api/xflow/auto-refresh/config        # 更新Jaeger配置参数
 ```
 
 ## 📊 数据模型
@@ -237,6 +264,46 @@ chaosblade-topo-visualizer/
    ```
    前端开发服务器运行在 http://localhost:3000，并通过代理访问后端API
 
+## ⚙️ 配置说明
+
+### 自动刷新配置
+
+在 `application.yml` 中可以配置自动刷新功能：
+
+```yaml
+topology:
+  auto-refresh:
+    enabled: true                    # 是否启用自动刷新
+    interval: 15000                  # 刷新间隔（毫秒），15秒
+    time-range-minutes: 15           # 查询时间范围（分钟）
+    jaeger:
+      host: localhost                # Jaeger 主机地址
+      port: 14250                    # Jaeger gRPC 端口
+    service-name: frontend           # 默认查询的服务名
+    operation-name: all              # 默认查询的操作名
+```
+
+### 运行时配置修改
+
+除了配置文件，还可以通过 API 接口在运行时修改配置：
+
+```bash
+# 更新 Jaeger 配置
+curl -X POST http://localhost:8106/api/xflow/auto-refresh/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "jaeger-host",
+    "port": 14250,
+    "serviceName": "my-service",
+    "operationName": "all",
+    "timeRangeMinutes": 30
+  }'
+
+# 启用/禁用自动刷新
+curl -X POST http://localhost:8106/api/xflow/auto-refresh/enable
+curl -X POST http://localhost:8106/api/xflow/auto-refresh/disable
+```
+
 ## 🛡️ 错误处理
 
 应用包含完整的错误处理机制：
@@ -282,6 +349,11 @@ chaosblade-topo-visualizer/
 - [ ] 性能瓶颈识别
 - [ ] 告警和监控集成
 - [ ] 多租户支持
+- [x] 自动刷新拓扑数据（已完成）
+- [x] Jaeger gRPC 集成（已完成）
+- [ ] 智能刷新策略（根据数据变化频率自动调整）
+- [ ] 拓扑变化历史记录和回放
+- [ ] 实时性能指标显示（CPU、内存、网络等）
 
 ---
 

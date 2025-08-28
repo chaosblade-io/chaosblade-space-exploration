@@ -14,6 +14,7 @@
 
 package com.chaosblade.svc.topo.controller;
 
+import com.chaosblade.svc.topo.service.TopologyAutoRefreshService;
 import com.chaosblade.svc.topo.service.XFlowConverterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -37,6 +39,9 @@ public class XFlowController {
 
     @Autowired
     private XFlowConverterService xFlowConverterService;
+
+    @Autowired
+    private TopologyAutoRefreshService autoRefreshService;
 
     /**
      * 获取当前拓扑的 XFlow 格式数据
@@ -153,6 +158,169 @@ public class XFlowController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
                         "error", "应用布局失败",
+                        "message", e.getMessage()
+                    ));
+        }
+    }
+
+    // ==================== 自动刷新管理接口 ====================
+
+    /**
+     * 获取自动刷新状态
+     *
+     * @return 自动刷新状态信息
+     */
+    @GetMapping("/auto-refresh/status")
+    public ResponseEntity<Map<String, Object>> getAutoRefreshStatus() {
+        try {
+            logger.debug("获取自动刷新状态");
+
+            TopologyAutoRefreshService.RefreshStatus status = autoRefreshService.getRefreshStatus();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("status", status);
+            response.put("timestamp", System.currentTimeMillis());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("获取自动刷新状态失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "获取状态失败",
+                        "message", e.getMessage()
+                    ));
+        }
+    }
+
+    /**
+     * 手动触发拓扑数据刷新
+     *
+     * @return 刷新结果
+     */
+    @PostMapping("/auto-refresh/trigger")
+    public ResponseEntity<Map<String, Object>> triggerManualRefresh() {
+        try {
+            logger.info("手动触发拓扑数据刷新");
+
+            autoRefreshService.manualRefresh();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "手动刷新完成");
+            response.put("timestamp", System.currentTimeMillis());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("手动刷新失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "手动刷新失败",
+                        "message", e.getMessage()
+                    ));
+        }
+    }
+
+    /**
+     * 启用自动刷新
+     *
+     * @return 操作结果
+     */
+    @PostMapping("/auto-refresh/enable")
+    public ResponseEntity<Map<String, Object>> enableAutoRefresh() {
+        try {
+            logger.info("启用自动刷新");
+
+            autoRefreshService.enableAutoRefresh();
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "自动刷新已启用",
+                "timestamp", System.currentTimeMillis()
+            ));
+
+        } catch (Exception e) {
+            logger.error("启用自动刷新失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "启用失败",
+                        "message", e.getMessage()
+                    ));
+        }
+    }
+
+    /**
+     * 禁用自动刷新
+     *
+     * @return 操作结果
+     */
+    @PostMapping("/auto-refresh/disable")
+    public ResponseEntity<Map<String, Object>> disableAutoRefresh() {
+        try {
+            logger.info("禁用自动刷新");
+
+            autoRefreshService.disableAutoRefresh();
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "自动刷新已禁用",
+                "timestamp", System.currentTimeMillis()
+            ));
+
+        } catch (Exception e) {
+            logger.error("禁用自动刷新失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "禁用失败",
+                        "message", e.getMessage()
+                    ));
+        }
+    }
+
+    /**
+     * 更新 Jaeger 配置
+     *
+     * @param config Jaeger 配置参数
+     * @return 操作结果
+     */
+    @PostMapping("/auto-refresh/config")
+    public ResponseEntity<Map<String, Object>> updateJaegerConfig(@RequestBody Map<String, Object> config) {
+        try {
+            logger.info("更新 Jaeger 配置: {}", config);
+
+            String host = (String) config.getOrDefault("host", "localhost");
+            int port = (Integer) config.getOrDefault("port", 14250);
+            String serviceName = (String) config.getOrDefault("serviceName", "frontend");
+            String operationName = (String) config.getOrDefault("operationName", "all");
+            int timeRangeMinutes = (Integer) config.getOrDefault("timeRangeMinutes", 15);
+
+            autoRefreshService.updateJaegerConfig(host, port, serviceName, operationName, timeRangeMinutes);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Jaeger 配置已更新",
+                "config", Map.of(
+                    "host", host,
+                    "port", port,
+                    "serviceName", serviceName,
+                    "operationName", operationName,
+                    "timeRangeMinutes", timeRangeMinutes
+                ),
+                "timestamp", System.currentTimeMillis()
+            ));
+
+        } catch (Exception e) {
+            logger.error("更新 Jaeger 配置失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "配置更新失败",
                         "message", e.getMessage()
                     ));
         }
