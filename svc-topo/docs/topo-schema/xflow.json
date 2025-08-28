@@ -1,0 +1,1157 @@
+{
+    "metadata": {
+        "createdAt": 1756367066854,
+        "description": "基于 XFlow 的微服务拓扑可视化",
+        "title": "XFlow 拓扑图",
+        "version": "1.0",
+        "updatedAt": 1756367066854
+    },
+    "nodes": [
+        {
+            "shape": "custom-namespace",
+            "data": {
+                "entityType": "NAMESPACE",
+                "displayName": "default Namespace",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "ns-default",
+                    "type": "NAMESPACE",
+                    "displayName": "default Namespace",
+                    "name": "default",
+                    "regionId": "default",
+                    "firstSeen": 1756367052123,
+                    "lastSeen": 1756367052123,
+                    "attributes": {}
+                },
+                "status": "success"
+            },
+            "x": 50,
+            "width": 160,
+            "y": 80,
+            "id": "ns-default",
+            "label": "default Namespace",
+            "height": 80,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 14,
+                    "text": "default Namespace",
+                    "fill": "#1890ff",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#e6f7ff",
+                    "stroke": "#1890ff"
+                }
+            }
+        },
+        {
+            "shape": "custom-service",
+            "data": {
+                "entityType": "SERVICE",
+                "displayName": "details.default Service",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "svc-details.default",
+                    "type": "SERVICE",
+                    "displayName": "details.default Service",
+                    "name": "details.default",
+                    "appId": "details.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052123,
+                    "lastSeen": 1756367052123,
+                    "attributes": {}
+                },
+                "status": "success"
+            },
+            "x": 240,
+            "width": 120,
+            "y": 240,
+            "id": "svc-details.default",
+            "label": "details.default Service",
+            "height": 60,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 12,
+                    "text": "details.default Service",
+                    "fill": "#52c41a",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#f6ffed",
+                    "stroke": "#52c41a"
+                }
+            }
+        },
+        {
+            "shape": "custom-service",
+            "data": {
+                "entityType": "SERVICE",
+                "displayName": "bookinfo-gateway-istio.default Service",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "svc-bookinfo-gateway-istio.default",
+                    "type": "SERVICE",
+                    "displayName": "bookinfo-gateway-istio.default Service",
+                    "name": "bookinfo-gateway-istio.default",
+                    "appId": "bookinfo-gateway-istio.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052123,
+                    "lastSeen": 1756367052123,
+                    "attributes": {}
+                },
+                "status": "success"
+            },
+            "x": 320,
+            "width": 120,
+            "y": 210,
+            "id": "svc-bookinfo-gateway-istio.default",
+            "label": "bookinfo-gateway-istio.default Service",
+            "height": 60,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 12,
+                    "text": "bookinfo-gateway-istio.default Service",
+                    "fill": "#52c41a",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#f6ffed",
+                    "stroke": "#52c41a"
+                }
+            }
+        },
+        {
+            "shape": "custom-service",
+            "data": {
+                "entityType": "SERVICE",
+                "displayName": "reviews.default Service",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "svc-reviews.default",
+                    "type": "SERVICE",
+                    "displayName": "reviews.default Service",
+                    "name": "reviews.default",
+                    "appId": "reviews.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052123,
+                    "lastSeen": 1756367052123,
+                    "attributes": {}
+                },
+                "status": "success"
+            },
+            "x": 280,
+            "width": 120,
+            "y": 180,
+            "id": "svc-reviews.default",
+            "label": "reviews.default Service",
+            "height": 60,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 12,
+                    "text": "reviews.default Service",
+                    "fill": "#52c41a",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#f6ffed",
+                    "stroke": "#52c41a"
+                }
+            }
+        },
+        {
+            "shape": "custom-service",
+            "data": {
+                "entityType": "SERVICE",
+                "displayName": "productpage.default Service",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "svc-productpage.default",
+                    "type": "SERVICE",
+                    "displayName": "productpage.default Service",
+                    "name": "productpage.default",
+                    "appId": "productpage.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052123,
+                    "lastSeen": 1756367052123,
+                    "attributes": {}
+                },
+                "status": "success"
+            },
+            "x": 320,
+            "width": 120,
+            "y": 180,
+            "id": "svc-productpage.default",
+            "label": "productpage.default Service",
+            "height": 60,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 12,
+                    "text": "productpage.default Service",
+                    "fill": "#52c41a",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#f6ffed",
+                    "stroke": "#52c41a"
+                }
+            }
+        },
+        {
+            "shape": "custom-service",
+            "data": {
+                "entityType": "SERVICE",
+                "displayName": "ratings.default Service",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "svc-ratings.default",
+                    "type": "SERVICE",
+                    "displayName": "ratings.default Service",
+                    "name": "ratings.default",
+                    "appId": "ratings.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052123,
+                    "lastSeen": 1756367052123,
+                    "attributes": {}
+                },
+                "status": "success"
+            },
+            "x": 280,
+            "width": 120,
+            "y": 210,
+            "id": "svc-ratings.default",
+            "label": "ratings.default Service",
+            "height": 60,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 12,
+                    "text": "ratings.default Service",
+                    "fill": "#52c41a",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#f6ffed",
+                    "stroke": "#52c41a"
+                }
+            }
+        },
+        {
+            "shape": "custom-host",
+            "data": {
+                "entityType": "HOST",
+                "displayName": "Unknown Host",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "host-Unknown",
+                    "type": "HOST",
+                    "displayName": "Unknown Host",
+                    "name": "Unknown",
+                    "regionId": "default",
+                    "firstSeen": 1756367052124,
+                    "lastSeen": 1756367052124,
+                    "attributes": {}
+                },
+                "status": "success"
+            },
+            "x": 480,
+            "width": 100,
+            "y": 140,
+            "id": "host-Unknown",
+            "label": "Unknown Host",
+            "height": 50,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 12,
+                    "text": "Unknown Host",
+                    "fill": "#fa8c16",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#fff2e8",
+                    "stroke": "#fa8c16"
+                }
+            }
+        },
+        {
+            "shape": "custom-rpc",
+            "data": {
+                "entityType": "RPC",
+                "displayName": "GET /details/0",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "rpc-get-details-0",
+                    "type": "RPC",
+                    "displayName": "GET /details/0",
+                    "appId": "details.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052125,
+                    "lastSeen": 1756367052125,
+                    "attributes": {
+                        "protocol": "http",
+                        "rpc": "GET /details/0"
+                    }
+                },
+                "status": "success"
+            },
+            "x": 580,
+            "width": 100,
+            "y": 350,
+            "id": "rpc-get-details-0",
+            "label": "GET /details/0",
+            "height": 40,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 10,
+                    "text": "GET /details/0",
+                    "fill": "#f5222d",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#fff1f0",
+                    "stroke": "#f5222d"
+                }
+            }
+        },
+        {
+            "shape": "custom-rpc",
+            "data": {
+                "entityType": "RPC",
+                "displayName": "GET /productpage",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "rpc-get-productpage",
+                    "type": "RPC",
+                    "displayName": "GET /productpage",
+                    "appId": "bookinfo-gateway-istio.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052125,
+                    "lastSeen": 1756367052125,
+                    "attributes": {
+                        "protocol": "http",
+                        "rpc": "GET /productpage"
+                    }
+                },
+                "status": "success"
+            },
+            "x": 500,
+            "width": 100,
+            "y": 380,
+            "id": "rpc-get-productpage",
+            "label": "GET /productpage",
+            "height": 40,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 10,
+                    "text": "GET /productpage",
+                    "fill": "#f5222d",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#fff1f0",
+                    "stroke": "#f5222d"
+                }
+            }
+        },
+        {
+            "shape": "custom-rpc",
+            "data": {
+                "entityType": "RPC",
+                "displayName": "GET /reviews/0",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "rpc-get-reviews-0",
+                    "type": "RPC",
+                    "displayName": "GET /reviews/0",
+                    "appId": "reviews.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052125,
+                    "lastSeen": 1756367052125,
+                    "attributes": {
+                        "protocol": "http",
+                        "rpc": "GET /reviews/0"
+                    }
+                },
+                "status": "success"
+            },
+            "x": 620,
+            "width": 100,
+            "y": 410,
+            "id": "rpc-get-reviews-0",
+            "label": "GET /reviews/0",
+            "height": 40,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 10,
+                    "text": "GET /reviews/0",
+                    "fill": "#f5222d",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#fff1f0",
+                    "stroke": "#f5222d"
+                }
+            }
+        },
+        {
+            "shape": "custom-rpc",
+            "data": {
+                "entityType": "RPC",
+                "displayName": "GET /ratings/0",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "rpc-get-ratings-0",
+                    "type": "RPC",
+                    "displayName": "GET /ratings/0",
+                    "appId": "reviews.default@null",
+                    "regionId": "default",
+                    "firstSeen": 1756367052125,
+                    "lastSeen": 1756367052125,
+                    "attributes": {
+                        "protocol": "http",
+                        "rpc": "GET /ratings/0"
+                    }
+                },
+                "status": "success"
+            },
+            "x": 500,
+            "width": 100,
+            "y": 410,
+            "id": "rpc-get-ratings-0",
+            "label": "GET /ratings/0",
+            "height": 40,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 10,
+                    "text": "GET /ratings/0",
+                    "fill": "#f5222d",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#fff1f0",
+                    "stroke": "#f5222d"
+                }
+            }
+        },
+        {
+            "shape": "custom-rpc-group",
+            "data": {
+                "entityType": "RPC_GROUP",
+                "displayName": "HTTPRPCG",
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "entity": {
+                    "entityId": "rpcg-http",
+                    "type": "RPC_GROUP",
+                    "displayName": "HTTPRPCG",
+                    "regionId": "default",
+                    "firstSeen": 1756367052126,
+                    "lastSeen": 1756367052126,
+                    "attributes": {
+                        "count": 8,
+                        "rpcType": "http"
+                    }
+                },
+                "status": "success"
+            },
+            "x": 390,
+            "width": 140,
+            "y": 250,
+            "id": "rpcg-http",
+            "label": "HTTPRPCG",
+            "height": 50,
+            "attrs": {
+                "text": {
+                    "textVerticalAnchor": "middle",
+                    "textWrap": {
+                        "width": "90%",
+                        "height": "90%"
+                    },
+                    "fontSize": 11,
+                    "text": "HTTPRPCG",
+                    "fill": "#722ed1",
+                    "textAnchor": "middle"
+                },
+                "body": {
+                    "strokeWidth": 2,
+                    "rx": 6,
+                    "ry": 6,
+                    "fill": "#f9f0ff",
+                    "stroke": "#722ed1"
+                }
+            }
+        }
+    ],
+    "edges": [
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "CONTAINS"
+            },
+            "id": "ns-default-svc-details.default-CONTAINS",
+            "source": "ns-default",
+            "label": {
+                "fontSize": 6,
+                "text": "CONTAINS",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-details.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#52c41a",
+                        "height": 6
+                    },
+                    "stroke": "#52c41a",
+                    "strokeDasharray": "5,5"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "CONTAINS"
+            },
+            "id": "ns-default-svc-bookinfo-gateway-istio.default-CONTAINS",
+            "source": "ns-default",
+            "label": {
+                "fontSize": 6,
+                "text": "CONTAINS",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-bookinfo-gateway-istio.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#52c41a",
+                        "height": 6
+                    },
+                    "stroke": "#52c41a",
+                    "strokeDasharray": "5,5"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "CONTAINS"
+            },
+            "id": "ns-default-svc-reviews.default-CONTAINS",
+            "source": "ns-default",
+            "label": {
+                "fontSize": 6,
+                "text": "CONTAINS",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-reviews.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#52c41a",
+                        "height": 6
+                    },
+                    "stroke": "#52c41a",
+                    "strokeDasharray": "5,5"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "CONTAINS"
+            },
+            "id": "ns-default-svc-productpage.default-CONTAINS",
+            "source": "ns-default",
+            "label": {
+                "fontSize": 6,
+                "text": "CONTAINS",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-productpage.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#52c41a",
+                        "height": 6
+                    },
+                    "stroke": "#52c41a",
+                    "strokeDasharray": "5,5"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "CONTAINS"
+            },
+            "id": "ns-default-svc-ratings.default-CONTAINS",
+            "source": "ns-default",
+            "label": {
+                "fontSize": 6,
+                "text": "CONTAINS",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-ratings.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#52c41a",
+                        "height": 6
+                    },
+                    "stroke": "#52c41a",
+                    "strokeDasharray": "5,5"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "INVOKES"
+            },
+            "id": "svc-productpage.default-rpc-get-productpage-INVOKES",
+            "source": "svc-productpage.default",
+            "label": {
+                "fontSize": 6,
+                "text": "INVOKES",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "rpc-get-productpage",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#722ed1",
+                        "height": 6
+                    },
+                    "stroke": "#722ed1"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "INVOKES"
+            },
+            "id": "svc-productpage.default-rpc-get-reviews-0-INVOKES",
+            "source": "svc-productpage.default",
+            "label": {
+                "fontSize": 6,
+                "text": "INVOKES",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "rpc-get-reviews-0",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#722ed1",
+                        "height": 6
+                    },
+                    "stroke": "#722ed1"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "INVOKES"
+            },
+            "id": "svc-productpage.default-rpc-get-details-0-INVOKES",
+            "source": "svc-productpage.default",
+            "label": {
+                "fontSize": 6,
+                "text": "INVOKES",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "rpc-get-details-0",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#722ed1",
+                        "height": 6
+                    },
+                    "stroke": "#722ed1"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "INVOKES"
+            },
+            "id": "svc-ratings.default-rpc-get-ratings-0-INVOKES",
+            "source": "svc-ratings.default",
+            "label": {
+                "fontSize": 6,
+                "text": "INVOKES",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "rpc-get-ratings-0",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 1,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#722ed1",
+                        "height": 6
+                    },
+                    "stroke": "#722ed1"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "DEPENDS_ON"
+            },
+            "id": "svc-productpage.default-svc-details.default-DEPENDS_ON",
+            "source": "svc-productpage.default",
+            "label": {
+                "fontSize": 6,
+                "text": "DEPENDS_ON",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-details.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 2,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#1890ff",
+                        "height": 6
+                    },
+                    "stroke": "#1890ff"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "DEPENDS_ON"
+            },
+            "id": "svc-productpage.default-svc-reviews.default-DEPENDS_ON",
+            "source": "svc-productpage.default",
+            "label": {
+                "fontSize": 6,
+                "text": "DEPENDS_ON",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-reviews.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 2,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#1890ff",
+                        "height": 6
+                    },
+                    "stroke": "#1890ff"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "DEPENDS_ON"
+            },
+            "id": "svc-bookinfo-gateway-istio.default-svc-productpage.default-DEPENDS_ON",
+            "source": "svc-bookinfo-gateway-istio.default",
+            "label": {
+                "fontSize": 6,
+                "text": "DEPENDS_ON",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-productpage.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 2,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#1890ff",
+                        "height": 6
+                    },
+                    "stroke": "#1890ff"
+                }
+            }
+        },
+        {
+            "shape": "edge",
+            "data": {
+                "redMetrics": {
+                    "healthy": true,
+                    "errorRate": 0.0,
+                    "successRate": 100.0,
+                    "count": 1,
+                    "error": 0,
+                    "rt": 0.0,
+                    "status": "success"
+                },
+                "type": "DEPENDS_ON"
+            },
+            "id": "svc-reviews.default-svc-ratings.default-DEPENDS_ON",
+            "source": "svc-reviews.default",
+            "label": {
+                "fontSize": 6,
+                "text": "DEPENDS_ON",
+                "position": 0.5,
+                "fill": "#666"
+            },
+            "target": "svc-ratings.default",
+            "attrs": {
+                "line": {
+                    "strokeWidth": 2,
+                    "targetMarker": {
+                        "name": "classic",
+                        "width": 8,
+                        "fill": "#1890ff",
+                        "height": 6
+                    },
+                    "stroke": "#1890ff"
+                }
+            }
+        }
+    ],
+    "statistics": {
+        "edgeTypeCount": {
+            "DEPENDS_ON": 4,
+            "CONTAINS": 5,
+            "INVOKES": 4
+        },
+        "edgeCount": 13,
+        "nodeCount": 12,
+        "nodeTypeCount": {
+            "RPC": 4,
+            "SERVICE": 5,
+            "NAMESPACE": 1,
+            "HOST": 1,
+            "RPC_GROUP": 1
+        }
+    }
+}

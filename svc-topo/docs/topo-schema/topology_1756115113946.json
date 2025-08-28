@@ -1,0 +1,1126 @@
+{
+  "statistics": {
+    "nodeCount": 16,
+    "edgeCount": 17,
+    "nodeTypeCount": {
+      "SERVICE": 5,
+      "NAMESPACE": 1,
+      "RPC": 4,
+      "HOST": 1,
+      "RPC_GROUP": 5
+    },
+    "edgeTypeCount": {
+      "CONTAINS": 9,
+      "DEPENDS_ON": 4,
+      "INVOKES": 4
+    }
+  },
+  "empty": false,
+  "nodes": [
+    {
+      "entityType": "NAMESPACE",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "default 命名空间",
+      "nodeId": "ns-default",
+      "entity": {
+        "entityId": "ns-default",
+        "type": "NAMESPACE",
+        "displayName": "default 命名空间",
+        "name": "default",
+        "regionId": "default",
+        "firstSeen": 1756114948748,
+        "lastSeen": 1756114948748,
+        "attributes": {}
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "SERVICE",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "应用【details.default】",
+      "nodeId": "svc-details.default",
+      "entity": {
+        "entityId": "svc-details.default",
+        "type": "SERVICE",
+        "displayName": "应用【details.default】",
+        "name": "details.default",
+        "appId": "opentelemetry-demo@details.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {}
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "SERVICE",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "应用【bookinfo-gateway-istio.default】",
+      "nodeId": "svc-bookinfo-gateway-istio.default",
+      "entity": {
+        "entityId": "svc-bookinfo-gateway-istio.default",
+        "type": "SERVICE",
+        "displayName": "应用【bookinfo-gateway-istio.default】",
+        "name": "bookinfo-gateway-istio.default",
+        "appId": "opentelemetry-demo@bookinfo-gateway-istio.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {}
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "SERVICE",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "应用【reviews.default】",
+      "nodeId": "svc-reviews.default",
+      "entity": {
+        "entityId": "svc-reviews.default",
+        "type": "SERVICE",
+        "displayName": "应用【reviews.default】",
+        "name": "reviews.default",
+        "appId": "opentelemetry-demo@reviews.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {}
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "SERVICE",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "应用【productpage.default】",
+      "nodeId": "svc-productpage.default",
+      "entity": {
+        "entityId": "svc-productpage.default",
+        "type": "SERVICE",
+        "displayName": "应用【productpage.default】",
+        "name": "productpage.default",
+        "appId": "opentelemetry-demo@productpage.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {}
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "SERVICE",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "应用【ratings.default】",
+      "nodeId": "svc-ratings.default",
+      "entity": {
+        "entityId": "svc-ratings.default",
+        "type": "SERVICE",
+        "displayName": "应用【ratings.default】",
+        "name": "ratings.default",
+        "appId": "opentelemetry-demo@ratings.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {}
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "HOST",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "主机【tcse-v100-01】",
+      "nodeId": "host-tcse-v100-01",
+      "entity": {
+        "entityId": "host-tcse-v100-01",
+        "type": "HOST",
+        "displayName": "主机【tcse-v100-01】",
+        "name": "tcse-v100-01",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {}
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC_GROUP",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "【HTTP】服务",
+      "nodeId": "rpcg-details.default-http",
+      "entity": {
+        "entityId": "rpcg-details.default-http",
+        "type": "RPC_GROUP",
+        "displayName": "【HTTP】服务",
+        "appId": "opentelemetry-demo@details.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "rpcType": "http"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "接口【GET http://details:9080/details/0】",
+      "nodeId": "rpc-get-http-details-9080-details-0",
+      "entity": {
+        "entityId": "rpc-get-http-details-9080-details-0",
+        "type": "RPC",
+        "displayName": "接口【GET http://details:9080/details/0】",
+        "appId": "opentelemetry-demo@details.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "protocol": "http",
+          "rpc": "GET http://details:9080/details/0"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC_GROUP",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "【HTTP】服务",
+      "nodeId": "rpcg-bookinfo-gateway-istio.default-http",
+      "entity": {
+        "entityId": "rpcg-bookinfo-gateway-istio.default-http",
+        "type": "RPC_GROUP",
+        "displayName": "【HTTP】服务",
+        "appId": "opentelemetry-demo@bookinfo-gateway-istio.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "rpcType": "http"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "接口【GET http://localhost:8080/productpage】",
+      "nodeId": "rpc-get-http-localhost-8080-productpage",
+      "entity": {
+        "entityId": "rpc-get-http-localhost-8080-productpage",
+        "type": "RPC",
+        "displayName": "接口【GET http://localhost:8080/productpage】",
+        "appId": "opentelemetry-demo@bookinfo-gateway-istio.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "protocol": "http",
+          "rpc": "GET http://localhost:8080/productpage"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC_GROUP",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "【HTTP】服务",
+      "nodeId": "rpcg-reviews.default-http",
+      "entity": {
+        "entityId": "rpcg-reviews.default-http",
+        "type": "RPC_GROUP",
+        "displayName": "【HTTP】服务",
+        "appId": "opentelemetry-demo@reviews.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "rpcType": "http"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "接口【GET http://reviews:9080/reviews/0】",
+      "nodeId": "rpc-get-http-reviews-9080-reviews-0",
+      "entity": {
+        "entityId": "rpc-get-http-reviews-9080-reviews-0",
+        "type": "RPC",
+        "displayName": "接口【GET http://reviews:9080/reviews/0】",
+        "appId": "opentelemetry-demo@reviews.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "protocol": "http",
+          "rpc": "GET http://reviews:9080/reviews/0"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "接口【GET http://ratings:9080/ratings/0】",
+      "nodeId": "rpc-get-http-ratings-9080-ratings-0",
+      "entity": {
+        "entityId": "rpc-get-http-ratings-9080-ratings-0",
+        "type": "RPC",
+        "displayName": "接口【GET http://ratings:9080/ratings/0】",
+        "appId": "opentelemetry-demo@reviews.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "protocol": "http",
+          "rpc": "GET http://ratings:9080/ratings/0"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC_GROUP",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "【HTTP】服务",
+      "nodeId": "rpcg-productpage.default-http",
+      "entity": {
+        "entityId": "rpcg-productpage.default-http",
+        "type": "RPC_GROUP",
+        "displayName": "【HTTP】服务",
+        "appId": "opentelemetry-demo@productpage.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "rpcType": "http"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "entityType": "RPC_GROUP",
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "displayName": "【HTTP】服务",
+      "nodeId": "rpcg-ratings.default-http",
+      "entity": {
+        "entityId": "rpcg-ratings.default-http",
+        "type": "RPC_GROUP",
+        "displayName": "【HTTP】服务",
+        "appId": "opentelemetry-demo@ratings.default",
+        "regionId": "default",
+        "firstSeen": 1756114948749,
+        "lastSeen": 1756114948749,
+        "attributes": {
+          "rpcType": "http"
+        }
+      },
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    }
+  ],
+  "edges": [
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "ns-default-svc-details.default-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-details.default",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "ns-default-svc-bookinfo-gateway-istio.default-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-bookinfo-gateway-istio.default",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "ns-default-svc-reviews.default-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-reviews.default",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "ns-default-svc-productpage.default-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-productpage.default",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "ns-default-svc-ratings.default-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-ratings.default",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "svc-productpage.default-rpc-get-http-reviews-9080-reviews-0-INVOKES",
+      "from": "svc-productpage.default",
+      "to": "rpc-get-http-reviews-9080-reviews-0",
+      "type": "INVOKES",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "svc-productpage.default-rpc-get-http-localhost-8080-productpage-INVOKES",
+      "from": "svc-productpage.default",
+      "to": "rpc-get-http-localhost-8080-productpage",
+      "type": "INVOKES",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "svc-productpage.default-rpc-get-http-details-9080-details-0-INVOKES",
+      "from": "svc-productpage.default",
+      "to": "rpc-get-http-details-9080-details-0",
+      "type": "INVOKES",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "svc-ratings.default-rpc-get-http-ratings-9080-ratings-0-INVOKES",
+      "from": "svc-ratings.default",
+      "to": "rpc-get-http-ratings-9080-ratings-0",
+      "type": "INVOKES",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "rpcg-productpage.default-http-rpc-get-http-reviews-9080-reviews-0-CONTAINS",
+      "from": "rpcg-productpage.default-http",
+      "to": "rpc-get-http-reviews-9080-reviews-0",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "rpcg-productpage.default-http-rpc-get-http-localhost-8080-productpage-CONTAINS",
+      "from": "rpcg-productpage.default-http",
+      "to": "rpc-get-http-localhost-8080-productpage",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "rpcg-productpage.default-http-rpc-get-http-details-9080-details-0-CONTAINS",
+      "from": "rpcg-productpage.default-http",
+      "to": "rpc-get-http-details-9080-details-0",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "rpcg-ratings.default-http-rpc-get-http-ratings-9080-ratings-0-CONTAINS",
+      "from": "rpcg-ratings.default-http",
+      "to": "rpc-get-http-ratings-9080-ratings-0",
+      "type": "CONTAINS",
+      "firstSeen": 1756114948749,
+      "lastSeen": 1756114948749,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "svc-productpage.default-svc-reviews.default-DEPENDS_ON",
+      "from": "svc-productpage.default",
+      "to": "svc-reviews.default",
+      "type": "DEPENDS_ON",
+      "firstSeen": 1756114948750,
+      "lastSeen": 1756114948750,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "svc-productpage.default-svc-details.default-DEPENDS_ON",
+      "from": "svc-productpage.default",
+      "to": "svc-details.default",
+      "type": "DEPENDS_ON",
+      "firstSeen": 1756114948750,
+      "lastSeen": 1756114948750,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "svc-reviews.default-svc-ratings.default-DEPENDS_ON",
+      "from": "svc-reviews.default",
+      "to": "svc-ratings.default",
+      "type": "DEPENDS_ON",
+      "firstSeen": 1756114948750,
+      "lastSeen": 1756114948750,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "redMetrics": {
+        "errorRate": 0,
+        "successRate": 100,
+        "healthy": true,
+        "count": 1,
+        "error": 0,
+        "rt": 0,
+        "status": "success"
+      },
+      "edgeId": "svc-bookinfo-gateway-istio.default-svc-productpage.default-DEPENDS_ON",
+      "from": "svc-bookinfo-gateway-istio.default",
+      "to": "svc-productpage.default",
+      "type": "DEPENDS_ON",
+      "firstSeen": 1756114948750,
+      "lastSeen": 1756114948750,
+      "attrs": {
+        "RED": {
+          "errorRate": 0,
+          "successRate": 100,
+          "healthy": true,
+          "count": 1,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        },
+        "extensions": {}
+      }
+    }
+  ],
+  "metadata": {
+    "title": "OpenTelemetry Trace 拓扑图",
+    "description": "从trace数据生成的服务拓扑结构",
+    "version": "1.0",
+    "createdAt": 1756114948748,
+    "updatedAt": 1756114948748
+  }
+}

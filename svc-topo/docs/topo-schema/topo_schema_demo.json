@@ -1,0 +1,559 @@
+{
+  "nodes": [
+    {
+      "nodeId": "ns-otel-demo",
+      "entity": {
+        "entityId": "ns-otel-demo",
+        "type": "NAMESPACE",
+        "displayName": "otel-demo 命名空间",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-frontend",
+      "entity": {
+        "entityId": "svc-frontend",
+        "type": "SERVICE",
+        "displayName": "应用【frontend】",
+        "name": "frontend",
+        "appId": "otel-demo@frontend",
+        "regionId": "default",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 2300,
+          "error": 3,
+          "rt": 148.2,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-accounting",
+      "entity": {
+        "entityId": "svc-accounting",
+        "type": "SERVICE",
+        "displayName": "应用【accounting】",
+        "name": "accounting",
+        "appId": "otel-demo@accounting",
+        "regionId": "default",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 800,
+          "error": 0,
+          "rt": 200.1,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-checkout",
+      "entity": {
+        "entityId": "svc-checkout",
+        "type": "SERVICE",
+        "displayName": "应用【checkout】",
+        "name": "checkout",
+        "appId": "otel-demo@checkout",
+        "regionId": "default",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 1200,
+          "error": 5,
+          "rt": 300.5,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-productcatalog",
+      "entity": {
+        "entityId": "svc-productcatalog",
+        "type": "SERVICE",
+        "displayName": "应用【product-catalog】",
+        "name": "product-catalog",
+        "appId": "otel-demo@product-catalog",
+        "regionId": "default",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 1500,
+          "error": 2,
+          "rt": 180.3,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "extsvc-payment",
+      "entity": {
+        "entityId": "extsvc-payment",
+        "type": "EXTERNAL_SERVICE",
+        "displayName": "外部服务【payment-api:443】",
+        "serverAddr": "203.0.113.10:443",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 500,
+          "error": 5,
+          "rt": 450.2,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "mw-db",
+      "entity": {
+        "entityId": "mw-db",
+        "type": "MIDDLEWARE",
+        "displayName": "中间件【product-db】",
+        "name": "product-db",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 2000,
+          "error": 1,
+          "rt": 12.5,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "mw-mq",
+      "entity": {
+        "entityId": "mw-mq",
+        "type": "MIDDLEWARE",
+        "displayName": "中间件【checkout-mq】",
+        "name": "checkout-mq",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 1800,
+          "error": 3,
+          "rt": 25.7,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "pod-frontend-1",
+      "entity": {
+        "entityId": "pod-frontend-1",
+        "type": "POD",
+        "displayName": "应用实例【10.1.0.10】",
+        "appId": "otel-demo@frontend",
+        "ip": "10.1.0.10",
+        "regionId": "default",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 1200,
+          "error": 2,
+          "rt": 150.5,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "pod-frontend-2",
+      "entity": {
+        "entityId": "pod-frontend-2",
+        "type": "POD",
+        "displayName": "应用实例【10.1.0.11】",
+        "appId": "otel-demo@frontend",
+        "ip": "10.1.0.11",
+        "regionId": "default",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 1100,
+          "error": 1,
+          "rt": 145.2,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "inst-db-1",
+      "entity": {
+        "entityId": "inst-db-1",
+        "type": "INSTANCE",
+        "displayName": "实例【10.0.0.20:5432】",
+        "ip": "10.0.0.20",
+        "port": 5432,
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 2000,
+          "error": 1,
+          "rt": 12.5,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "rpc-frontend-getproducts",
+      "entity": {
+        "entityId": "rpc-frontend-getproducts",
+        "type": "RPC",
+        "displayName": "接口【/api/products】",
+        "appId": "otel-demo@frontend",
+        "rpc": "/api/products",
+        "regionId": "default",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 1500,
+          "error": 1,
+          "rt": 145.3,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "rpcg-frontend-http",
+      "entity": {
+        "entityId": "rpcg-frontend-http",
+        "type": "RPC_GROUP",
+        "displayName": "【HTTP】服务",
+        "appId": "otel-demo@frontend",
+        "rpcType": "HTTP",
+        "regionId": "default",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 2300,
+          "error": 3,
+          "rt": 148.2,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "host-node1",
+      "entity": {
+        "entityId": "host-node1",
+        "type": "HOST",
+        "displayName": "主机【k8s-node-01】",
+        "name": "k8s-node-01",
+        "ip": "10.0.1.10",
+        "regionId": "default",
+        "hostId": "i-bp1234567890abcde",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "host-node2",
+      "entity": {
+        "entityId": "host-node2",
+        "type": "HOST",
+        "displayName": "主机【k8s-node-02】",
+        "name": "k8s-node-02",
+        "ip": "10.0.1.11",
+        "regionId": "default",
+        "hostId": "i-bp1234567890abcdf",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "host-db",
+      "entity": {
+        "entityId": "host-db",
+        "type": "HOST",
+        "displayName": "主机【db-server-01】",
+        "name": "db-server-01",
+        "ip": "10.0.0.20",
+        "regionId": "default",
+        "hostId": "i-bp1234567890abcdg",
+        "firstSeen": 1672531200000,
+        "lastSeen": 1672534800000
+      },
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "ns-otel-demo-svc-frontend-CONTAINS",
+      "from": "ns-otel-demo",
+      "to": "svc-frontend",
+      "type": "CONTAINS",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-frontend-svc-productcatalog-DEPENDS_ON",
+      "from": "svc-frontend",
+      "to": "svc-productcatalog",
+      "type": "DEPENDS_ON",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 1500,
+          "error": 1,
+          "rt": 185.2,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-frontend-extsvc-payment-DEPENDS_ON",
+      "from": "svc-frontend",
+      "to": "extsvc-payment",
+      "type": "DEPENDS_ON",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 500,
+          "error": 5,
+          "rt": 450.2,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-productcatalog-mw-db-DEPENDS_ON",
+      "from": "svc-productcatalog",
+      "to": "mw-db",
+      "type": "DEPENDS_ON",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 2000,
+          "error": 1,
+          "rt": 15.5,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-checkout-mw-mq-DEPENDS_ON",
+      "from": "svc-checkout",
+      "to": "mw-mq",
+      "type": "DEPENDS_ON",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 1800,
+          "error": 3,
+          "rt": 28.7,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-frontend-pod-frontend-1-INSTANTIATED_BY",
+      "from": "svc-frontend",
+      "to": "pod-frontend-1",
+      "type": "INSTANTIATED_BY",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 1200,
+          "error": 2,
+          "rt": 150.5,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-frontend-pod-frontend-2-INSTANTIATED_BY",
+      "from": "svc-frontend",
+      "to": "pod-frontend-2",
+      "type": "INSTANTIATED_BY",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 1100,
+          "error": 1,
+          "rt": 145.2,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "mw-db-inst-db-1-INSTANTIATED_BY",
+      "from": "mw-db",
+      "to": "inst-db-1",
+      "type": "INSTANTIATED_BY",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 2000,
+          "error": 1,
+          "rt": 12.5,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-frontend-rpc-frontend-getproducts-INVOKES",
+      "from": "svc-frontend",
+      "to": "rpc-frontend-getproducts",
+      "type": "INVOKES",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 1500,
+          "error": 1,
+          "rt": 145.3,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "rpc-frontend-getproducts-rpcg-frontend-http-CONTAINS",
+      "from": "rpcg-frontend-http",
+      "to": "rpc-frontend-getproducts",
+      "type": "CONTAINS",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 1500,
+          "error": 1,
+          "rt": 145.3,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "rpc-frontend-placeorder-rpcg-frontend-http-CONTAINS",
+      "from": "rpcg-frontend-http",
+      "to": "rpc-frontend-placeorder",
+      "type": "CONTAINS",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 1000,
+          "error": 2,
+          "rt": 175.1,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "pod-frontend-1-host-node1-RUNS_ON",
+      "from": "pod-frontend-1",
+      "to": "host-node1",
+      "type": "RUNS_ON",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "pod-frontend-2-host-node2-RUNS_ON",
+      "from": "pod-frontend-2",
+      "to": "host-node2",
+      "type": "RUNS_ON",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "inst-db-1-host-db-RUNS_ON",
+      "from": "inst-db-1",
+      "to": "host-db",
+      "type": "RUNS_ON",
+      "firstSeen": 1672531200000,
+      "lastSeen": 1672534800000,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    }
+  ]
+}

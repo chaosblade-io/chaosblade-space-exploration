@@ -1,6 +1,43 @@
 server:
   port: 8106
+  servlet:
+    context-path: /
+
 spring:
   application:
-    name: svc-topo
+    name: chaosblade-topo
 
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+      enabled: true
+
+  thymeleaf:
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+    prefix: classpath:/templates/
+    suffix: .html
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      accept-single-value-as-array: true
+
+logging:
+  level:
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# 应用特定配置
+topo:
+  visualizer:
+    upload:
+      temp-dir: /tmp/topo-uploads
+      allowed-extensions: json
+    graph:
+      max-nodes: 10000
+      max-edges: 50000
