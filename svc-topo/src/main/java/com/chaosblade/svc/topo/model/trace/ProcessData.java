@@ -102,7 +102,17 @@ public class ProcessData {
      * 获取进程所在的Kubernetes命名空间
      */
     public String getKubernetesNamespace() {
-        return getTagValue("k8s.namespace.name");
+        // 首先尝试获取k8s.namespace.name标签
+        String namespace = getTagValue("k8s.namespace.name");
+        // 如果没有找到，尝试获取istio.namespace标签
+        if (namespace == null) {
+            namespace = getTagValue("istio.namespace");
+        }
+        if (namespace == null) {
+            namespace = "default";
+        }
+        
+        return namespace;
     }
 
     /**

@@ -1,0 +1,1222 @@
+{
+    "data": [
+        {
+            "traceID": "04deae9bf55325ef4cfc39671f85c779",
+            "spans": [
+                {
+                    "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                    "spanID": "2b9ab49d1ed169c2",
+                    "operationName": "productpage.default.svc.cluster.local:9080/productpage",
+                    "references": [],
+                    "startTime": 1748261464162553,
+                    "duration": 8742,
+                    "tags": [
+                        {
+                            "key": "component",
+                            "type": "string",
+                            "value": "proxy"
+                        },
+                        {
+                            "key": "downstream_cluster",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "guid:x-request-id",
+                            "type": "string",
+                            "value": "6b4bcddd-ae59-99fe-b19d-9f9f6bdde3b1"
+                        },
+                        {
+                            "key": "http.method",
+                            "type": "string",
+                            "value": "GET"
+                        },
+                        {
+                            "key": "http.protocol",
+                            "type": "string",
+                            "value": "HTTP/1.1"
+                        },
+                        {
+                            "key": "http.status_code",
+                            "type": "string",
+                            "value": "200"
+                        },
+                        {
+                            "key": "http.url",
+                            "type": "string",
+                            "value": "http://localhost:8080/productpage"
+                        },
+                        {
+                            "key": "istio.canonical_revision",
+                            "type": "string",
+                            "value": "latest"
+                        },
+                        {
+                            "key": "istio.canonical_service",
+                            "type": "string",
+                            "value": "bookinfo-gateway-istio"
+                        },
+                        {
+                            "key": "istio.cluster_id",
+                            "type": "string",
+                            "value": "Kubernetes"
+                        },
+                        {
+                            "key": "istio.mesh_id",
+                            "type": "string",
+                            "value": "cluster.local"
+                        },
+                        {
+                            "key": "istio.namespace",
+                            "type": "string",
+                            "value": "default"
+                        },
+                        {
+                            "key": "node_id",
+                            "type": "string",
+                            "value": "router~10.0.0.199~bookinfo-gateway-istio-6bd6cbbf56-qpbtj.default~default.svc.cluster.local"
+                        },
+                        {
+                            "key": "otel.scope.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "otel.scope.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        },
+                        {
+                            "key": "peer.address",
+                            "type": "string",
+                            "value": "127.0.0.1"
+                        },
+                        {
+                            "key": "request_size",
+                            "type": "string",
+                            "value": "0"
+                        },
+                        {
+                            "key": "response_flags",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "response_size",
+                            "type": "string",
+                            "value": "15072"
+                        },
+                        {
+                            "key": "span.kind",
+                            "type": "string",
+                            "value": "client"
+                        },
+                        {
+                            "key": "upstream_cluster",
+                            "type": "string",
+                            "value": "outbound|9080||productpage.default.svc.cluster.local"
+                        },
+                        {
+                            "key": "upstream_cluster.name",
+                            "type": "string",
+                            "value": "outbound|9080||productpage.default.svc.cluster.local;"
+                        },
+                        {
+                            "key": "user_agent",
+                            "type": "string",
+                            "value": "curl/7.81.0"
+                        },
+                        {
+                            "key": "zone",
+                            "type": "string",
+                            "value": ""
+                        }
+                    ],
+                    "logs": [],
+                    "processID": "p1",
+                    "warnings": null
+                },
+                {
+                    "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                    "spanID": "04fd5f254672a6f7",
+                    "operationName": "productpage.default.svc.cluster.local:9080/productpage",
+                    "references": [
+                        {
+                            "refType": "CHILD_OF",
+                            "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                            "spanID": "2b9ab49d1ed169c2"
+                        }
+                    ],
+                    "startTime": 1748261464162711,
+                    "duration": 8236,
+                    "tags": [
+                        {
+                            "key": "component",
+                            "type": "string",
+                            "value": "proxy"
+                        },
+                        {
+                            "key": "downstream_cluster",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "guid:x-request-id",
+                            "type": "string",
+                            "value": "6b4bcddd-ae59-99fe-b19d-9f9f6bdde3b1"
+                        },
+                        {
+                            "key": "http.method",
+                            "type": "string",
+                            "value": "GET"
+                        },
+                        {
+                            "key": "http.protocol",
+                            "type": "string",
+                            "value": "HTTP/1.1"
+                        },
+                        {
+                            "key": "http.status_code",
+                            "type": "string",
+                            "value": "200"
+                        },
+                        {
+                            "key": "http.url",
+                            "type": "string",
+                            "value": "http://localhost:8080/productpage"
+                        },
+                        {
+                            "key": "istio.canonical_revision",
+                            "type": "string",
+                            "value": "v1"
+                        },
+                        {
+                            "key": "istio.canonical_service",
+                            "type": "string",
+                            "value": "productpage"
+                        },
+                        {
+                            "key": "istio.cluster_id",
+                            "type": "string",
+                            "value": "Kubernetes"
+                        },
+                        {
+                            "key": "istio.mesh_id",
+                            "type": "string",
+                            "value": "cluster.local"
+                        },
+                        {
+                            "key": "istio.namespace",
+                            "type": "string",
+                            "value": "default"
+                        },
+                        {
+                            "key": "node_id",
+                            "type": "string",
+                            "value": "sidecar~10.0.0.251~productpage-v1-59ffbf8b65-hhwf4.default~default.svc.cluster.local"
+                        },
+                        {
+                            "key": "otel.scope.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "otel.scope.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        },
+                        {
+                            "key": "peer.address",
+                            "type": "string",
+                            "value": "10.0.0.199"
+                        },
+                        {
+                            "key": "request_size",
+                            "type": "string",
+                            "value": "0"
+                        },
+                        {
+                            "key": "response_flags",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "response_size",
+                            "type": "string",
+                            "value": "15072"
+                        },
+                        {
+                            "key": "span.kind",
+                            "type": "string",
+                            "value": "server"
+                        },
+                        {
+                            "key": "upstream_cluster",
+                            "type": "string",
+                            "value": "inbound|9080||"
+                        },
+                        {
+                            "key": "upstream_cluster.name",
+                            "type": "string",
+                            "value": "inbound|9080||;"
+                        },
+                        {
+                            "key": "user_agent",
+                            "type": "string",
+                            "value": "curl/7.81.0"
+                        },
+                        {
+                            "key": "zone",
+                            "type": "string",
+                            "value": ""
+                        }
+                    ],
+                    "logs": [],
+                    "processID": "p2",
+                    "warnings": null
+                },
+                {
+                    "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                    "spanID": "55892ca741c51d5f",
+                    "operationName": "details.default.svc.cluster.local:9080/*",
+                    "references": [
+                        {
+                            "refType": "CHILD_OF",
+                            "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                            "spanID": "04fd5f254672a6f7"
+                        }
+                    ],
+                    "startTime": 1748261464164519,
+                    "duration": 1064,
+                    "tags": [
+                        {
+                            "key": "component",
+                            "type": "string",
+                            "value": "proxy"
+                        },
+                        {
+                            "key": "downstream_cluster",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "guid:x-request-id",
+                            "type": "string",
+                            "value": "6b4bcddd-ae59-99fe-b19d-9f9f6bdde3b1"
+                        },
+                        {
+                            "key": "http.method",
+                            "type": "string",
+                            "value": "GET"
+                        },
+                        {
+                            "key": "http.protocol",
+                            "type": "string",
+                            "value": "HTTP/1.1"
+                        },
+                        {
+                            "key": "http.status_code",
+                            "type": "string",
+                            "value": "200"
+                        },
+                        {
+                            "key": "http.url",
+                            "type": "string",
+                            "value": "http://details:9080/details/0"
+                        },
+                        {
+                            "key": "istio.canonical_revision",
+                            "type": "string",
+                            "value": "v1"
+                        },
+                        {
+                            "key": "istio.canonical_service",
+                            "type": "string",
+                            "value": "productpage"
+                        },
+                        {
+                            "key": "istio.cluster_id",
+                            "type": "string",
+                            "value": "Kubernetes"
+                        },
+                        {
+                            "key": "istio.mesh_id",
+                            "type": "string",
+                            "value": "cluster.local"
+                        },
+                        {
+                            "key": "istio.namespace",
+                            "type": "string",
+                            "value": "default"
+                        },
+                        {
+                            "key": "node_id",
+                            "type": "string",
+                            "value": "sidecar~10.0.0.251~productpage-v1-59ffbf8b65-hhwf4.default~default.svc.cluster.local"
+                        },
+                        {
+                            "key": "otel.scope.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "otel.scope.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        },
+                        {
+                            "key": "peer.address",
+                            "type": "string",
+                            "value": "10.0.0.251"
+                        },
+                        {
+                            "key": "request_size",
+                            "type": "string",
+                            "value": "0"
+                        },
+                        {
+                            "key": "response_flags",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "response_size",
+                            "type": "string",
+                            "value": "178"
+                        },
+                        {
+                            "key": "span.kind",
+                            "type": "string",
+                            "value": "client"
+                        },
+                        {
+                            "key": "upstream_cluster",
+                            "type": "string",
+                            "value": "outbound|9080||details.default.svc.cluster.local"
+                        },
+                        {
+                            "key": "upstream_cluster.name",
+                            "type": "string",
+                            "value": "outbound|9080||details.default.svc.cluster.local;"
+                        },
+                        {
+                            "key": "user_agent",
+                            "type": "string",
+                            "value": "curl/7.81.0"
+                        },
+                        {
+                            "key": "zone",
+                            "type": "string",
+                            "value": ""
+                        }
+                    ],
+                    "logs": [],
+                    "processID": "p2",
+                    "warnings": null
+                },
+                {
+                    "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                    "spanID": "84104ff7d7be0dc3",
+                    "operationName": "details.default.svc.cluster.local:9080/*",
+                    "references": [
+                        {
+                            "refType": "CHILD_OF",
+                            "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                            "spanID": "55892ca741c51d5f"
+                        }
+                    ],
+                    "startTime": 1748261464164674,
+                    "duration": 715,
+                    "tags": [
+                        {
+                            "key": "component",
+                            "type": "string",
+                            "value": "proxy"
+                        },
+                        {
+                            "key": "downstream_cluster",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "guid:x-request-id",
+                            "type": "string",
+                            "value": "6b4bcddd-ae59-99fe-b19d-9f9f6bdde3b1"
+                        },
+                        {
+                            "key": "http.method",
+                            "type": "string",
+                            "value": "GET"
+                        },
+                        {
+                            "key": "http.protocol",
+                            "type": "string",
+                            "value": "HTTP/1.1"
+                        },
+                        {
+                            "key": "http.status_code",
+                            "type": "string",
+                            "value": "200"
+                        },
+                        {
+                            "key": "http.url",
+                            "type": "string",
+                            "value": "http://details:9080/details/0"
+                        },
+                        {
+                            "key": "istio.canonical_revision",
+                            "type": "string",
+                            "value": "v1"
+                        },
+                        {
+                            "key": "istio.canonical_service",
+                            "type": "string",
+                            "value": "details"
+                        },
+                        {
+                            "key": "istio.cluster_id",
+                            "type": "string",
+                            "value": "Kubernetes"
+                        },
+                        {
+                            "key": "istio.mesh_id",
+                            "type": "string",
+                            "value": "cluster.local"
+                        },
+                        {
+                            "key": "istio.namespace",
+                            "type": "string",
+                            "value": "default"
+                        },
+                        {
+                            "key": "node_id",
+                            "type": "string",
+                            "value": "sidecar~10.0.0.50~details-v1-d689f847b-wjtpc.default~default.svc.cluster.local"
+                        },
+                        {
+                            "key": "otel.scope.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "otel.scope.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        },
+                        {
+                            "key": "peer.address",
+                            "type": "string",
+                            "value": "10.0.0.251"
+                        },
+                        {
+                            "key": "request_size",
+                            "type": "string",
+                            "value": "0"
+                        },
+                        {
+                            "key": "response_flags",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "response_size",
+                            "type": "string",
+                            "value": "178"
+                        },
+                        {
+                            "key": "span.kind",
+                            "type": "string",
+                            "value": "server"
+                        },
+                        {
+                            "key": "upstream_cluster",
+                            "type": "string",
+                            "value": "inbound|9080||"
+                        },
+                        {
+                            "key": "upstream_cluster.name",
+                            "type": "string",
+                            "value": "inbound|9080||;"
+                        },
+                        {
+                            "key": "user_agent",
+                            "type": "string",
+                            "value": "curl/7.81.0"
+                        },
+                        {
+                            "key": "zone",
+                            "type": "string",
+                            "value": ""
+                        }
+                    ],
+                    "logs": [],
+                    "processID": "p3",
+                    "warnings": null
+                },
+                {
+                    "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                    "spanID": "ddb22230874d2ad4",
+                    "operationName": "reviews.default.svc.cluster.local:9080/*",
+                    "references": [
+                        {
+                            "refType": "CHILD_OF",
+                            "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                            "spanID": "04fd5f254672a6f7"
+                        }
+                    ],
+                    "startTime": 1748261464167082,
+                    "duration": 2813,
+                    "tags": [
+                        {
+                            "key": "component",
+                            "type": "string",
+                            "value": "proxy"
+                        },
+                        {
+                            "key": "downstream_cluster",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "guid:x-request-id",
+                            "type": "string",
+                            "value": "6b4bcddd-ae59-99fe-b19d-9f9f6bdde3b1"
+                        },
+                        {
+                            "key": "http.method",
+                            "type": "string",
+                            "value": "GET"
+                        },
+                        {
+                            "key": "http.protocol",
+                            "type": "string",
+                            "value": "HTTP/1.1"
+                        },
+                        {
+                            "key": "http.status_code",
+                            "type": "string",
+                            "value": "200"
+                        },
+                        {
+                            "key": "http.url",
+                            "type": "string",
+                            "value": "http://reviews:9080/reviews/0"
+                        },
+                        {
+                            "key": "istio.canonical_revision",
+                            "type": "string",
+                            "value": "v1"
+                        },
+                        {
+                            "key": "istio.canonical_service",
+                            "type": "string",
+                            "value": "productpage"
+                        },
+                        {
+                            "key": "istio.cluster_id",
+                            "type": "string",
+                            "value": "Kubernetes"
+                        },
+                        {
+                            "key": "istio.mesh_id",
+                            "type": "string",
+                            "value": "cluster.local"
+                        },
+                        {
+                            "key": "istio.namespace",
+                            "type": "string",
+                            "value": "default"
+                        },
+                        {
+                            "key": "node_id",
+                            "type": "string",
+                            "value": "sidecar~10.0.0.251~productpage-v1-59ffbf8b65-hhwf4.default~default.svc.cluster.local"
+                        },
+                        {
+                            "key": "otel.scope.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "otel.scope.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        },
+                        {
+                            "key": "peer.address",
+                            "type": "string",
+                            "value": "10.0.0.251"
+                        },
+                        {
+                            "key": "request_size",
+                            "type": "string",
+                            "value": "0"
+                        },
+                        {
+                            "key": "response_flags",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "response_size",
+                            "type": "string",
+                            "value": "442"
+                        },
+                        {
+                            "key": "span.kind",
+                            "type": "string",
+                            "value": "client"
+                        },
+                        {
+                            "key": "upstream_cluster",
+                            "type": "string",
+                            "value": "outbound|9080||reviews.default.svc.cluster.local"
+                        },
+                        {
+                            "key": "upstream_cluster.name",
+                            "type": "string",
+                            "value": "outbound|9080||reviews.default.svc.cluster.local;"
+                        },
+                        {
+                            "key": "user_agent",
+                            "type": "string",
+                            "value": "curl/7.81.0"
+                        },
+                        {
+                            "key": "zone",
+                            "type": "string",
+                            "value": ""
+                        }
+                    ],
+                    "logs": [],
+                    "processID": "p2",
+                    "warnings": null
+                },
+                {
+                    "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                    "spanID": "e531943aeb2dbd75",
+                    "operationName": "reviews.default.svc.cluster.local:9080/*",
+                    "references": [
+                        {
+                            "refType": "CHILD_OF",
+                            "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                            "spanID": "ddb22230874d2ad4"
+                        }
+                    ],
+                    "startTime": 1748261464167268,
+                    "duration": 2415,
+                    "tags": [
+                        {
+                            "key": "component",
+                            "type": "string",
+                            "value": "proxy"
+                        },
+                        {
+                            "key": "downstream_cluster",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "guid:x-request-id",
+                            "type": "string",
+                            "value": "6b4bcddd-ae59-99fe-b19d-9f9f6bdde3b1"
+                        },
+                        {
+                            "key": "http.method",
+                            "type": "string",
+                            "value": "GET"
+                        },
+                        {
+                            "key": "http.protocol",
+                            "type": "string",
+                            "value": "HTTP/1.1"
+                        },
+                        {
+                            "key": "http.status_code",
+                            "type": "string",
+                            "value": "200"
+                        },
+                        {
+                            "key": "http.url",
+                            "type": "string",
+                            "value": "http://reviews:9080/reviews/0"
+                        },
+                        {
+                            "key": "istio.canonical_revision",
+                            "type": "string",
+                            "value": "v2"
+                        },
+                        {
+                            "key": "istio.canonical_service",
+                            "type": "string",
+                            "value": "reviews"
+                        },
+                        {
+                            "key": "istio.cluster_id",
+                            "type": "string",
+                            "value": "Kubernetes"
+                        },
+                        {
+                            "key": "istio.mesh_id",
+                            "type": "string",
+                            "value": "cluster.local"
+                        },
+                        {
+                            "key": "istio.namespace",
+                            "type": "string",
+                            "value": "default"
+                        },
+                        {
+                            "key": "node_id",
+                            "type": "string",
+                            "value": "sidecar~10.0.0.67~reviews-v2-75f48cdfc6-hgshn.default~default.svc.cluster.local"
+                        },
+                        {
+                            "key": "otel.scope.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "otel.scope.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        },
+                        {
+                            "key": "peer.address",
+                            "type": "string",
+                            "value": "10.0.0.251"
+                        },
+                        {
+                            "key": "request_size",
+                            "type": "string",
+                            "value": "0"
+                        },
+                        {
+                            "key": "response_flags",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "response_size",
+                            "type": "string",
+                            "value": "442"
+                        },
+                        {
+                            "key": "span.kind",
+                            "type": "string",
+                            "value": "server"
+                        },
+                        {
+                            "key": "upstream_cluster",
+                            "type": "string",
+                            "value": "inbound|9080||"
+                        },
+                        {
+                            "key": "upstream_cluster.name",
+                            "type": "string",
+                            "value": "inbound|9080||;"
+                        },
+                        {
+                            "key": "user_agent",
+                            "type": "string",
+                            "value": "curl/7.81.0"
+                        },
+                        {
+                            "key": "zone",
+                            "type": "string",
+                            "value": ""
+                        }
+                    ],
+                    "logs": [],
+                    "processID": "p4",
+                    "warnings": null
+                },
+                {
+                    "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                    "spanID": "3e52fb85ee9d5a6f",
+                    "operationName": "ratings.default.svc.cluster.local:9080/*",
+                    "references": [
+                        {
+                            "refType": "CHILD_OF",
+                            "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                            "spanID": "e531943aeb2dbd75"
+                        }
+                    ],
+                    "startTime": 1748261464168223,
+                    "duration": 956,
+                    "tags": [
+                        {
+                            "key": "component",
+                            "type": "string",
+                            "value": "proxy"
+                        },
+                        {
+                            "key": "downstream_cluster",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "guid:x-request-id",
+                            "type": "string",
+                            "value": "6b4bcddd-ae59-99fe-b19d-9f9f6bdde3b1"
+                        },
+                        {
+                            "key": "http.method",
+                            "type": "string",
+                            "value": "GET"
+                        },
+                        {
+                            "key": "http.protocol",
+                            "type": "string",
+                            "value": "HTTP/1.1"
+                        },
+                        {
+                            "key": "http.status_code",
+                            "type": "string",
+                            "value": "200"
+                        },
+                        {
+                            "key": "http.url",
+                            "type": "string",
+                            "value": "http://ratings:9080/ratings/0"
+                        },
+                        {
+                            "key": "istio.canonical_revision",
+                            "type": "string",
+                            "value": "v2"
+                        },
+                        {
+                            "key": "istio.canonical_service",
+                            "type": "string",
+                            "value": "reviews"
+                        },
+                        {
+                            "key": "istio.cluster_id",
+                            "type": "string",
+                            "value": "Kubernetes"
+                        },
+                        {
+                            "key": "istio.mesh_id",
+                            "type": "string",
+                            "value": "cluster.local"
+                        },
+                        {
+                            "key": "istio.namespace",
+                            "type": "string",
+                            "value": "default"
+                        },
+                        {
+                            "key": "node_id",
+                            "type": "string",
+                            "value": "sidecar~10.0.0.67~reviews-v2-75f48cdfc6-hgshn.default~default.svc.cluster.local"
+                        },
+                        {
+                            "key": "otel.scope.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "otel.scope.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        },
+                        {
+                            "key": "peer.address",
+                            "type": "string",
+                            "value": "10.0.0.67"
+                        },
+                        {
+                            "key": "request_size",
+                            "type": "string",
+                            "value": "0"
+                        },
+                        {
+                            "key": "response_flags",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "response_size",
+                            "type": "string",
+                            "value": "48"
+                        },
+                        {
+                            "key": "span.kind",
+                            "type": "string",
+                            "value": "client"
+                        },
+                        {
+                            "key": "upstream_cluster",
+                            "type": "string",
+                            "value": "outbound|9080||ratings.default.svc.cluster.local"
+                        },
+                        {
+                            "key": "upstream_cluster.name",
+                            "type": "string",
+                            "value": "outbound|9080||ratings.default.svc.cluster.local;"
+                        },
+                        {
+                            "key": "user_agent",
+                            "type": "string",
+                            "value": "curl/7.81.0"
+                        },
+                        {
+                            "key": "zone",
+                            "type": "string",
+                            "value": ""
+                        }
+                    ],
+                    "logs": [],
+                    "processID": "p4",
+                    "warnings": null
+                },
+                {
+                    "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                    "spanID": "66fb3b493667a261",
+                    "operationName": "ratings.default.svc.cluster.local:9080/*",
+                    "references": [
+                        {
+                            "refType": "CHILD_OF",
+                            "traceID": "04deae9bf55325ef4cfc39671f85c779",
+                            "spanID": "3e52fb85ee9d5a6f"
+                        }
+                    ],
+                    "startTime": 1748261464168443,
+                    "duration": 477,
+                    "tags": [
+                        {
+                            "key": "component",
+                            "type": "string",
+                            "value": "proxy"
+                        },
+                        {
+                            "key": "downstream_cluster",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "guid:x-request-id",
+                            "type": "string",
+                            "value": "6b4bcddd-ae59-99fe-b19d-9f9f6bdde3b1"
+                        },
+                        {
+                            "key": "http.method",
+                            "type": "string",
+                            "value": "GET"
+                        },
+                        {
+                            "key": "http.protocol",
+                            "type": "string",
+                            "value": "HTTP/1.1"
+                        },
+                        {
+                            "key": "http.status_code",
+                            "type": "string",
+                            "value": "200"
+                        },
+                        {
+                            "key": "http.url",
+                            "type": "string",
+                            "value": "http://ratings:9080/ratings/0"
+                        },
+                        {
+                            "key": "istio.canonical_revision",
+                            "type": "string",
+                            "value": "v1"
+                        },
+                        {
+                            "key": "istio.canonical_service",
+                            "type": "string",
+                            "value": "ratings"
+                        },
+                        {
+                            "key": "istio.cluster_id",
+                            "type": "string",
+                            "value": "Kubernetes"
+                        },
+                        {
+                            "key": "istio.mesh_id",
+                            "type": "string",
+                            "value": "cluster.local"
+                        },
+                        {
+                            "key": "istio.namespace",
+                            "type": "string",
+                            "value": "default"
+                        },
+                        {
+                            "key": "node_id",
+                            "type": "string",
+                            "value": "sidecar~10.0.0.8~ratings-v1-67b76f57b8-8td2n.default~default.svc.cluster.local"
+                        },
+                        {
+                            "key": "otel.scope.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "otel.scope.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        },
+                        {
+                            "key": "peer.address",
+                            "type": "string",
+                            "value": "10.0.0.67"
+                        },
+                        {
+                            "key": "request_size",
+                            "type": "string",
+                            "value": "0"
+                        },
+                        {
+                            "key": "response_flags",
+                            "type": "string",
+                            "value": "-"
+                        },
+                        {
+                            "key": "response_size",
+                            "type": "string",
+                            "value": "48"
+                        },
+                        {
+                            "key": "span.kind",
+                            "type": "string",
+                            "value": "server"
+                        },
+                        {
+                            "key": "upstream_cluster",
+                            "type": "string",
+                            "value": "inbound|9080||"
+                        },
+                        {
+                            "key": "upstream_cluster.name",
+                            "type": "string",
+                            "value": "inbound|9080||;"
+                        },
+                        {
+                            "key": "user_agent",
+                            "type": "string",
+                            "value": "curl/7.81.0"
+                        },
+                        {
+                            "key": "zone",
+                            "type": "string",
+                            "value": ""
+                        }
+                    ],
+                    "logs": [],
+                    "processID": "p5",
+                    "warnings": null
+                }
+            ],
+            "processes": {
+                "p1": {
+                    "serviceName": "bookinfo-gateway-istio.default",
+                    "tags": [
+                        {
+                            "key": "telemetry.sdk.language",
+                            "type": "string",
+                            "value": "cpp"
+                        },
+                        {
+                            "key": "telemetry.sdk.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "telemetry.sdk.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        }
+                    ]
+                },
+                "p2": {
+                    "serviceName": "productpage.default",
+                    "tags": [
+                        {
+                            "key": "telemetry.sdk.language",
+                            "type": "string",
+                            "value": "cpp"
+                        },
+                        {
+                            "key": "telemetry.sdk.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "telemetry.sdk.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        }
+                    ]
+                },
+                "p3": {
+                    "serviceName": "details.default",
+                    "tags": [
+                        {
+                            "key": "telemetry.sdk.language",
+                            "type": "string",
+                            "value": "cpp"
+                        },
+                        {
+                            "key": "telemetry.sdk.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "telemetry.sdk.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        }
+                    ]
+                },
+                "p4": {
+                    "serviceName": "reviews.default",
+                    "tags": [
+                        {
+                            "key": "telemetry.sdk.language",
+                            "type": "string",
+                            "value": "cpp"
+                        },
+                        {
+                            "key": "telemetry.sdk.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "telemetry.sdk.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        }
+                    ]
+                },
+                "p5": {
+                    "serviceName": "ratings.default",
+                    "tags": [
+                        {
+                            "key": "telemetry.sdk.language",
+                            "type": "string",
+                            "value": "cpp"
+                        },
+                        {
+                            "key": "telemetry.sdk.name",
+                            "type": "string",
+                            "value": "envoy"
+                        },
+                        {
+                            "key": "telemetry.sdk.version",
+                            "type": "string",
+                            "value": "71a753428f4479887db4b686ca9d01cfc6e11068/1.34.1-dev/Clean/RELEASE/BoringSSL"
+                        }
+                    ]
+                }
+            },
+            "warnings": null
+        }
+    ],
+    "total": 0,
+    "limit": 0,
+    "offset": 0,
+    "errors": null
+}

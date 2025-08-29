@@ -1,0 +1,133 @@
+{
+  "items": [
+    {
+      "apiId": "rpc-get-http-localhost-8080-productpage",
+      "displayName": "GET /productpage",
+      "providerService": {
+        "serviceId": "svc-productpage.default",
+        "name": "productpage",
+        "namespace": "default"
+      },
+      "method": "GET",
+      "url": {
+        "template": "/productpage",
+        // 路由模板（优先取 http.route）
+        "example": "/productpage",
+        // 样例路径
+        "scheme": "http",
+        "host": "localhost",
+        "port": 8080,
+        "fullExample": "http://localhost:8080/productpage"
+        // 便于直接访问/预览
+      },
+      "params": {
+        "path": [],
+        // GET /productpage 无路径参数
+        "query": [
+          // 如存在查询参数，列在此处
+          {
+            "name": "lang",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "example": "en",
+            "description": "语言"
+          }
+        ],
+        "headers": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "type": "string",
+            "required": false
+          }
+        ]
+      },
+      "body": {},
+      // GET 无请求体。如果 POST 请求体过长，截断成 1M 字节。
+
+      "firstSeen": 1756114800000,
+      "lastSeen": 1756118400000,
+      "labels": {
+        "protocol": "http"
+      }
+    },
+    {
+      "apiId": "rpc-post-http-orders-8080-orders",
+      "displayName": "POST /orders",
+      "namespace": "default",
+      "providerService": {
+        "serviceId": "svc-orders.default",
+        "name": "orders",
+        "namespace": "default"
+      },
+      "method": "POST",
+      "url": {
+        "template": "/orders",
+        "example": "/orders",
+        "scheme": "http",
+        "host": "orders",
+        "port": 8080,
+        "fullExample": "http://orders:8080/orders"
+      },
+      "params": {
+        "path": [],
+        "query": [
+          {
+            "name": "async",
+            "in": "query",
+            "type": "boolean",
+            "required": false,
+            "example": false
+          }
+        ],
+        "headers": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "type": "string",
+            "required": true,
+            "example": "application/json"
+          }
+        ]
+      },
+      "body": {
+        "present": true,
+        "contentType": "application/json",
+        "schema": {
+          "type": "object",
+          "required": [
+            "productId",
+            "quantity"
+          ],
+          "properties": {
+            "productId": {
+              "type": "string",
+              "example": "SKU-10001"
+            },
+            "quantity": {
+              "type": "integer",
+              "example": 1,
+              "minimum": 1
+            },
+            "note": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        },
+        "example": {
+          "productId": "SKU-10001",
+          "quantity": 1,
+          "note": "rush"
+        }
+      },
+      "firstSeen": 1756114800000,
+      "lastSeen": 1756118400000,
+      "labels": {
+        "protocol": "http"
+      }
+    }
+  ]
+}
+

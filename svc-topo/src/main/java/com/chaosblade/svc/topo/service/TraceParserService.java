@@ -229,13 +229,18 @@ public class TraceParserService {
                     ));
 
             for (SpanData span : record.getSpans()) {
+                // 过滤掉span.kind等于'internal'的Span
+                String spanKind = span.getSpanKind();
+                if ("internal".equals(spanKind)) {
+                    continue;
+                }
+                
                 String serviceName = processToService.get(span.getProcessId());
                 if (serviceName == null) continue;
 
                 // 提取RPC信息
                 String rpcService = span.getRpcService();
                 String rpcMethod = span.getRpcMethod();
-                String spanKind = span.getSpanKind();
 
                 if (rpcService != null && rpcMethod != null) {
                     RpcInterface rpcInterface = new RpcInterface(
