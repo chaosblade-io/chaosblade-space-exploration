@@ -32,6 +32,8 @@ public class JaegerQueryService {
     private static final int DEFAULT_TIMEOUT_SECONDS = 30;
     private static final int MAX_SPANS_PER_QUERY = 1000;
     private static final int DEFAULT_TRACE_LIMIT = 20;
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final long RETRY_DELAY_MS = 1000;
 
     private final Map<String, ManagedChannel> channelCache = new HashMap<>();
     private final Map<String, QueryServiceGrpc.QueryServiceBlockingStub> stubCache = new HashMap<>();
@@ -76,48 +78,70 @@ public class JaegerQueryService {
         logger.info("开始从Jaeger查询trace数据: host={}, port={}, service={}, operation={}, startTime={}, endTime={}, limit={}",
                    jaegerHost, port, serviceName, operationName, startTime, endTime, limit);
 
-        try {
-            // 获取或创建gRPC通道
-            ManagedChannel channel = getOrCreateChannel(jaegerHost, port);
-            
-            // 获取或创建gRPC stub
-            QueryServiceGrpc.QueryServiceBlockingStub stub = getOrCreateStub(channel, jaegerHost, port);
+        Exception lastException = null;
+        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+            try {
+                // 获取或创建gRPC通道
+                ManagedChannel channel = getOrCreateChannel(jaegerHost, port);
+                
+                // 获取或创建gRPC stub
+                QueryServiceGrpc.QueryServiceBlockingStub stub = getOrCreateStub(channel, jaegerHost, port);
 
-            // 构建查询参数
-            Query.TraceQueryParameters queryParameters = Query.TraceQueryParameters.newBuilder()
-                    .setServiceName(serviceName)
-                    .setOperationName(operationName)
-                    .setStartTimeMin(com.google.protobuf.Timestamp.newBuilder()
-                            .setSeconds(startTime / 1_000_000)
-                            .setNanos((int) ((startTime % 1_000_000) * 1000)))
-                    .setStartTimeMax(com.google.protobuf.Timestamp.newBuilder()
-                            .setSeconds(endTime / 1_000_000)
-                            .setNanos((int) ((endTime % 1_000_000) * 1000)))
-                    .setSearchDepth(MAX_SPANS_PER_QUERY)
-                    .build();
+                // 构建查询参数
+                Query.TraceQueryParameters queryParameters = Query.TraceQueryParameters.newBuilder()
+                        .setServiceName(serviceName)
+                        .setOperationName(operationName)
+                        .setStartTimeMin(com.google.protobuf.Timestamp.newBuilder()
+                                .setSeconds(startTime / 1_000_000)
+                                .setNanos((int) ((startTime % 1_000_000) * 1000)))
+                        .setStartTimeMax(com.google.protobuf.Timestamp.newBuilder()
+                                .setSeconds(endTime / 1_000_000)
+                                .setNanos((int) ((endTime % 1_000_000) * 1000)))
+                        .setSearchDepth(MAX_SPANS_PER_QUERY)
+                        .build();
 
-            // 构建查询请求
-            Query.FindTracesRequest request = Query.FindTracesRequest.newBuilder()
-                    .setQuery(queryParameters)
-                    .build();
+                // 构建查询请求
+                Query.FindTracesRequest request = Query.FindTracesRequest.newBuilder()
+                        .setQuery(queryParameters)
+                        .build();
 
-            // 执行查询
-            Iterator<Query.SpansResponseChunk> responseIterator = stub.findTraces(request);
+                // 执行查询
+                Iterator<Query.SpansResponseChunk> responseIterator = stub.findTraces(request);
 
-            // 处理响应
-            TraceData traceData = processFindTracesResponse(responseIterator, limit);
+                // 处理响应
+                TraceData traceData = processFindTracesResponse(responseIterator, limit);
 
-            logger.info("成功从Jaeger获取trace数据，共{}个trace记录",
-                       traceData.getData() != null ? traceData.getData().size() : 0);
-            return traceData;
+                logger.info("成功从Jaeger获取trace数据，共{}个trace记录",
+                           traceData.getData() != null ? traceData.getData().size() : 0);
+                return traceData;
 
-        } catch (StatusRuntimeException e) {
-            logger.error("Jaeger gRPC调用失败: {}", e.getStatus(), e);
-            throw new RuntimeException("Failed to query Jaeger: " + e.getStatus().getDescription(), e);
-        } catch (Exception e) {
-            logger.error("查询Jaeger trace数据时发生异常", e);
-            throw new RuntimeException("Failed to query traces from Jaeger", e);
+            } catch (StatusRuntimeException e) {
+                lastException = e;
+                logger.warn("Jaeger gRPC调用失败 (尝试 {}/{}): {}", attempt, MAX_RETRY_ATTEMPTS, e.getStatus(), e);
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("查询被中断", ie);
+                    }
+                }
+            } catch (Exception e) {
+                lastException = e;
+                logger.warn("查询Jaeger trace数据时发生异常 (尝试 {}/{}): {}", attempt, MAX_RETRY_ATTEMPTS, e.getMessage(), e);
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("查询被中断", ie);
+                    }
+                }
+            }
         }
+        
+        logger.error("经过{}次尝试后仍无法从Jaeger查询trace数据", MAX_RETRY_ATTEMPTS, lastException);
+        throw new RuntimeException("Failed to query Jaeger after " + MAX_RETRY_ATTEMPTS + " attempts: " + lastException.getMessage(), lastException);
     }
 
     /**
@@ -128,13 +152,22 @@ public class JaegerQueryService {
 
         return channelCache.computeIfAbsent(channelKey, key -> {
             logger.debug("创建新的gRPC通道: {}", key);
-            return ManagedChannelBuilder.forAddress(host, port)
+            ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
                     .usePlaintext()
                     .keepAliveTime(30, TimeUnit.SECONDS)
                     .keepAliveTimeout(5, TimeUnit.SECONDS)
                     .keepAliveWithoutCalls(true)
                     .maxInboundMessageSize(1024 * 1024 * 16) // 16MB
                     .build();
+            
+            // 测试连接
+            try {
+                channel.getState(true);
+            } catch (Exception e) {
+                logger.warn("创建gRPC通道后测试连接失败: {}", e.getMessage());
+            }
+            
+            return channel;
         });
     }
 

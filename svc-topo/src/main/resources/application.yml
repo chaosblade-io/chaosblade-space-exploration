@@ -1,55 +1,57 @@
 server:
-  port: 8106
-  servlet:
-    context-path: /
+    port: 8106
+    servlet:
+        context-path: /
 
 spring:
-  application:
-    name: chaosblade-topo
+    application:
+        name: chaosblade-topo
 
-  servlet:
-    multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
-      enabled: true
+    servlet:
+        multipart:
+            max-file-size: 50MB
+            max-request-size: 50MB
+            enabled: true
 
-  thymeleaf:
-    cache: false
-    mode: HTML
-    encoding: UTF-8
-    prefix: classpath:/templates/
-    suffix: .html
+    thymeleaf:
+        cache: false
+        mode: HTML
+        encoding: UTF-8
+        prefix: classpath:/templates/
+        suffix: .html
 
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    deserialization:
-      accept-single-value-as-array: true
+    jackson:
+        serialization:
+            write-dates-as-timestamps: false
+        deserialization:
+            accept-single-value-as-array: true
 
 logging:
-  level:
-    org.springframework.web: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    level:
+        org.springframework.web: INFO
+    pattern:
+        console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 
 # 应用特定配置
 topo:
-  visualizer:
-    upload:
-      temp-dir: /tmp/topo-uploads
-      allowed-extensions: json
-    graph:
-      max-nodes: 10000
-      max-edges: 50000
+    visualizer:
+        upload:
+            temp-dir: /tmp/topo-uploads
+            allowed-extensions: json
+        graph:
+            max-nodes: 10000
+            max-edges: 50000
 
 # 拓扑自动刷新配置
 topology:
-  auto-refresh:
-    enabled: true                    # 是否启用自动刷新
-    interval: 15000                  # 刷新间隔（毫秒），15秒
-    time-range-minutes: 15           # 查询时间范围（分钟）
-    jaeger:
-      host: localhost                # Jaeger 主机地址
-      port: 14250                    # Jaeger gRPC 端口
-    service-name: frontend           # 默认查询的服务名
-    operation-name: all              # 默认查询的操作名
+    auto-refresh:
+        enabled: true                    # 是否启用自动刷新
+        interval: 15000                  # 刷新间隔（毫秒），15秒
+        time-range-minutes: 1           # 查询时间范围（分钟）
+        jaeger:
+            host: localhost                # Jaeger 主机地址
+            port: 16685                    # Jaeger gRPC 端口
+#        service-name: checkout           # 默认查询的服务名
+#        operation-name: oteldemo.CheckoutService/PlaceOrder              # 默认查询的操作名
+        service-name: frontend-proxy           # 默认查询的服务名
+        operation-name: ingress              # 默认查询的操作名

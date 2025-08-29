@@ -176,7 +176,7 @@ public class XFlowController {
             logger.debug("获取自动刷新状态");
 
             TopologyAutoRefreshService.RefreshStatus status = autoRefreshService.getRefreshStatus();
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("status", status);
@@ -295,7 +295,7 @@ public class XFlowController {
             logger.info("更新 Jaeger 配置: {}", config);
 
             String host = (String) config.getOrDefault("host", "localhost");
-            int port = (Integer) config.getOrDefault("port", 14250);
+            int port = (Integer) config.getOrDefault("port", 16685);
             String serviceName = (String) config.getOrDefault("serviceName", "frontend");
             String operationName = (String) config.getOrDefault("operationName", "all");
             int timeRangeMinutes = (Integer) config.getOrDefault("timeRangeMinutes", 15);

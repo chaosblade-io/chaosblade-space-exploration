@@ -13,7 +13,7 @@ import java.time.Duration;
 
 /**
  * 拓扑数据自动刷新服务
- * 
+ *
  * 功能：
  * 1. 每隔 15 秒自动刷新拓扑数据
  * 2. 从 Jaeger 查询最新的 trace 数据
@@ -37,7 +37,7 @@ public class TopologyAutoRefreshService {
     @Value("${topology.auto-refresh.jaeger.host:localhost}")
     private String jaegerHost;
 
-    @Value("${topology.auto-refresh.jaeger.port:14250}")
+    @Value("${topology.auto-refresh.jaeger.port:16685}")
     private int jaegerPort;
 
     @Value("${topology.auto-refresh.service-name:frontend}")
@@ -77,12 +77,12 @@ public class TopologyAutoRefreshService {
             refreshTopologyData();
             successfulRefreshCount++;
             lastRefreshTime = System.currentTimeMillis();
-            
-            logger.info("拓扑数据自动刷新完成 (成功次数: {}, 失败次数: {})", 
+
+            logger.info("拓扑数据自动刷新完成 (成功次数: {}, 失败次数: {})",
                        successfulRefreshCount, failedRefreshCount);
         } catch (Exception e) {
             failedRefreshCount++;
-            logger.error("拓扑数据自动刷新失败 (成功次数: {}, 失败次数: {}): {}", 
+            logger.error("拓扑数据自动刷新失败 (成功次数: {}, 失败次数: {}): {}",
                         successfulRefreshCount, failedRefreshCount, e.getMessage(), e);
         } finally {
             isRefreshing = false;
@@ -131,7 +131,7 @@ public class TopologyAutoRefreshService {
             // 3. 更新当前拓扑
             topologyConverterService.setCurrentTopology(newTopology);
 
-            logger.debug("成功更新拓扑数据：{} 个节点，{} 条边", 
+            logger.debug("成功更新拓扑数据：{} 个节点，{} 条边",
                         newTopology.getNodes().size(), newTopology.getEdges().size());
 
         } catch (IllegalArgumentException e) {
@@ -189,8 +189,8 @@ public class TopologyAutoRefreshService {
         this.serviceName = service;
         this.operationName = operation;
         this.timeRangeMinutes = timeRange;
-        
-        logger.info("已更新 Jaeger 配置: host={}, port={}, service={}, operation={}, timeRange={}分钟", 
+
+        logger.info("已更新 Jaeger 配置: host={}, port={}, service={}, operation={}, timeRange={}分钟",
                    host, port, service, operation, timeRange);
     }
 

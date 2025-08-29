@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *
  * 注意：此测试需要运行中的Jaeger实例
  * 可以通过以下命令启动Jaeger：
- * docker run -d --name jaeger -p 16686:16686 -p 14268:14268 -p 14250:14250 jaegertracing/all-in-one:latest
+ * docker run -d --name jaeger -p 16686:16686 -p 16685:16685 jaegertracing/all-in-one:latest
  */
 @SpringBootTest
 @TestPropertySource(properties = {
