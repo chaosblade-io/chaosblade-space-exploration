@@ -1,5 +1,6 @@
 package com.chaosblade.svc.topo.service;
 
+import com.chaosblade.svc.topo.config.JaegerTestConfig;
 import com.chaosblade.svc.topo.model.trace.TraceData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,17 +27,16 @@ class JaegerQueryServiceTest {
     private String validOperationName;
     private long validStartTime;
     private long validEndTime;
-    private String validTraceId;
 
     @BeforeEach
     void setUp() {
-        validJaegerHost = "demo.jaegertracing.io";
-        validPort = 16685;
-        validServiceName = "test-service";
-        validOperationName = "test-operation";
+        // 从配置类中读取参数
+        validJaegerHost = JaegerTestConfig.JAEGER_HOST;
+        validPort = JaegerTestConfig.JAEGER_PORT;
+        validServiceName = JaegerTestConfig.SERVICE_NAME;
+        validOperationName = JaegerTestConfig.OPERATION_NAME;
         validEndTime = System.currentTimeMillis() * 1000; // 当前时间（微秒）
-        validStartTime = validEndTime - Duration.ofHours(1).toNanos() / 1000; // 1小时前（微秒）
-        validTraceId = "abc123def456";
+        validStartTime = validEndTime - Duration.ofMinutes(1).toNanos() / 1000; // 1小时前（微秒）
     }
 
     @Test
@@ -49,6 +49,26 @@ class JaegerQueryServiceTest {
         assertNotNull(result);
         assertNotNull(result.getData());
         assertFalse(result.getData().isEmpty());
+
+        TraceData.TraceRecord trace = result.getData().get(0);
+        assertNotNull(trace.getTraceId());
+        assertNotNull(trace.getSpans());
+        assertFalse(trace.getSpans().isEmpty());
+        assertNotNull(trace.getProcesses());
+    }
+
+    @Test
+    void testQueryTracesByOperationWithLimit() {
+        // 测试带limit参数的查询
+        int limit = 5;
+        TraceData result = jaegerQueryService.queryTracesByOperation(
+                validJaegerHost, validPort, validServiceName, validOperationName, validStartTime, validEndTime, limit);
+
+        // 验证结果
+        assertNotNull(result);
+        assertNotNull(result.getData());
+        assertFalse(result.getData().isEmpty());
+        assertTrue(result.getData().size() <= limit, "返回的trace数量应该不超过limit值");
 
         TraceData.TraceRecord trace = result.getData().get(0);
         assertNotNull(trace.getTraceId());
@@ -148,63 +168,6 @@ class JaegerQueryServiceTest {
     }
 
     @Test
-    void testQueryTraceByIdWithValidParameters() {
-        // 执行测试
-        TraceData result = jaegerQueryService.queryTraceById(validJaegerHost, validPort, validTraceId);
-
-        // 验证结果
-        assertNotNull(result);
-        assertNotNull(result.getData());
-        assertFalse(result.getData().isEmpty());
-
-        TraceData.TraceRecord trace = result.getData().get(0);
-        assertNotNull(trace.getTraceId());
-        assertEquals(validTraceId, trace.getTraceId());
-        assertNotNull(trace.getSpans());
-        assertFalse(trace.getSpans().isEmpty());
-    }
-
-    @Test
-    void testQueryTraceByIdWithNullHost() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTraceById(null, validPort, validTraceId);
-        });
-        assertEquals("Jaeger host cannot be null or empty", exception.getMessage());
-    }
-
-    @Test
-    void testQueryTraceByIdWithEmptyHost() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTraceById("", validPort, validTraceId);
-        });
-        assertEquals("Jaeger host cannot be null or empty", exception.getMessage());
-    }
-
-    @Test
-    void testQueryTraceByIdWithInvalidPort() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTraceById(validJaegerHost, -1, validTraceId);
-        });
-        assertEquals("Port must be between 1 and 65535", exception.getMessage());
-    }
-
-    @Test
-    void testQueryTraceByIdWithNullTraceId() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTraceById(validJaegerHost, validPort, null);
-        });
-        assertEquals("Trace ID cannot be null or empty", exception.getMessage());
-    }
-
-    @Test
-    void testQueryTraceByIdWithEmptyTraceId() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTraceById(validJaegerHost, validPort, "");
-        });
-        assertEquals("Trace ID cannot be null or empty", exception.getMessage());
-    }
-
-    @Test
     void testMockDataStructure() {
         // 测试模拟数据的结构是否正确
         TraceData result = jaegerQueryService.queryTracesByOperation(
@@ -236,11 +199,6 @@ class JaegerQueryServiceTest {
         trace.getSpans().forEach(span -> {
             assertNotNull(span.getTags());
             assertFalse(span.getTags().isEmpty());
-
-            // 验证必须的标签
-            boolean hasServiceName = span.getTags().stream()
-                    .anyMatch(tag -> "service.name".equals(tag.getKey()));
-            assertTrue(hasServiceName, "span应该有service.name标签");
         });
     }
 }

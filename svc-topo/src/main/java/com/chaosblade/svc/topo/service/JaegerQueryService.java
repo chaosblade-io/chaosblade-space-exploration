@@ -6,6 +6,10 @@ import com.chaosblade.svc.topo.model.trace.TraceData;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import io.jaegertracing.api_v2.QueryServiceGrpc;
+import io.jaegertracing.api_v2.Query;
+import io.jaegertracing.api_v2.Model;
+import com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -27,8 +31,10 @@ public class JaegerQueryService {
 
     private static final int DEFAULT_TIMEOUT_SECONDS = 30;
     private static final int MAX_SPANS_PER_QUERY = 1000;
+    private static final int DEFAULT_TRACE_LIMIT = 20;
 
     private final Map<String, ManagedChannel> channelCache = new HashMap<>();
+    private final Map<String, QueryServiceGrpc.QueryServiceBlockingStub> stubCache = new HashMap<>();
 
     /**
      * 根据服务名和操作名查询Trace数据
@@ -45,18 +51,61 @@ public class JaegerQueryService {
      */
     public TraceData queryTracesByOperation(String jaegerHost, int port, String serviceName,
                                            String operationName, long startTime, long endTime) {
+        return queryTracesByOperation(jaegerHost, port, serviceName, operationName, startTime, endTime, DEFAULT_TRACE_LIMIT);
+    }
+
+    /**
+     * 根据服务名和操作名查询Trace数据
+     *
+     * @param jaegerHost Jaeger服务主机地址
+     * @param port Jaeger服务端口
+     * @param serviceName 服务名称
+     * @param operationName 操作名称
+     * @param startTime 查询开始时间（微秒）
+     * @param endTime 查询结束时间（微秒）
+     * @param limit 返回的最大Trace数量
+     * @return Trace数据
+     * @throws IllegalArgumentException 当参数无效时
+     * @throws RuntimeException 当连接或查询失败时
+     */
+    public TraceData queryTracesByOperation(String jaegerHost, int port, String serviceName,
+                                           String operationName, long startTime, long endTime, int limit) {
         // 参数验证
         validateParameters(jaegerHost, port, serviceName, operationName, startTime, endTime);
 
-        logger.info("开始从Jaeger查询trace数据: host={}, port={}, service={}, operation={}, startTime={}, endTime={}",
-                   jaegerHost, port, serviceName, operationName, startTime, endTime);
+        logger.info("开始从Jaeger查询trace数据: host={}, port={}, service={}, operation={}, startTime={}, endTime={}, limit={}",
+                   jaegerHost, port, serviceName, operationName, startTime, endTime, limit);
 
         try {
             // 获取或创建gRPC通道
             ManagedChannel channel = getOrCreateChannel(jaegerHost, port);
+            
+            // 获取或创建gRPC stub
+            QueryServiceGrpc.QueryServiceBlockingStub stub = getOrCreateStub(channel, jaegerHost, port);
 
-            // 创建模拟的查询结果（在实际实现中，这里会调用真正的Jaeger gRPC API）
-            TraceData traceData = mockJaegerQuery(serviceName, operationName, startTime, endTime);
+            // 构建查询参数
+            Query.TraceQueryParameters queryParameters = Query.TraceQueryParameters.newBuilder()
+                    .setServiceName(serviceName)
+                    .setOperationName(operationName)
+                    .setStartTimeMin(com.google.protobuf.Timestamp.newBuilder()
+                            .setSeconds(startTime / 1_000_000)
+                            .setNanos((int) ((startTime % 1_000_000) * 1000)))
+                    .setStartTimeMax(com.google.protobuf.Timestamp.newBuilder()
+                            .setSeconds(endTime / 1_000_000)
+                            .setNanos((int) ((endTime % 1_000_000) * 1000)))
+                    .setSearchDepth(MAX_SPANS_PER_QUERY)
+                    .build();
+
+            // 构建查询请求
+            Query.FindTracesRequest request = Query.FindTracesRequest.newBuilder()
+                    .setQuery(queryParameters)
+                    .build();
+
+            // 执行查询
+            Iterator<Query.SpansResponseChunk> responseIterator = stub.findTraces(request);
+
+            // 处理响应
+            TraceData traceData = processFindTracesResponse(responseIterator, limit);
 
             logger.info("成功从Jaeger获取trace数据，共{}个trace记录",
                        traceData.getData() != null ? traceData.getData().size() : 0);
@@ -68,35 +117,6 @@ public class JaegerQueryService {
         } catch (Exception e) {
             logger.error("查询Jaeger trace数据时发生异常", e);
             throw new RuntimeException("Failed to query traces from Jaeger", e);
-        }
-    }
-
-    /**
-     * 根据TraceID查询特定的Trace数据
-     *
-     * @param jaegerHost Jaeger服务主机地址
-     * @param port Jaeger服务端口
-     * @param traceId 要查询的TraceID
-     * @return Trace数据
-     */
-    public TraceData queryTraceById(String jaegerHost, int port, String traceId) {
-        validateTraceIdParameters(jaegerHost, port, traceId);
-
-        logger.info("开始根据TraceID查询trace数据: host={}, port={}, traceId={}",
-                   jaegerHost, port, traceId);
-
-        try {
-            ManagedChannel channel = getOrCreateChannel(jaegerHost, port);
-
-            // 创建模拟的查询结果
-            TraceData traceData = mockTraceByIdQuery(traceId);
-
-            logger.info("成功根据TraceID获取trace数据");
-            return traceData;
-
-        } catch (Exception e) {
-            logger.error("根据TraceID查询trace数据时发生异常: traceId={}", traceId, e);
-            throw new RuntimeException("Failed to query trace by ID: " + traceId, e);
         }
     }
 
@@ -115,6 +135,18 @@ public class JaegerQueryService {
                     .keepAliveWithoutCalls(true)
                     .maxInboundMessageSize(1024 * 1024 * 16) // 16MB
                     .build();
+        });
+    }
+
+    /**
+     * 获取或创建gRPC stub
+     */
+    private QueryServiceGrpc.QueryServiceBlockingStub getOrCreateStub(ManagedChannel channel, String host, int port) {
+        String stubKey = host + ":" + port;
+
+        return stubCache.computeIfAbsent(stubKey, key -> {
+            logger.debug("创建新的gRPC stub: {}", key);
+            return QueryServiceGrpc.newBlockingStub(channel);
         });
     }
 
@@ -144,154 +176,191 @@ public class JaegerQueryService {
     }
 
     /**
-     * 验证TraceID查询参数
+     * 处理FindTraces响应
      */
-    private void validateTraceIdParameters(String jaegerHost, int port, String traceId) {
-        if (jaegerHost == null || jaegerHost.trim().isEmpty()) {
-            throw new IllegalArgumentException("Jaeger host cannot be null or empty");
-        }
-        if (port <= 0 || port > 65535) {
-            throw new IllegalArgumentException("Port must be between 1 and 65535");
-        }
-        if (traceId == null || traceId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Trace ID cannot be null or empty");
-        }
-    }
-
-    private String getServiceNameFromTags(List<SpanData.Tag> tags) {
-        if (tags != null) {
-            for (SpanData.Tag tag : tags) {
-                if ("service.name".equals(tag.getKey()) && tag.getValue() != null) {
-                    return tag.getValue().toString();
+    private TraceData processFindTracesResponse(Iterator<Query.SpansResponseChunk> responseIterator, int limit) {
+        TraceData traceData = new TraceData();
+        List<TraceData.TraceRecord> traces = new ArrayList<>();
+        
+        // 用于存储所有span，按traceId分组
+        Map<String, List<SpanData>> spansByTraceId = new HashMap<>();
+        Map<String, Map<String, ProcessData>> processesByTraceId = new HashMap<>();
+        
+        // 处理响应流中的每个chunk
+        while (responseIterator.hasNext() && traces.size() < limit) {
+            Query.SpansResponseChunk chunk = responseIterator.next();
+            
+            // 处理chunk中的每个span
+            for (Model.Span span : chunk.getSpansList()) {
+                String traceId = bytesToHex(span.getTraceId().toByteArray());
+                
+                // 转换span
+                SpanData spanData = convertSpan(span);
+                
+                // 按traceId分组存储span
+                spansByTraceId.computeIfAbsent(traceId, k -> new ArrayList<>()).add(spanData);
+                
+                // 处理进程信息
+                if (span.hasProcess()) {
+                    ProcessData processData = convertProcess(span.getProcess());
+                    String processId = span.getProcessId();
+                    
+                    processesByTraceId.computeIfAbsent(traceId, k -> new HashMap<>())
+                            .put(processId, processData);
                 }
             }
         }
-        return "unknown-service";
-    }
-
-    /**
-     * 模拟Jaeger查询（在实际实现中，这里会调用真正的Jaeger gRPC API）
-     */
-    private TraceData mockJaegerQuery(String serviceName, String operationName, long startTime, long endTime) {
-        TraceData traceData = new TraceData();
-        List<TraceData.TraceRecord> traces = new ArrayList<>();
-
-        // 创建模拟的trace记录
-        TraceData.TraceRecord trace = createMockTrace(serviceName, operationName, startTime);
-        traces.add(trace);
-
+        
+        // 构建trace记录，限制数量
+        int count = 0;
+        for (Map.Entry<String, List<SpanData>> entry : spansByTraceId.entrySet()) {
+            if (count >= limit) {
+                break;
+            }
+            
+            String traceId = entry.getKey();
+            List<SpanData> spanList = entry.getValue();
+            
+            TraceData.TraceRecord traceRecord = new TraceData.TraceRecord();
+            traceRecord.setTraceId(traceId);
+            traceRecord.setSpans(spanList);
+            traceRecord.setProcesses(processesByTraceId.getOrDefault(traceId, new HashMap<>()));
+            
+            traces.add(traceRecord);
+            count++;
+        }
+        
         traceData.setData(traces);
         return traceData;
     }
 
     /**
-     * 模拟根据TraceID查询
+     * 转换Jaeger Span为项目中的SpanData
      */
-    private TraceData mockTraceByIdQuery(String traceId) {
-        TraceData traceData = new TraceData();
-        List<TraceData.TraceRecord> traces = new ArrayList<>();
-
-        TraceData.TraceRecord trace = createMockTraceWithId(traceId);
-        traces.add(trace);
-
-        traceData.setData(traces);
-        return traceData;
-    }
-
-    /**
-     * 创建模拟的trace记录
-     */
-    private TraceData.TraceRecord createMockTrace(String serviceName, String operationName, long startTime) {
-        TraceData.TraceRecord record = new TraceData.TraceRecord();
-        String traceId = UUID.randomUUID().toString().replace("-", "");
-        record.setTraceId(traceId);
-
-        // 创建模拟span
-        List<SpanData> spans = new ArrayList<>();
-
-        // 主span
-        SpanData rootSpan = createMockSpan(traceId, null, serviceName, operationName, startTime, 1000000L);
-        spans.add(rootSpan);
-
-        // 子span
-        SpanData childSpan = createMockSpan(traceId, rootSpan.getSpanId(), serviceName + "-db", "select", startTime + 100000L, 500000L);
-        spans.add(childSpan);
-
-        record.setSpans(spans);
-
-        // 创建进程信息
-        Map<String, ProcessData> processes = new HashMap<>();
-        ProcessData process = new ProcessData();
-        process.setServiceName(serviceName);
-        processes.put("p1", process);
-        record.setProcesses(processes);
-
-        return record;
-    }
-
-    /**
-     * 创建指定TraceID的模拟trace记录
-     */
-    private TraceData.TraceRecord createMockTraceWithId(String traceId) {
-        TraceData.TraceRecord record = new TraceData.TraceRecord();
-        record.setTraceId(traceId);
-
-        List<SpanData> spans = new ArrayList<>();
-        long startTime = System.currentTimeMillis() * 1000L;
-
-        SpanData span = createMockSpan(traceId, null, "test-service", "test-operation", startTime, 1000000L);
-        spans.add(span);
-
-        record.setSpans(spans);
-
-        Map<String, ProcessData> processes = new HashMap<>();
-        ProcessData process = new ProcessData();
-        process.setServiceName("test-service");
-        processes.put("p1", process);
-        record.setProcesses(processes);
-
-        return record;
-    }
-
-    /**
-     * 创建模拟span
-     */
-    private SpanData createMockSpan(String traceId, String parentSpanId, String serviceName,
-                                   String operationName, long startTime, long duration) {
-        SpanData span = new SpanData();
-        span.setTraceId(traceId);
-        span.setSpanId(generateSpanId());
-        span.setOperationName(operationName);
-        span.setStartTime(startTime);
-        span.setDuration(duration);
-        span.setProcessId("p1");
-
-        // 添加模拟标签
+    private SpanData convertSpan(Model.Span span) {
+        SpanData spanData = new SpanData();
+        
+        spanData.setTraceId(bytesToHex(span.getTraceId().toByteArray()));
+        spanData.setSpanId(bytesToHex(span.getSpanId().toByteArray()));
+        spanData.setOperationName(span.getOperationName());
+        spanData.setStartTime(span.getStartTime().getSeconds() * 1_000_000 + span.getStartTime().getNanos() / 1000);
+        spanData.setDuration(span.getDuration().getSeconds() * 1_000_000 + span.getDuration().getNanos() / 1000);
+        spanData.setProcessId(span.getProcessId());
+        spanData.setWarnings(span.getWarningsList());
+        
+        // 转换标签
         List<SpanData.Tag> tags = new ArrayList<>();
-        tags.add(createTag("service.name", "string", serviceName));
-        tags.add(createTag("span.kind", "string", "server"));
-        tags.add(createTag("http.status_code", "int64", 200));
-        span.setTags(tags);
-
-        return span;
+        for (Model.KeyValue keyValue : span.getTagsList()) {
+            SpanData.Tag tag = new SpanData.Tag();
+            tag.setKey(keyValue.getKey());
+            tag.setType(convertValueType(keyValue.getVType()));
+            tag.setValue(getValueFromKeyValue(keyValue));
+            tags.add(tag);
+        }
+        spanData.setTags(tags);
+        
+        // 转换引用关系
+        List<SpanData.SpanReference> references = new ArrayList<>();
+        for (Model.SpanRef spanRef : span.getReferencesList()) {
+            SpanData.SpanReference reference = new SpanData.SpanReference();
+            reference.setRefType(convertSpanRefType(spanRef.getRefType()));
+            reference.setTraceId(bytesToHex(spanRef.getTraceId().toByteArray()));
+            reference.setSpanId(bytesToHex(spanRef.getSpanId().toByteArray()));
+            references.add(reference);
+        }
+        spanData.setReferences(references);
+        
+        // 转换日志
+        List<SpanData.LogEntry> logs = new ArrayList<>();
+        for (Model.Log log : span.getLogsList()) {
+            SpanData.LogEntry logEntry = new SpanData.LogEntry();
+            logEntry.setTimestamp(log.getTimestamp().getSeconds() * 1_000_000 + log.getTimestamp().getNanos() / 1000);
+            
+            List<SpanData.Tag> logFields = new ArrayList<>();
+            for (Model.KeyValue keyValue : log.getFieldsList()) {
+                SpanData.Tag tag = new SpanData.Tag();
+                tag.setKey(keyValue.getKey());
+                tag.setType(convertValueType(keyValue.getVType()));
+                tag.setValue(getValueFromKeyValue(keyValue));
+                logFields.add(tag);
+            }
+            logEntry.setFields(logFields);
+            logs.add(logEntry);
+        }
+        spanData.setLogs(logs);
+        
+        return spanData;
     }
 
     /**
-     * 创建模拟标签
+     * 转换Jaeger Process为项目中的ProcessData
      */
-    private SpanData.Tag createTag(String key, String type, Object value) {
-        SpanData.Tag tag = new SpanData.Tag();
-        tag.setKey(key);
-        tag.setType(type);
-        tag.setValue(value);
-        return tag;
+    private ProcessData convertProcess(Model.Process process) {
+        ProcessData processData = new ProcessData();
+        processData.setServiceName(process.getServiceName());
+        
+        // 转换标签
+        List<SpanData.Tag> tags = new ArrayList<>();
+        for (Model.KeyValue keyValue : process.getTagsList()) {
+            SpanData.Tag tag = new SpanData.Tag();
+            tag.setKey(keyValue.getKey());
+            tag.setType(convertValueType(keyValue.getVType()));
+            tag.setValue(getValueFromKeyValue(keyValue));
+            tags.add(tag);
+        }
+        processData.setTags(tags);
+        
+        return processData;
     }
 
     /**
-     * 生成SpanID
+     * 转换ValueType为字符串表示
      */
-    private String generateSpanId() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    private String convertValueType(Model.ValueType valueType) {
+        switch (valueType) {
+            case STRING: return "string";
+            case BOOL: return "bool";
+            case INT64: return "int64";
+            case FLOAT64: return "float64";
+            case BINARY: return "binary";
+            default: return "string";
+        }
+    }
+
+    /**
+     * 从KeyValue中获取值
+     */
+    private Object getValueFromKeyValue(Model.KeyValue keyValue) {
+        switch (keyValue.getVType()) {
+            case STRING: return keyValue.getVStr();
+            case BOOL: return keyValue.getVBool();
+            case INT64: return keyValue.getVInt64();
+            case FLOAT64: return keyValue.getVFloat64();
+            case BINARY: return keyValue.getVBinary().toByteArray();
+            default: return keyValue.getVStr();
+        }
+    }
+
+    /**
+     * 转换SpanRefType为字符串表示
+     */
+    private String convertSpanRefType(Model.SpanRefType refType) {
+        switch (refType) {
+            case CHILD_OF: return "CHILD_OF";
+            case FOLLOWS_FROM: return "FOLLOWS_FROM";
+            default: return "CHILD_OF";
+        }
+    }
+
+    /**
+     * 将字节数组转换为十六进制字符串
+     */
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
     }
 
     /**
@@ -314,5 +383,6 @@ public class JaegerQueryService {
             }
         }
         channelCache.clear();
+        stubCache.clear();
     }
 }

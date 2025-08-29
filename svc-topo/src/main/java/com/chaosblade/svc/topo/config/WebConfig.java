@@ -1,4 +1,4 @@
-package com.topo.visualizer.config;
+package com.chaosblade.svc.topo.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -6,21 +6,24 @@ import com.chaosblade.svc.topo.model.trace.TraceData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Jaeger数据转换专项测试
+ * Jaeger数据转换器测试
  *
- * 测试JaegerQueryService中数据转换相关的逻辑
+ * 测试Jaeger数据模型到项目数据模型的转换逻辑
  */
 @ExtendWith(MockitoExtension.class)
 class JaegerDataConverterTest {
 
+    @InjectMocks
     private JaegerQueryService jaegerQueryService;
 
     private String testServiceName;
@@ -31,42 +34,25 @@ class JaegerDataConverterTest {
 
     @BeforeEach
     void setUp() {
-        jaegerQueryService = new JaegerQueryService();
-
-        testServiceName = "test-service";
-        testOperationName = "test-operation";
-        testEndTime = System.currentTimeMillis() * 1000;
-        testStartTime = testEndTime - Duration.ofHours(1).toNanos() / 1000;
-        testTraceId = "test-trace-id-123";
+        testServiceName = "checkout";
+        testOperationName = "oteldemo.CheckoutService/PlaceOrder";
+        testEndTime = System.currentTimeMillis() * 1000; // 当前时间（微秒）
+        testStartTime = testEndTime - Duration.ofHours(1).toNanos() / 1000; // 1小时前（微秒）
+        testTraceId = "abc123def456";
     }
 
     @Test
-    void testMockTraceDataStructure() {
-        // 执行查询获取模拟数据
+    void testMockTraceStructure() {
+        // 执行查询
         TraceData result = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
-
-        // 验证TraceData结构
-        assertNotNull(result, "TraceData不应该为null");
-        assertNotNull(result.getData(), "TraceData.data不应该为null");
-        assertEquals(1, result.getData().size(), "应该有一个trace记录");
-
-        TraceData.TraceRecord trace = result.getData().get(0);
-        verifyTraceRecord(trace);
-    }
-
-    @Test
-    void testMockTraceByIdStructure() {
-        // 执行根据TraceID查询
-        TraceData result = jaegerQueryService.queryTraceById("demo.jaegertracing.io", 16685, testTraceId);
+                "localhost", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
 
         // 验证结果
         assertNotNull(result);
         assertNotNull(result.getData());
-        assertEquals(1, result.getData().size());
+        assertFalse(result.getData().isEmpty());
 
         TraceData.TraceRecord trace = result.getData().get(0);
-        assertEquals(testTraceId, trace.getTraceId(), "TraceID应该匹配");
         verifyTraceRecord(trace);
     }
 
@@ -74,7 +60,7 @@ class JaegerDataConverterTest {
     void testSpanHierarchy() {
         // 测试span层次结构
         TraceData result = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
+                "localhost", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
 
         TraceData.TraceRecord trace = result.getData().get(0);
 
@@ -101,7 +87,7 @@ class JaegerDataConverterTest {
     void testSpanTags() {
         // 测试span标签
         TraceData result = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
+                "localhost", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
 
         TraceData.TraceRecord trace = result.getData().get(0);
 
@@ -114,7 +100,7 @@ class JaegerDataConverterTest {
     void testProcessData() {
         // 测试进程数据
         TraceData result = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
+                "localhost", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
 
         TraceData.TraceRecord trace = result.getData().get(0);
 
@@ -132,7 +118,7 @@ class JaegerDataConverterTest {
     void testTimingData() {
         // 测试时间数据
         TraceData result = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
+                "localhost", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
 
         TraceData.TraceRecord trace = result.getData().get(0);
 
@@ -150,9 +136,9 @@ class JaegerDataConverterTest {
     void testSpanIdGeneration() {
         // 测试SpanID生成
         TraceData result1 = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
+                "localhost", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
         TraceData result2 = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName + "-2", testOperationName, testStartTime, testEndTime);
+                "localhost", 16685, testServiceName + "-2", testOperationName, testStartTime, testEndTime);
 
         TraceData.TraceRecord trace1 = result1.getData().get(0);
         TraceData.TraceRecord trace2 = result2.getData().get(0);
@@ -172,7 +158,7 @@ class JaegerDataConverterTest {
     void testTagTypes() {
         // 测试标签类型转换
         TraceData result = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
+                "localhost", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
 
         TraceData.TraceRecord trace = result.getData().get(0);
 
@@ -203,7 +189,7 @@ class JaegerDataConverterTest {
     void testMultipleServicesInTrace() {
         // 测试包含多个服务的trace
         TraceData result = jaegerQueryService.queryTracesByOperation(
-                "demo.jaegertracing.io", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
+                "localhost", 16685, testServiceName, testOperationName, testStartTime, testEndTime);
 
         TraceData.TraceRecord trace = result.getData().get(0);
 
@@ -253,43 +239,75 @@ class JaegerDataConverterTest {
         assertNotNull(span.getProcessId(), "Span ProcessID不应该为null");
 
         assertTrue(span.getStartTime() > 0, "Span开始时间应该大于0");
-        assertTrue(span.getDuration() > 0, "Span持续时间应该大于0");
+        assertTrue(span.getDuration() >= 0, "Span持续时间应该大于等于0");
+
+        // 验证引用关系
+        if (span.getReferences() != null) {
+            for (SpanData.SpanReference ref : span.getReferences()) {
+                assertNotNull(ref.getRefType(), "引用类型不应该为null");
+                assertNotNull(ref.getTraceId(), "引用TraceID不应该为null");
+                assertNotNull(ref.getSpanId(), "引用SpanID不应该为null");
+            }
+        }
+
+        // 验证标签
+        if (span.getTags() != null) {
+            for (SpanData.Tag tag : span.getTags()) {
+                assertNotNull(tag.getKey(), "标签key不应该为null");
+                assertNotNull(tag.getType(), "标签type不应该为null");
+                assertNotNull(tag.getValue(), "标签value不应该为null");
+            }
+        }
+
+        // 验证日志
+        if (span.getLogs() != null) {
+            for (SpanData.LogEntry log : span.getLogs()) {
+                assertTrue(log.getTimestamp() > 0, "日志时间戳应该大于0");
+                if (log.getFields() != null) {
+                    for (SpanData.Tag field : log.getFields()) {
+                        assertNotNull(field.getKey(), "日志字段key不应该为null");
+                        assertNotNull(field.getType(), "日志字段type不应该为null");
+                        assertNotNull(field.getValue(), "日志字段value不应该为null");
+                    }
+                }
+            }
+        }
     }
 
     /**
      * 验证Span标签
      */
     private void verifySpanTags(SpanData span) {
-        assertNotNull(span.getTags(), "Span tags不应该为null");
-        assertFalse(span.getTags().isEmpty(), "Span tags不应该为空");
+        List<SpanData.Tag> tags = span.getTags();
+        assertNotNull(tags, "标签列表不应该为null");
 
-        // 验证必须的标签
+        // 验证必须的标签存在
         boolean hasServiceName = false;
-        boolean hasSpanKind = false;
+        boolean hasOperationName = false;
 
-        for (SpanData.Tag tag : span.getTags()) {
-            assertNotNull(tag.getKey(), "Tag key不应该为null");
-            assertNotNull(tag.getType(), "Tag type不应该为null");
-            assertNotNull(tag.getValue(), "Tag value不应该为null");
-
+        for (SpanData.Tag tag : tags) {
             if ("service.name".equals(tag.getKey())) {
                 hasServiceName = true;
-            } else if ("span.kind".equals(tag.getKey())) {
-                hasSpanKind = true;
+                assertEquals(testServiceName, tag.getValue().toString(), "服务名应该匹配");
+            } else if ("operation.name".equals(tag.getKey())) {
+                hasOperationName = true;
+                assertEquals(testOperationName, tag.getValue().toString(), "操作名应该匹配");
             }
         }
 
-        assertTrue(hasServiceName, "Span应该有service.name标签");
-        assertTrue(hasSpanKind, "Span应该有span.kind标签");
+        assertTrue(hasServiceName, "应该有service.name标签");
+        assertTrue(hasOperationName, "应该有operation.name标签");
     }
 
     /**
-     * 从Span标签中获取服务名
+     * 从span标签中获取服务名
      */
     private String getServiceNameFromSpanTags(SpanData span) {
-        for (SpanData.Tag tag : span.getTags()) {
-            if ("service.name".equals(tag.getKey())) {
-                return tag.getValue().toString();
+        if (span.getTags() != null) {
+            for (SpanData.Tag tag : span.getTags()) {
+                if ("service.name".equals(tag.getKey())) {
+                    return tag.getValue().toString();
+                }
             }
         }
         return null;

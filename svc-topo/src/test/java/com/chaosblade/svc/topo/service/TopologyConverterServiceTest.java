@@ -122,7 +122,7 @@ class TopologyConverterServiceTest {
 
         // 创建Process数据
         ProcessData process = new ProcessData();
-        process.setServiceName("test-service");
+        process.setServiceName("checkout");
 
         Map<String, ProcessData> processes = new HashMap<>();
         processes.put("p1", process);
@@ -132,14 +132,14 @@ class TopologyConverterServiceTest {
         SpanData span = new SpanData();
         span.setSpanId("test-span-id");
         span.setTraceId("test-trace-id");
-        span.setOperationName("test-operation");
+        span.setOperationName("oteldemo.CheckoutService/PlaceOrder");
         span.setProcessId("p1");
         span.setDuration(100L);
 
         // 添加service.name标签
         SpanData.Tag serviceTag = new SpanData.Tag();
         serviceTag.setKey("service.name");
-        serviceTag.setValue("test-service");
+        serviceTag.setValue("checkout");
 
         List<SpanData.Tag> tags = new ArrayList<>();
         tags.add(serviceTag);

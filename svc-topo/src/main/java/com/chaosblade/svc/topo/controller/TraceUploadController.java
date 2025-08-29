@@ -4,8 +4,6 @@ import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import com.chaosblade.svc.topo.model.trace.TraceData;
 import com.chaosblade.svc.topo.service.TopologyConverterService;
 import com.chaosblade.svc.topo.service.TraceParserService;
-import com.chaosblade.svc.topo.service.JaegerQueryService;
-import com.chaosblade.svc.topo.model.JaegerFetchRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,9 +34,6 @@ public class TraceUploadController {
 
     @Autowired
     private TopologyConverterService topologyConverterService;
-    
-    @Autowired
-    private JaegerQueryService jaegerQueryService;
 
     /**
      * 上传多个trace文件并生成合并的拓扑可视化
@@ -284,93 +279,6 @@ public class TraceUploadController {
         }
     }
 
-    /**
-     * 从Jaeger获取Trace数据并生成拓扑图
-     */
-    @PostMapping("/jaeger/fetch")
-    public ResponseEntity<Map<String, Object>> fetchTraceFromJaeger(@RequestBody JaegerFetchRequest request) {
-        logger.info("收到从Jaeger获取trace数据请求: host={}, service={}, operation={}", 
-                   request.getJaegerHost(), request.getServiceName(), request.getOperationName());
-        
-        try {
-            // 1. 验证请求参数
-            if (request.getJaegerHost() == null || request.getJaegerHost().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Jaeger主机地址不能为空", "EMPTY_JAEGER_HOST"));
-            }
-            
-            if (request.getServiceName() == null || request.getServiceName().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("服务名称不能为空", "EMPTY_SERVICE_NAME"));
-            }
-            
-            if (request.getOperationName() == null || request.getOperationName().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("操作名称不能为空", "EMPTY_OPERATION_NAME"));
-            }
-            
-            if (request.getStartTime() >= request.getEndTime()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("开始时间必须小于结束时间", "INVALID_TIME_RANGE"));
-            }
-            
-            // 2. 调用Jaeger查询服务获取数据
-            TraceData traceData = jaegerQueryService.queryTracesByOperation(
-                request.getJaegerHost(), 
-                request.getPort(), 
-                request.getServiceName(),
-                request.getOperationName(),
-                request.getStartTime(),
-                request.getEndTime()
-            );
-            
-            if (traceData == null || traceData.getData() == null || traceData.getData().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("未获取到trace数据", "NO_TRACE_DATA"));
-            }
-            
-            // 3. 转换为拓扑图
-            TopologyGraph topology = topologyConverterService.convertTraceToTopology(traceData);
-            topologyConverterService.setCurrentTopology(topology);
-            
-            // 4. 提取统计信息
-            Set<String> serviceNames = traceParserService.extractServiceNames(traceData);
-            TopologyGraph.GraphStatistics statistics = topology.getStatistics();
-            
-            // 5. 构建响应
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "从Jaeger获取trace数据成功");
-            response.put("jaegerHost", request.getJaegerHost());
-            response.put("serviceName", request.getServiceName());
-            response.put("operationName", request.getOperationName());
-            response.put("processedAt", System.currentTimeMillis());
-            
-            // 数据统计
-            Map<String, Object> stats = new HashMap<>();
-            stats.put("serviceCount", serviceNames.size());
-            stats.put("nodeCount", statistics.getNodeCount());
-            stats.put("edgeCount", statistics.getEdgeCount());
-            stats.put("serviceNames", serviceNames);
-            stats.put("nodeTypeCount", statistics.getNodeTypeCount());
-            stats.put("edgeTypeCount", statistics.getEdgeTypeCount());
-            response.put("statistics", stats);
-            
-            // 生成的数据
-            response.put("topology", topology);
-            
-            logger.info("从Jaeger获取trace数据处理完成: {} 个服务, {} 个节点, {} 条边",
-                       serviceNames.size(), statistics.getNodeCount(), statistics.getEdgeCount());
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            logger.error("从Jaeger获取trace数据时发生错误: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("获取数据时发生错误: " + e.getMessage(), "FETCH_ERROR"));
-        }
-    }
-    
     /**
      * 验证文件格式
      */

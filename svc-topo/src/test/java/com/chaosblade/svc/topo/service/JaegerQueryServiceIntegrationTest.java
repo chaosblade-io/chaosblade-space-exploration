@@ -41,7 +41,7 @@ class JaegerQueryServiceIntegrationTest {
 
         // 从JVM系统属性或环境变量获取配置
         jaegerHost = System.getProperty("jaeger.host",
-                     System.getenv().getOrDefault("JAEGER_HOST", "demo.jaegertracing.io"));
+                     System.getenv().getOrDefault("JAEGER_HOST", "localhost"));
         jaegerPort = Integer.parseInt(System.getProperty("jaeger.port",
                      System.getenv().getOrDefault("JAEGER_PORT", "16685")));
 
@@ -77,19 +77,6 @@ class JaegerQueryServiceIntegrationTest {
 
         assertNotNull(trace.getProcesses(), "Processes不应该为null");
         assertFalse(trace.getProcesses().isEmpty(), "应该有至少一个process");
-    }
-
-    @Test
-    void testQueryTraceByIdWithMockData() {
-        // 测试根据TraceID查询
-        TraceData result = jaegerQueryService.queryTraceById(jaegerHost, jaegerPort, testTraceId);
-
-        assertNotNull(result);
-        assertNotNull(result.getData());
-        assertFalse(result.getData().isEmpty());
-
-        TraceData.TraceRecord trace = result.getData().get(0);
-        assertEquals(testTraceId, trace.getTraceId(), "TraceID应该与查询的ID一致");
     }
 
     @Test
