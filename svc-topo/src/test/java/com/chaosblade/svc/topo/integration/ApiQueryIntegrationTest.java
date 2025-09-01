@@ -94,7 +94,7 @@ public class ApiQueryIntegrationTest {
         // 验证结果
         assertNotNull(response);
         assertNotNull(response.getItems());
-        
+
         System.out.println("查询结果项数: " + response.getItems().size());
         for (ApiQueryResponse.ApiItem item : response.getItems()) {
             System.out.println("API项 - 名称: " + item.getDisplayName() +
@@ -124,7 +124,7 @@ public class ApiQueryIntegrationTest {
 
         ApiQueryRequest.AppSelector appSelector = new ApiQueryRequest.AppSelector();
         // 使用实际存在的服务名称
-        appSelector.setServices(java.util.Arrays.asList("frontend-proxy"));
+        appSelector.setServices(java.util.Arrays.asList("cart"));
         request.setAppSelector(appSelector);
 
         // 执行查询
@@ -134,13 +134,13 @@ public class ApiQueryIntegrationTest {
         assertNotNull(response);
         assertNotNull(response.getItems());
 
-        System.out.println("服务过滤查询结果项数: " + response.getItems().size());
+        System.out.println("服务过滤查询结果 API  项数: " + response.getItems().size());
         // 验证所有返回的API都属于frontend-proxy服务
         for (ApiQueryResponse.ApiItem item : response.getItems()) {
             System.out.println("API项 - 名称: " + item.getDisplayName() +
                              ", 服务: " + item.getProviderService().getServiceId() +
                              ", 命名空间: " + item.getNamespace());
-            assertTrue(item.getProviderService().getServiceId().contains("frontend-proxy"));
+            assertTrue(item.getProviderService().getServiceId().contains("cart"));
         }
     }
 
@@ -157,14 +157,14 @@ public class ApiQueryIntegrationTest {
         // 验证结果
         assertNotNull(response);
         assertNotNull(response.getItems());
-        
+
         System.out.println("空appSelector查询结果项数: " + response.getItems().size());
         for (ApiQueryResponse.ApiItem item : response.getItems()) {
             System.out.println("API项 - 名称: " + item.getDisplayName() +
                              ", 服务: " + item.getProviderService().getServiceId() +
                              ", 命名空间: " + item.getNamespace());
         }
-        
+
         // 验证返回了正确的API数量（应该返回所有匹配命名空间的API项）
         // 在setUp方法中，我们看到命名空间"default"过滤后返回了21个API项
         assertEquals(21, response.getItems().size());
@@ -185,14 +185,14 @@ public class ApiQueryIntegrationTest {
         // 验证结果
         assertNotNull(response);
         assertNotNull(response.getItems());
-        
+
         System.out.println("null services列表查询结果项数: " + response.getItems().size());
         for (ApiQueryResponse.ApiItem item : response.getItems()) {
             System.out.println("API项 - 名称: " + item.getDisplayName() +
                              ", 服务: " + item.getProviderService().getServiceId() +
                              ", 命名空间: " + item.getNamespace());
         }
-        
+
         // 验证返回了正确的API数量（应该返回所有匹配命名空间的API项）
         assertEquals(21, response.getItems().size());
     }
@@ -212,14 +212,14 @@ public class ApiQueryIntegrationTest {
         // 验证结果
         assertNotNull(response);
         assertNotNull(response.getItems());
-        
+
         System.out.println("空services列表查询结果项数: " + response.getItems().size());
         for (ApiQueryResponse.ApiItem item : response.getItems()) {
             System.out.println("API项 - 名称: " + item.getDisplayName() +
                              ", 服务: " + item.getProviderService().getServiceId() +
                              ", 命名空间: " + item.getNamespace());
         }
-        
+
         // 验证返回了正确的API数量（应该返回所有匹配命名空间的API项）
         assertEquals(21, response.getItems().size());
     }

@@ -2,9 +2,8 @@ package com.chaosblade.svc.topo.service;
 
 import com.chaosblade.svc.topo.model.ApiQueryRequest;
 import com.chaosblade.svc.topo.model.ApiQueryResponse;
-import com.chaosblade.svc.topo.model.entity.Entity;
-import com.chaosblade.svc.topo.model.entity.EntityType;
-import com.chaosblade.svc.topo.model.entity.Node;
+import com.chaosblade.svc.topo.model.TopologyByApiRequest;
+import com.chaosblade.svc.topo.model.entity.*;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,7 @@ public class ApiQueryService {
     public ApiQueryResponse queryApisFromTopology(TopologyGraph topology, ApiQueryRequest request) {
         logger.info("开始查询API列表，命名空间: {}, 服务数: {}",
             request.getNamespace(),
-            request.getAppSelector() != null && request.getAppSelector().getServices() != null ? 
+            request.getAppSelector() != null && request.getAppSelector().getServices() != null ?
                 request.getAppSelector().getServices().size() : 0);
 
         try {
@@ -327,5 +326,75 @@ public class ApiQueryService {
         }
 
         return result;
+    }
+
+    /**
+     * 根据API ID查询相关的上下游节点和边
+     *
+     * @param topology 当前拓扑图
+     * @param request  查询请求
+     * @return 包含指定API节点的上下游信息的拓扑图
+     */
+    public TopologyGraph queryTopologyByApiId(TopologyGraph topology, TopologyByApiRequest request) {
+        logger.info("开始查询API关联的拓扑信息，API ID: {}, 命名空间: {}",
+            request.getApiId(),
+            request.getNamespace());
+
+        try {
+            // 创建新的拓扑图来存储结果
+            TopologyGraph resultTopology = new TopologyGraph();
+
+            // 查找指定的API节点
+            Node targetNode = null;
+            for (Node node : topology.getNodes()) {
+                if (node.getEntity() != null &&
+                    request.getApiId().equals(node.getEntity().getEntityId()) &&
+                    filterByNamespace(node, request.getNamespace())) {
+                    targetNode = node;
+                    break;
+                }
+            }
+
+            // 如果找不到目标节点，返回空的拓扑图
+            if (targetNode == null) {
+                logger.warn("未找到指定的API节点: {}", request.getApiId());
+                return resultTopology;
+            }
+
+            // 添加目标节点到结果拓扑图
+            resultTopology.addNode(targetNode);
+
+            // 查找上游节点（唯一）
+            List<Edge> incomingEdges = topology.getIncomingEdges(targetNode.getNodeId());
+            if (!incomingEdges.isEmpty()) {
+                // 取第一个上游节点
+                // fixme 无约束
+                Edge upstreamEdge = incomingEdges.get(0);
+                Node upstreamNode = topology.getNode(upstreamEdge.getFrom());
+                if (upstreamNode != null) {
+                    resultTopology.addNode(upstreamNode);
+                    resultTopology.addEdge(upstreamEdge);
+                }
+            }
+
+            // 查找所有下游节点
+            List<Edge> outgoingEdges = topology.getOutgoingEdges(targetNode.getNodeId());
+            for (Edge edge : outgoingEdges) {
+                Node downstreamNode = topology.getNode(edge.getTo());
+                if (downstreamNode != null) {
+                    resultTopology.addNode(downstreamNode);
+                    resultTopology.addEdge(edge);
+                }
+            }
+
+            logger.info("查询完成，共找到 {} 个节点和 {} 条边",
+                resultTopology.getNodes().size(),
+                resultTopology.getEdges().size());
+
+            return resultTopology;
+        } catch (Exception e) {
+            logger.error("查询API关联的拓扑信息时发生错误: {}", e.getMessage(), e);
+            throw new RuntimeException("查询API关联的拓扑信息失败", e);
+        }
     }
 }
