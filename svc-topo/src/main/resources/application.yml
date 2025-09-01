@@ -41,17 +41,16 @@ topo:
         graph:
             max-nodes: 10000
             max-edges: 50000
+        mock: true
 
 # 拓扑自动刷新配置
 topology:
     auto-refresh:
         enabled: true                    # 是否启用自动刷新
-        interval: 15000                  # 刷新间隔（毫秒），15秒
-        time-range-minutes: 1           # 查询时间范围（分钟）
+        interval: 15000                  # 刷新间隔（毫秒）
+        time-range-minutes: 5           # 查询时间范围（分钟）
         jaeger:
             host: localhost                # Jaeger 主机地址
             port: 16685                    # Jaeger gRPC 端口
-#        service-name: checkout           # 默认查询的服务名
-#        operation-name: oteldemo.CheckoutService/PlaceOrder              # 默认查询的操作名
         service-name: frontend-proxy           # 默认查询的服务名
         operation-name: ingress              # 默认查询的操作名

@@ -74,21 +74,14 @@ public class ProcessData {
      * 获取主机名
      */
     public String getHostName() {
-        return getTagValue("hostname");
+        return getTagValue("k8s.node.name");
     }
 
     /**
      * 获取IP地址
      */
     public String getIpAddress() {
-        return getTagValue("ip");
-    }
-
-    /**
-     * 获取Jaeger版本
-     */
-    public String getJaegerVersion() {
-        return getTagValue("jaeger.version");
+        return getTagValue("k8s.pod.ip");
     }
 
     /**
@@ -111,36 +104,8 @@ public class ProcessData {
         if (namespace == null) {
             namespace = "default";
         }
-        
+
         return namespace;
-    }
-
-    /**
-     * 获取Kubernetes容器名称
-     */
-    public String getKubernetesContainerName() {
-        return getTagValue("k8s.container.name");
-    }
-
-    /**
-     * 获取telemetry SDK名称
-     */
-    public String getTelemetrySdkName() {
-        return getTagValue("telemetry.sdk.name");
-    }
-
-    /**
-     * 获取telemetry SDK版本
-     */
-    public String getTelemetrySdkVersion() {
-        return getTagValue("telemetry.sdk.version");
-    }
-
-    /**
-     * 获取telemetry SDK语言
-     */
-    public String getTelemetrySdkLanguage() {
-        return getTagValue("telemetry.sdk.language");
     }
 
     /**
@@ -155,14 +120,7 @@ public class ProcessData {
         if (region == null) {
             region = getTagValue("deployment.environment");
         }
-        return region != null ? region : "default";
-    }
-
-    /**
-     * 判断是否为Kubernetes环境
-     */
-    public boolean isKubernetesEnvironment() {
-        return getKubernetesPodName() != null || getKubernetesNamespace() != null;
+        return region != null ? region : "unknown";
     }
 
     @Override

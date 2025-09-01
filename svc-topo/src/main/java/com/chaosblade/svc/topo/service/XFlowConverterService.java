@@ -45,11 +45,7 @@ public class XFlowConverterService {
             TopologyGraph topology = topologyConverterService.getCurrentTopology();
             if (topology == null || topology.isEmpty()) {
                 logger.warn("当前拓扑数据为空");
-//                return createEmptyXFlowData();
-
-                logger.warn("测试环境返回 dummy 数据");
-                return createDummyXFlowData();
-
+                return createEmptyXFlowData();
             }
 
             return convertToXFlow(topology);
@@ -63,7 +59,7 @@ public class XFlowConverterService {
      * 刷新并获取 XFlow 数据
      */
     public Map<String, Object> refreshAndGetXFlowData() {
-        // 这里可以添加刷新逻辑，目前直接返回当前数据
+        // todo 这里可以添加刷新逻辑，目前直接返回当前数据
         return getCurrentTopologyAsXFlow();
     }
 
@@ -97,8 +93,8 @@ public class XFlowConverterService {
      */
     private List<Map<String, Object>> convertNodes(List<Node> nodes) {
         return nodes.stream()
-                .map(this::convertNode)
-                .collect(Collectors.toList());
+            .map(this::convertNode)
+            .collect(Collectors.toList());
     }
 
     /**
@@ -144,8 +140,8 @@ public class XFlowConverterService {
      */
     private List<Map<String, Object>> convertEdges(List<Edge> edges) {
         return edges.stream()
-                .map(this::convertEdge)
-                .collect(Collectors.toList());
+            .map(this::convertEdge)
+            .collect(Collectors.toList());
     }
 
     /**
@@ -519,8 +515,8 @@ public class XFlowConverterService {
             }
 
             Optional<Node> nodeOpt = topology.getNodes().stream()
-                    .filter(node -> node.getNodeId().equals(nodeId))
-                    .findFirst();
+                .filter(node -> node.getNodeId().equals(nodeId))
+                .findFirst();
 
             if (nodeOpt.isPresent()) {
                 Node node = nodeOpt.get();
@@ -587,40 +583,16 @@ public class XFlowConverterService {
         result.put("nodes", new ArrayList<>());
         result.put("edges", new ArrayList<>());
         result.put("statistics", Map.of(
-                "nodeCount", 0,
-                "edgeCount", 0
+            "nodeCount", 0,
+            "edgeCount", 0
         ));
         result.put("metadata", createMetadata());
         return result;
     }
 
     /**
-     * 创建 Duumy XFlow 数据
+     * 创建统计信息
      */
-    private Map<String, Object> createDummyXFlowData() {
-        try {
-            // 读取指定的 JSON 文件
-            String filePath = "/Users/leo/IdeaProjects/chaosblade-space-exploration/svc-topo/docs/topo-schema/xflow.json";
-            String content = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(filePath)));
-            ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, Object> jsonData = objectMapper.readValue(content, Map.class);
-
-            // 构造 XFlow 数据结构
-            Map<String, Object> result = new HashMap<>();
-            result.put("nodes", jsonData.get("nodes"));
-            result.put("edges", jsonData.get("edges"));
-            result.put("statistics", jsonData.get("statistics"));
-            result.put("metadata", jsonData.get("metadata"));
-
-            return result;
-        } catch (Exception e) {
-            logger.error("读取或转换 dummy 数据失败", e);
-            return createEmptyXFlowData(); // 出错时返回空数据
-        }
-    }
-        /**
-         * 创建统计信息
-         */
     private Map<String, Object> createStatistics(TopologyGraph topology) {
         Map<String, Object> stats = new HashMap<>();
         stats.put("nodeCount", topology.getNodes().size());
@@ -628,12 +600,12 @@ public class XFlowConverterService {
 
         // 节点类型统计
         Map<EntityType, Long> nodeTypeCount = topology.getNodes().stream()
-                .collect(Collectors.groupingBy(Node::getEntityType, Collectors.counting()));
+            .collect(Collectors.groupingBy(Node::getEntityType, Collectors.counting()));
         stats.put("nodeTypeCount", nodeTypeCount);
 
         // 边类型统计
         Map<RelationType, Long> edgeTypeCount = topology.getEdges().stream()
-                .collect(Collectors.groupingBy(Edge::getType, Collectors.counting()));
+            .collect(Collectors.groupingBy(Edge::getType, Collectors.counting()));
         stats.put("edgeTypeCount", edgeTypeCount);
 
         return stats;

@@ -2,13 +2,16 @@ package com.chaosblade.svc.topo.service;
 
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import com.chaosblade.svc.topo.model.trace.TraceData;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
 import java.time.Duration;
 
 /**
@@ -51,6 +54,10 @@ public class TopologyAutoRefreshService {
 
     @Value("${topology.auto-refresh.enabled:true}")
     private boolean autoRefreshEnabled;
+
+    // 是否启用mock模式，如果为true则从本地文件读取trace数据而不是从Jaeger拉取
+    @Value("${topo.visualizer.mock:false}")
+    private boolean mockMode;
 
     private volatile boolean isRefreshing = false;
     private long lastRefreshTime = 0;
@@ -109,26 +116,34 @@ public class TopologyAutoRefreshService {
     private void refreshTopologyData() {
         logger.debug("开始刷新拓扑数据，从 Jaeger 查询 trace 数据");
 
-        // 计算查询时间范围：当前时间向前推 timeRangeMinutes 分钟
-        long endTime = System.currentTimeMillis() * 1000; // 转换为微秒
-        long startTime = endTime - Duration.ofMinutes(timeRangeMinutes).toNanos() / 1000; // 向前推指定分钟数
-
         try {
-            // 1. 从 Jaeger 查询最新的 trace 数据
-            TraceData traceData = jaegerQueryService.queryTracesByOperation(
-                    jaegerHost, jaegerPort, serviceName, operationName, startTime, endTime);
+            TraceData traceData;
+
+            if (mockMode) {
+                // 如果启用mock模式，从本地文件读取trace数据
+                traceData = loadMockTraceData();
+                logger.info("使用mock模式加载trace数据");
+            } else {
+                // 计算查询时间范围：当前时间向前推 timeRangeMinutes 分钟
+                long endTime = System.currentTimeMillis() * 1000; // 转换为微秒
+                long startTime = endTime - Duration.ofMinutes(timeRangeMinutes).toNanos() / 1000; // 向前推指定分钟数
+
+                // 从 Jaeger 查询最新的 trace 数据
+                traceData = jaegerQueryService.queryTracesByOperation(
+                        jaegerHost, jaegerPort, serviceName, operationName, startTime, endTime);
+            }
 
             if (traceData == null || traceData.getData() == null || traceData.getData().isEmpty()) {
-                logger.warn("从 Jaeger 查询到的 trace 数据为空，使用当前拓扑数据");
+                logger.warn("获取 trace 记录为空、没刷新");
                 return;
             }
 
-            logger.debug("从 Jaeger 查询到 {} 条 trace 记录", traceData.getData().size());
+            logger.debug("获取到 {} 条 trace 记录", traceData.getData().size());
 
-            // 2. 转换为拓扑图
+            // 转换为拓扑图
             TopologyGraph newTopology = topologyConverterService.convertTraceToTopology(traceData);
 
-            // 3. 更新当前拓扑
+            // 更新当前拓扑
             topologyConverterService.setCurrentTopology(newTopology);
 
             logger.debug("成功更新拓扑数据：{} 个节点，{} 条边",
@@ -147,6 +162,31 @@ public class TopologyAutoRefreshService {
     }
 
     /**
+     * 从本地文件加载mock的trace数据
+     */
+    private TraceData loadMockTraceData() {
+        try {
+            logger.debug("从本地文件加载mock trace数据");
+
+            // 从classpath加载trace文件
+            ClassPathResource resource = new ClassPathResource("topo-schema/trace-mock.json");
+            InputStream inputStream = resource.getInputStream();
+
+            // 使用ObjectMapper解析JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            TraceData traceData = objectMapper.readValue(inputStream, TraceData.class);
+
+            logger.debug("成功加载mock trace数据，包含 {} 条记录",
+                        traceData.getData() != null ? traceData.getData().size() : 0);
+
+            return traceData;
+        } catch (Exception e) {
+            logger.error("加载mock trace数据失败: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to load mock trace data", e);
+        }
+    }
+
+    /**
      * 获取刷新状态信息
      */
     public RefreshStatus getRefreshStatus() {
@@ -161,6 +201,7 @@ public class TopologyAutoRefreshService {
         status.setServiceName(serviceName);
         status.setOperationName(operationName);
         status.setTimeRangeMinutes(timeRangeMinutes);
+        status.setMockMode(mockMode);
         return status;
     }
 
@@ -208,6 +249,7 @@ public class TopologyAutoRefreshService {
         private String serviceName;
         private String operationName;
         private int timeRangeMinutes;
+        private boolean mockMode;
 
         // Getters and Setters
         public boolean isEnabled() {
@@ -288,6 +330,14 @@ public class TopologyAutoRefreshService {
 
         public void setTimeRangeMinutes(int timeRangeMinutes) {
             this.timeRangeMinutes = timeRangeMinutes;
+        }
+
+        public boolean isMockMode() {
+            return mockMode;
+        }
+
+        public void setMockMode(boolean mockMode) {
+            this.mockMode = mockMode;
         }
     }
 }

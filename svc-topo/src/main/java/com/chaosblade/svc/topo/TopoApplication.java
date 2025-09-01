@@ -26,8 +26,6 @@ public class TopoApplication {
     public static void main(String[] args) {
         SpringApplication.run(TopoApplication.class, args);
         System.out.println("\n=== Topology Visualizer Started ===");
-        System.out.println("🚀 Application is running on: http://localhost:8080/");
-        System.out.println("📊 Ready to process OpenTelemetry trace files!");
         System.out.println("==========================================\n");
     }
 

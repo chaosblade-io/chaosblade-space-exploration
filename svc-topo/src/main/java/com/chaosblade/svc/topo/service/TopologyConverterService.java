@@ -147,7 +147,8 @@ public class TopologyConverterService {
         for (String namespace : namespaces) {
             Entity entity = new Entity("ns-" + namespace, EntityType.NAMESPACE, namespace + " Namespace");
             entity.setName(namespace);
-            entity.setRegionId("default");
+            entity.setNamespace(namespace); // 设置 namespace 字段
+            entity.setRegionId("unknown");
 
             Node node = new Node(entity.getEntityId(), entity);
             node.setRedMetrics(RedMetrics.success());
@@ -169,6 +170,7 @@ public class TopologyConverterService {
 
             Entity entity = new Entity("svc-" + serviceName, EntityType.SERVICE, serviceName + " Service");
             entity.setName(serviceName);
+            entity.setNamespace(process.getKubernetesNamespace()); // 设置 namespace 字段
             entity.setAppId(serviceName + "@" + process.getKubernetesNamespace());
             entity.setRegionId(process.getRegion());
 
@@ -197,6 +199,8 @@ public class TopologyConverterService {
                 servicePods.computeIfAbsent(serviceName, k -> new HashSet<>()).add(podName);
 
                 Entity entity = new Entity("pod-" + podName, EntityType.POD, podName + " Pod");
+                entity.setName(podName); // 设置 name 字段
+                entity.setNamespace(process.getKubernetesNamespace()); // 设置 namespace 字段
                 entity.setAppId(serviceName + "@" + process.getKubernetesNamespace());
                 entity.setRegionId(process.getRegion());
                 entity.addAttribute("ip", ip);
@@ -226,7 +230,9 @@ public class TopologyConverterService {
         for (String hostName : hostNames) {
             Entity entity = new Entity("host-" + hostName, EntityType.HOST, hostName + " Host");
             entity.setName(hostName);
-            entity.setRegionId("default");
+            // Host 节点通常不直接关联到特定的 namespace，所以这里不设置 namespace 字段
+
+            entity.setRegionId("unknown");
 
             Node node = new Node(entity.getEntityId(), entity);
             node.setRedMetrics(RedMetrics.success());
@@ -250,7 +256,7 @@ public class TopologyConverterService {
             }}));
         }});
 
-        // 按服务分组RPC接口
+        // 逐个服务看RPC接口
         Map<String, List<TraceParserService.RpcInterface>> serviceNames = rpcInterfaces.stream().collect(Collectors.groupingBy(TraceParserService.RpcInterface::getServiceName));
 
         for (Map.Entry<String, List<TraceParserService.RpcInterface>> entry : serviceNames.entrySet()) {
@@ -262,8 +268,15 @@ public class TopologyConverterService {
                 String rpcId = EntityIdGenerator.generateRpcId(rpc.getInterfaceName());
 
                 Entity rpcEntity = new Entity(rpcId, EntityType.RPC, rpc.getInterfaceName());
-                rpcEntity.setAppId(serviceName + "@" + (collector.services.containsKey(serviceName) ? collector.services.get(serviceName).getKubernetesNamespace() : "default"));
-                rpcEntity.setRegionId("default");
+                rpcEntity.setName(rpc.getInterfaceName()); // 设置 name 字段
+                // 设置 namespace 字段
+                String namespace = "default";
+                if (collector.services.containsKey(serviceName)) {
+                    namespace = collector.services.get(serviceName).getKubernetesNamespace();
+                }
+                rpcEntity.setNamespace(namespace);
+                rpcEntity.setAppId(serviceName + "@" + namespace);
+                rpcEntity.setRegionId("unknown");
                 rpcEntity.addAttribute("rpc", rpc.getInterfaceName());
                 rpcEntity.addAttribute("protocol", rpc.getProtocol());
 
@@ -272,29 +285,8 @@ public class TopologyConverterService {
                 jgraph.addVertex(rpcNode);
 
                 collector.rpcNodes.put(rpcId, rpcNode);
+                collector.rpcOperationToNode.put(rpc.getInterfaceName(), rpcNode);
             }
-        }
-
-        // 按协议类型对RPC接口进行分组
-        Map<String, List<TraceParserService.RpcInterface>> protocols = rpcInterfaces.stream().collect(Collectors.groupingBy(TraceParserService.RpcInterface::getProtocol));
-
-        for (Map.Entry<String, List<TraceParserService.RpcInterface>> entry : protocols.entrySet()) {
-            String protocol = entry.getKey();
-            List<TraceParserService.RpcInterface> rpcs = entry.getValue();
-
-
-            String rpcGroupId = "rpcg-" + protocol;
-
-            Entity groupEntity = new Entity(rpcGroupId, EntityType.RPC_GROUP, protocol.toUpperCase() + "RPCG");
-            groupEntity.setRegionId("default");
-            groupEntity.addAttribute("rpcType", protocol);
-            groupEntity.addAttribute("count", rpcs.size());
-
-            Node groupNode = new Node(groupEntity.getEntityId(), groupEntity);
-            topology.addNode(groupNode);
-            jgraph.addVertex(groupNode);
-
-            collector.rpcGroupNodes.put(protocol, groupNode);
         }
     }
 
@@ -304,9 +296,10 @@ public class TopologyConverterService {
     private void createRelationshipEdges(TopologyGraph topology, Graph<Node, Edge> jgraph, EntityCollector collector) {
         // 1. 命名空间包含服务
         for (Node serviceNode : collector.serviceNodes.values()) {
-            String namespace = serviceNode.getEntity().getRegionId();
-            if (namespace == null) namespace = "default";
-
+            String namespace = serviceNode.getEntity().getNamespace();
+            if (namespace == null) {
+                continue;
+            }
             Node namespaceNode = collector.namespaceNodes.get(namespace);
             if (namespaceNode != null) {
                 createEdge(topology, jgraph, namespaceNode, serviceNode, RelationType.CONTAINS);
@@ -324,14 +317,24 @@ public class TopologyConverterService {
 
         // 3. Pod运行在Host上
         for (Node podNode : collector.podNodes.values()) {
-            // 假设所有Pod运行在第一个Host上
-            Node hostNode = collector.hostNodes.values().iterator().next();
-            if (hostNode != null) {
-                createEdge(topology, jgraph, podNode, hostNode, RelationType.RUNS_ON);
+            String podName = (String) podNode.getEntity().getAttributes().get("podName");
+            if (podName != null) {
+                // 通过pod名称找到对应的process信息
+                ProcessData podProcess = collector.processes.values().stream()
+                    .filter(process -> podName.equals(process.getKubernetesPodName()))
+                    .findFirst()
+                    .orElse(null);
+
+                if (podProcess != null && podProcess.getHostName() != null) {
+                    Node hostNode = collector.hostNodes.get(podProcess.getHostName());
+                    if (hostNode != null) {
+                        createEdge(topology, jgraph, podNode, hostNode, RelationType.RUNS_ON);
+                    }
+                }
             }
         }
 
-        // 4. 服务调用RPC接口
+        // 4. 服务包含RPC接口（基于appId）
         for (Map.Entry<String, Node> entry : collector.serviceNodes.entrySet()) {
             String serviceName = entry.getKey();
             Node serviceNode = entry.getValue();
@@ -340,46 +343,12 @@ public class TopologyConverterService {
             for (Node rpcNode : collector.rpcNodes.values()) {
                 String rpcServiceName = extractServiceNameFromAppId(rpcNode.getEntity().getAppId());
                 if (serviceName.equals(rpcServiceName)) {
-                    createEdge(topology, jgraph, serviceNode, rpcNode, RelationType.INVOKES);
+                    createEdge(topology, jgraph, serviceNode, rpcNode, RelationType.CONTAINS);
                 }
             }
         }
 
-        // todo
-//        // 5. 服务包含 RPC 接口
-//        for (Map.Entry<String, Node> entry : collector.rpcGroupNodes.entrySet()) {
-//            String key = entry.getKey(); // serviceName#protocol
-//            Node groupNode = entry.getValue();
-//
-//            // 从key中提取 serviceName
-//            String serviceName = key.split("#")[0];
-//            Node serviceNode = collector.serviceNodes.get(serviceName);
-//            if (serviceNode != null) {
-//                createEdge(topology, jgraph, serviceNode, groupNode, RelationType.CONTAINS);
-//            }
-//        }
-
-        // 5. RPC分组包含RPC接口
-        for (Map.Entry<String, Node> entry : collector.rpcGroupNodes.entrySet()) {
-            String key = entry.getKey(); // serviceName#protocol
-            Node groupNode = entry.getValue();
-
-            // 从key中提取 protocol
-            String[] parts = key.split("#");
-            String protocol = parts.length > 1 ? parts[1] : null;
-
-            for (Node rpcNode : collector.rpcNodes.values()) {
-                String rpcProtocol = (String) rpcNode.getEntity().getAttributes().get("protocol");
-
-                // 检查协议是否匹配
-                if (protocol != null && protocol.equals(rpcProtocol)) {
-                    createEdge(topology, jgraph, groupNode, rpcNode, RelationType.CONTAINS);
-                }
-            }
-        }
-
-
-        // 6. 服务间调用关系（基于trace数据）
+        // 5. 服务调用RPC接口（基于trace数据）
         List<TraceParserService.ServiceCall> serviceCalls = traceParserService.extractServiceCalls(new TraceData() {{
             setData(Collections.singletonList(new TraceRecord() {{
                 setSpans(new ArrayList<>(collector.spans.keySet()));
@@ -387,6 +356,17 @@ public class TopologyConverterService {
             }}));
         }});
 
+        for (TraceParserService.ServiceCall call : serviceCalls) {
+            Node fromNode = collector.serviceNodes.get(call.getFromService());
+            // 使用 operation 查找对应的 rpcNode
+            Node toNode = collector.rpcOperationToNode.get(call.getOperation());
+
+            if (fromNode != null && toNode != null) {
+                createEdge(topology, jgraph, fromNode, toNode, RelationType.INVOKES);
+            }
+        }
+
+        // 6. 服务间调用关系（基于trace数据）
         for (TraceParserService.ServiceCall call : serviceCalls) {
             Node fromNode = collector.serviceNodes.get(call.getFromService());
             Node toNode = collector.serviceNodes.get(call.getToService());
@@ -496,7 +476,7 @@ public class TopologyConverterService {
         final Map<String, Node> podNodes = new HashMap<>();
         final Map<String, Node> hostNodes = new HashMap<>();
         final Map<String, Node> rpcNodes = new HashMap<>();
-        final Map<String, Node> rpcGroupNodes = new HashMap<>();
+        final Map<String, Node> rpcOperationToNode = new HashMap<>();
 
         void addService(String serviceName, ProcessData process) {
             if (serviceName != null) {

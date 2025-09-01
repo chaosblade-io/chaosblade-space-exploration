@@ -12,7 +12,9 @@ import java.util.Map;
  *
  * 包含所有实体的共有属性：
  * - 唯一标识符（Entity ID）
+ * - 实体类型 (SERVICE, POD, HOST, RPC, NAMESPACE等)
  * - 实体名称
+ * - 命名空间（Kubernetes namespace）
  * - 创建时间与最后更新时间
  * - 标签和元数据
  * - 状态信息
@@ -43,6 +45,12 @@ public class Entity {
      */
     @JsonProperty("name")
     private String name;
+
+    /**
+     * 命名空间（对应 k8s.namespace.name）
+     */
+    @JsonProperty("namespace")
+    private String namespace;
 
     /**
      * 应用ID（适用于应用相关实体）
@@ -121,6 +129,14 @@ public class Entity {
         this.name = name;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     public String getAppId() {
         return appId;
     }
@@ -185,6 +201,7 @@ public class Entity {
                 ", type=" + type +
                 ", displayName='" + displayName + '\'' +
                 ", name='" + name + '\'' +
+                ", namespace='" + namespace + '\'' +
                 '}';
     }
 
