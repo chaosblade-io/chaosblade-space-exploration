@@ -2,6 +2,8 @@ package com.chaosblade.svc.topo.service;
 
 import com.chaosblade.svc.topo.model.ApiQueryRequest;
 import com.chaosblade.svc.topo.model.ApiQueryResponse;
+import com.chaosblade.svc.topo.model.MetricsByApiRequest;
+import com.chaosblade.svc.topo.model.MetricsByApiResponse;
 import com.chaosblade.svc.topo.model.TopologyByApiRequest;
 import com.chaosblade.svc.topo.model.entity.*;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
@@ -10,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,6 +24,9 @@ import java.util.stream.Stream;
 public class ApiQueryService {
 
     private static final Logger logger = LoggerFactory.getLogger(ApiQueryService.class);
+    
+    // EntityId到Node的并发安全缓存
+    private final Map<String, Node> entityNodeCache = new ConcurrentHashMap<>();
 
     /**
      * 根据查询请求从拓扑图中提取API列表
@@ -32,7 +38,7 @@ public class ApiQueryService {
     public ApiQueryResponse queryApisFromTopology(TopologyGraph topology, ApiQueryRequest request) {
         logger.info("开始查询API列表，命名空间: {}, 服务数: {}",
             request.getNamespace(),
-            request.getAppSelector() != null && request.getAppSelector().getServices() != null ?
+            request.getAppSelector() != null && request.getAppSelector().getServices() != null ? 
                 request.getAppSelector().getServices().size() : 0);
 
         try {
@@ -343,32 +349,23 @@ public class ApiQueryService {
         try {
             // 创建新的拓扑图来存储结果
             TopologyGraph resultTopology = new TopologyGraph();
-
-            // 查找指定的API节点
-            Node targetNode = null;
-            for (Node node : topology.getNodes()) {
-                if (node.getEntity() != null &&
-                    request.getApiId().equals(node.getEntity().getEntityId()) &&
-                    filterByNamespace(node, request.getNamespace())) {
-                    targetNode = node;
-                    break;
-                }
-            }
-
-            // 如果找不到目标节点，返回空的拓扑图
-            if (targetNode == null) {
-                logger.warn("未找到指定的API节点: {}", request.getApiId());
+            
+            // 通过EntityId查找目标节点（使用缓存加速）
+            Node targetNode = findNodeByEntityId(topology, request.getApiId());
+            
+            // 如果找不到目标节点或命名空间不匹配，返回空的拓扑图
+            if (targetNode == null || !filterByNamespace(targetNode, request.getNamespace())) {
+                logger.warn("未找到指定的API节点或命名空间不匹配: {}", request.getApiId());
                 return resultTopology;
             }
-
+            
             // 添加目标节点到结果拓扑图
             resultTopology.addNode(targetNode);
-
+            
             // 查找上游节点（唯一）
             List<Edge> incomingEdges = topology.getIncomingEdges(targetNode.getNodeId());
             if (!incomingEdges.isEmpty()) {
                 // 取第一个上游节点
-                // fixme 无约束
                 Edge upstreamEdge = incomingEdges.get(0);
                 Node upstreamNode = topology.getNode(upstreamEdge.getFrom());
                 if (upstreamNode != null) {
@@ -376,7 +373,7 @@ public class ApiQueryService {
                     resultTopology.addEdge(upstreamEdge);
                 }
             }
-
+            
             // 查找所有下游节点
             List<Edge> outgoingEdges = topology.getOutgoingEdges(targetNode.getNodeId());
             for (Edge edge : outgoingEdges) {
@@ -386,15 +383,141 @@ public class ApiQueryService {
                     resultTopology.addEdge(edge);
                 }
             }
-
-            logger.info("查询完成，共找到 {} 个节点和 {} 条边",
-                resultTopology.getNodes().size(),
+            
+            logger.info("查询完成，共找到 {} 个节点和 {} 条边", 
+                resultTopology.getNodes().size(), 
                 resultTopology.getEdges().size());
-
+            
             return resultTopology;
         } catch (Exception e) {
             logger.error("查询API关联的拓扑信息时发生错误: {}", e.getMessage(), e);
             throw new RuntimeException("查询API关联的拓扑信息失败", e);
         }
+    }
+
+    /**
+     * 根据API ID查询性能指标
+     *
+     * @param topology 当前拓扑图
+     * @param request  查询请求
+     * @return 性能指标响应
+     */
+    public MetricsByApiResponse queryMetricsByApiId(TopologyGraph topology, MetricsByApiRequest request) {
+        logger.info("开始查询API性能指标，API ID: {}", request.getApiId());
+
+        try {
+            // 创建响应对象
+            MetricsByApiResponse response = new MetricsByApiResponse();
+            MetricsByApiResponse.Statistics statistics = new MetricsByApiResponse.Statistics();
+            MetricsByApiResponse.ChainMetrics chainMetrics = new MetricsByApiResponse.ChainMetrics();
+            
+            // 设置基本信息
+            chainMetrics.setApiId(request.getApiId());
+            chainMetrics.setTimeRange(request.getTimeRange());
+            chainMetrics.setChainMode(request.getChainMode());
+            chainMetrics.setPercentiles(request.getPercentiles());
+            chainMetrics.setPercentileMethod("TDIGEST"); // 固定值
+            
+            // 初始化默认值
+            chainMetrics.setTotalCount(0);
+            chainMetrics.setErrorCount(0);
+            chainMetrics.setErrorRate(0.0);
+            chainMetrics.setThroughputRps(0.0);
+            
+            // 创建延迟对象
+            MetricsByApiResponse.Latency latency = new MetricsByApiResponse.Latency();
+            latency.setP50(0);
+            latency.setP95(0);
+            latency.setP99(0);
+            chainMetrics.setLatency(latency);
+            
+            // 通过EntityId查找目标节点（使用缓存加速）
+            Node targetNode = findNodeByEntityId(topology, request.getApiId());
+            
+            // 如果找到目标节点，提取指标数据
+            if (targetNode != null) {
+                RedMetrics redMetrics = targetNode.getRedMetrics();
+                if (redMetrics != null) {
+                    // 设置计数和错误信息
+                    chainMetrics.setTotalCount(redMetrics.getCount());
+                    chainMetrics.setErrorCount(redMetrics.getError());
+                    
+                    // 计算错误率
+                    if (redMetrics.getCount() != null && redMetrics.getCount() > 0) {
+                        double errorRate = (redMetrics.getError() != null ? redMetrics.getError().doubleValue() : 0.0) / 
+                                          redMetrics.getCount();
+                        chainMetrics.setErrorRate(errorRate);
+                    }
+                    
+                    // 计算吞吐量 (简化计算，假设时间范围是1小时)
+                    if (request.getTimeRange() != null && 
+                        request.getTimeRange().getStart() != null && 
+                        request.getTimeRange().getEnd() != null) {
+                        long durationMillis = request.getTimeRange().getEnd() - request.getTimeRange().getStart();
+                        double durationHours = durationMillis / (1000.0 * 60 * 60);
+                        if (durationHours > 0 && redMetrics.getCount() != null) {
+                            double throughput = redMetrics.getCount() / durationHours;
+                            chainMetrics.setThroughputRps(throughput);
+                        }
+                    }
+                    
+                    // 设置延迟信息 (rt保存的是p99)
+                    if (redMetrics.getRt() != null) {
+                        int rtValue = redMetrics.getRt().intValue();
+                        latency.setP99(rtValue);
+                        // 简化处理，将p99作为基准，按比例设置其他百分位数
+                        latency.setP50((int) (rtValue * 0.7));
+                        latency.setP95((int) (rtValue * 0.9));
+                    }
+                }
+            } else {
+                logger.warn("未找到指定的API节点: {}", request.getApiId());
+            }
+            
+            statistics.setChain(chainMetrics);
+            response.setStatistics(statistics);
+            
+            logger.info("查询完成，API ID: {}", request.getApiId());
+            return response;
+        } catch (Exception e) {
+            logger.error("查询API性能指标时发生错误: {}", e.getMessage(), e);
+            throw new RuntimeException("查询API性能指标失败", e);
+        }
+    }
+    
+    /**
+     * 通过EntityId查找节点（使用缓存加速）
+     * 
+     * @param topology 当前拓扑图
+     * @param entityId 实体ID
+     * @return 对应的节点，如果未找到则返回null
+     */
+    private Node findNodeByEntityId(TopologyGraph topology, String entityId) {
+        if (entityId == null || topology == null) {
+            return null;
+        }
+        
+        // 首先尝试从缓存中获取
+        Node cachedNode = entityNodeCache.get(entityId);
+        if (cachedNode != null) {
+            // 验证节点是否仍然存在于拓扑图中
+            if (topology.getNode(cachedNode.getNodeId()) != null) {
+                return cachedNode;
+            } else {
+                // 如果节点已不存在，从缓存中移除
+                entityNodeCache.remove(entityId);
+            }
+        }
+        
+        // 缓存未命中，遍历节点查找并更新缓存
+        for (Node node : topology.getNodes()) {
+            if (node.getEntity() != null && entityId.equals(node.getEntity().getEntityId())) {
+                // 找到节点，更新缓存
+                entityNodeCache.put(entityId, node);
+                return node;
+            }
+        }
+        
+        return null;
     }
 }

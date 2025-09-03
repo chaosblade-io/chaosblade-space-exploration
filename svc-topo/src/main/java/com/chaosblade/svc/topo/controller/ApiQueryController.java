@@ -2,6 +2,8 @@ package com.chaosblade.svc.topo.controller;
 
 import com.chaosblade.svc.topo.model.ApiQueryRequest;
 import com.chaosblade.svc.topo.model.ApiQueryResponse;
+import com.chaosblade.svc.topo.model.MetricsByApiRequest;
+import com.chaosblade.svc.topo.model.MetricsByApiResponse;
 import com.chaosblade.svc.topo.model.TopologyByApiRequest;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import com.chaosblade.svc.topo.service.ApiQueryService;
@@ -84,6 +86,33 @@ public class ApiQueryController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("查询拓扑信息失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 根据API ID查询性能指标
+     * 返回根API的性能数据：错误率、吞吐量、p50/p95/p99
+     *
+     * @param request 指标查询请求对象
+     * @return 性能指标响应对象
+     */
+    @PostMapping("/metrics/byapi")
+    public ResponseEntity<MetricsByApiResponse> queryMetricsByApi(@RequestBody MetricsByApiRequest request) {
+        logger.info("收到指标查询请求: apiId={}", request.getApiId());
+
+        try {
+            // 从TopologyConverterService获取当前拓扑图
+            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+            if (currentTopology == null) {
+                logger.warn("当前拓扑图为空");
+                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
+            }
+
+            MetricsByApiResponse response = apiQueryService.queryMetricsByApiId(currentTopology, request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("查询性能指标失败: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
