@@ -43,6 +43,10 @@ public class TopologyAutoRefreshService {
     @Value("${topology.auto-refresh.jaeger.port:16685}")
     private int jaegerPort;
 
+    // 添加HTTP API端口配置
+    @Value("${topology.auto-refresh.jaeger.http-port:16686}")
+    private int jaegerHttpPort;
+
     @Value("${topology.auto-refresh.service-name:frontend}")
     private String serviceName;
 
@@ -54,6 +58,10 @@ public class TopologyAutoRefreshService {
 
     @Value("${topology.auto-refresh.enabled:true}")
     private boolean autoRefreshEnabled;
+
+    // 添加Jaeger查询方式配置：grpc 或 http
+    @Value("${topology.auto-refresh.jaeger.query-method:grpc}")
+    private String jaegerQueryMethod;
 
     // 是否启用mock模式，如果为true则从本地文件读取trace数据而不是从Jaeger拉取
     @Value("${topo.visualizer.mock:false}")
@@ -128,13 +136,40 @@ public class TopologyAutoRefreshService {
                 long endTime = System.currentTimeMillis() * 1000; // 转换为微秒
                 long startTime = endTime - Duration.ofMinutes(timeRangeMinutes).toNanos() / 1000; // 向前推指定分钟数
 
-                // 从 Jaeger 查询最新的 trace 数据
-                traceData = jaegerQueryService.queryTracesByOperation(
-                        jaegerHost, jaegerPort, serviceName, operationName, startTime, endTime);
+                // 根据配置选择查询方式
+                if ("http".equalsIgnoreCase(jaegerQueryMethod)) {
+                    // 使用HTTP API查询
+                    if (serviceName != null && !serviceName.isEmpty() && operationName != null && !operationName.isEmpty() &&
+                        !"all".equalsIgnoreCase(operationName)) {
+                        // 如果指定了服务和操作，使用queryTracesByOperationHttp方法
+                        traceData = jaegerQueryService.queryTracesByOperationHttp(
+                                jaegerHost, jaegerHttpPort, serviceName, operationName, startTime, endTime);
+                        logger.info("使用HTTP API查询Jaeger数据（指定服务和操作）: host={}, port={}, service={}, operation={}",
+                                   jaegerHost, jaegerHttpPort, serviceName, operationName);
+                    } else if (serviceName != null && !serviceName.isEmpty()) {
+                        // 如果只指定了服务，使用queryTracesByServiceHttp方法
+                        traceData = jaegerQueryService.queryTracesByServiceHttp(
+                                jaegerHost, jaegerHttpPort, serviceName, startTime, endTime);
+                        logger.info("使用HTTP API查询Jaeger数据（仅指定服务）: host={}, port={}, service={}",
+                                   jaegerHost, jaegerHttpPort, serviceName);
+                    } else {
+                        // 否则使用queryTracesHttp方法（不指定特定服务和操作）
+                        traceData = jaegerQueryService.queryTracesHttp(
+                                jaegerHost, jaegerHttpPort, startTime, endTime);
+                        logger.info("使用HTTP API查询Jaeger数据（不指定服务和操作）: host={}, port={}",
+                                   jaegerHost, jaegerHttpPort);
+                    }
+                } else {
+                    // 默认使用gRPC查询
+                    traceData = jaegerQueryService.queryTracesByOperation(
+                            jaegerHost, jaegerPort, serviceName, operationName, startTime, endTime);
+                    logger.info("使用gRPC查询Jaeger数据: host={}, port={}, service={}, operation={}",
+                               jaegerHost, jaegerPort, serviceName, operationName);
+                }
             }
 
             if (traceData == null || traceData.getData() == null || traceData.getData().isEmpty()) {
-                logger.warn("获取 trace 记录为空、没刷新");
+                logger.warn("获取 trace 记录为空");
                 return;
             }
 
@@ -169,7 +204,7 @@ public class TopologyAutoRefreshService {
             logger.debug("从本地文件加载mock trace数据");
 
             // 从classpath加载trace文件
-            ClassPathResource resource = new ClassPathResource("topo-schema/trace-mock.json");
+            ClassPathResource resource = new ClassPathResource("topo-schema/trace-mock-tt.json");
             InputStream inputStream = resource.getInputStream();
 
             // 使用ObjectMapper解析JSON
@@ -198,10 +233,12 @@ public class TopologyAutoRefreshService {
         status.setFailedRefreshCount(failedRefreshCount);
         status.setJaegerHost(jaegerHost);
         status.setJaegerPort(jaegerPort);
+        status.setJaegerHttpPort(jaegerHttpPort);
         status.setServiceName(serviceName);
         status.setOperationName(operationName);
         status.setTimeRangeMinutes(timeRangeMinutes);
         status.setMockMode(mockMode);
+        status.setJaegerQueryMethod(jaegerQueryMethod);
         return status;
     }
 
@@ -236,6 +273,23 @@ public class TopologyAutoRefreshService {
     }
 
     /**
+     * 更新 Jaeger 配置（包括HTTP端口和查询方式）
+     */
+    public void updateJaegerConfig(String host, int grpcPort, int httpPort, String service, String operation,
+                                  int timeRange, String queryMethod) {
+        this.jaegerHost = host;
+        this.jaegerPort = grpcPort;
+        this.jaegerHttpPort = httpPort;
+        this.serviceName = service;
+        this.operationName = operation;
+        this.timeRangeMinutes = timeRange;
+        this.jaegerQueryMethod = queryMethod;
+
+        logger.info("已更新 Jaeger 配置: host={}, grpcPort={}, httpPort={}, service={}, operation={}, timeRange={}分钟, queryMethod={}",
+                   host, grpcPort, httpPort, service, operation, timeRange, queryMethod);
+    }
+
+    /**
      * 刷新状态信息类
      */
     public static class RefreshStatus {
@@ -246,10 +300,12 @@ public class TopologyAutoRefreshService {
         private int failedRefreshCount;
         private String jaegerHost;
         private int jaegerPort;
+        private int jaegerHttpPort;
         private String serviceName;
         private String operationName;
         private int timeRangeMinutes;
         private boolean mockMode;
+        private String jaegerQueryMethod;
 
         // Getters and Setters
         public boolean isEnabled() {
@@ -308,6 +364,14 @@ public class TopologyAutoRefreshService {
             this.jaegerPort = jaegerPort;
         }
 
+        public int getJaegerHttpPort() {
+            return jaegerHttpPort;
+        }
+
+        public void setJaegerHttpPort(int jaegerHttpPort) {
+            this.jaegerHttpPort = jaegerHttpPort;
+        }
+
         public String getServiceName() {
             return serviceName;
         }
@@ -339,5 +403,14 @@ public class TopologyAutoRefreshService {
         public void setMockMode(boolean mockMode) {
             this.mockMode = mockMode;
         }
+
+        public String getJaegerQueryMethod() {
+            return jaegerQueryMethod;
+        }
+
+        public void setJaegerQueryMethod(String jaegerQueryMethod) {
+            this.jaegerQueryMethod = jaegerQueryMethod;
+        }
     }
+
 }

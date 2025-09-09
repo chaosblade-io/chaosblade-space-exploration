@@ -215,6 +215,13 @@
             <artifactId>fastjson</artifactId>
         </dependency>
 
+        <!-- 添加HTTP客户端依赖 -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.1</version>
+        </dependency>
+
         <!-- Utilities -->
         <dependency>
             <groupId>org.apache.commons</groupId>

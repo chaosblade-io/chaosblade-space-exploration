@@ -88,7 +88,19 @@ make build-frontend  # 仅构建前端
 make                 # 构建后端
 ```
 
-### 3. 运行应用
+### 3. 打包为JAR文件
+
+```bash
+# 进入项目目录
+cd svc-topo
+
+# 打包为可执行JAR文件
+mvn clean package -DskipTests
+
+# 生成的JAR文件位于 target/svc-topo-1.0.0.jar
+```
+
+### 4. 运行应用
 
 ```bash
 # 运行整个应用
@@ -96,9 +108,22 @@ make run
 
 # 开发模式（前后端分离运行）
 make dev
+
+# 直接运行JAR文件
+java -jar target/svc-topo-1.0.0.jar
+
+# 使用命令行参数指定配置
+java -jar target/svc-topo-1.0.0.jar \
+  --topology.auto-refresh.jaeger.host=your-jaeger-host \
+  --topology.auto-refresh.jaeger.http-port=16686 \
+  --topology.auto-refresh.jaeger.query-method=http
+
+# 使用外部配置文件
+java -jar target/svc-topo-1.0.0.jar \
+  --spring.config.location=classpath:/application.yml,file:./custom-config.yml
 ```
 
-### 4. 访问应用
+### 5. 访问应用
 
 - 生产模式: http://localhost:8080
 - 开发模式前端: http://localhost:3000
@@ -279,6 +304,8 @@ topology:
     jaeger:
       host: localhost                # Jaeger 主机地址
       port: 14250                    # Jaeger gRPC 端口
+      http-port: 16686               # Jaeger HTTP API 端口
+      query-method: http             # Jaeger 查询方式：grpc 或 http
     service-name: frontend           # 默认查询的服务名
     operation-name: all              # 默认查询的操作名
 ```
@@ -302,6 +329,44 @@ curl -X POST http://localhost:8106/api/xflow/auto-refresh/config \
 # 启用/禁用自动刷新
 curl -X POST http://localhost:8106/api/xflow/auto-refresh/enable
 curl -X POST http://localhost:8106/api/xflow/auto-refresh/disable
+```
+
+### 使用命令行参数指定配置
+
+运行 JAR 文件时，可以通过命令行参数指定配置项：
+
+```bash
+# 指定 Jaeger 主机和 HTTP 端口
+java -jar svc-topo-1.0.0.jar \
+  --topology.auto-refresh.jaeger.host=your-jaeger-host \
+  --topology.auto-refresh.jaeger.http-port=16686
+
+# 指定查询方式和服务名
+java -jar svc-topo-1.0.0.jar \
+  --topology.auto-refresh.jaeger.query-method=http \
+  --topology.auto-refresh.service-name=your-service-name
+
+# 组合多个配置项
+java -jar svc-topo-1.0.0.jar \
+  --topology.auto-refresh.jaeger.host=jaeger.example.com \
+  --topology.auto-refresh.jaeger.http-port=16686 \
+  --topology.auto-refresh.jaeger.query-method=http \
+  --topology.auto-refresh.service-name=frontend \
+  --topology.auto-refresh.time-range-minutes=30
+```
+
+### 使用环境变量指定配置
+
+也可以使用环境变量来设置配置：
+
+```bash
+# 设置环境变量
+export TOPOLOGY_AUTO_REFRESH_JAEGER_HOST=your-jaeger-host
+export TOPOLOGY_AUTO_REFRESH_JAEGER_HTTP_PORT=16686
+export TOPOLOGY_AUTO_REFRESH_JAEGER_QUERY_METHOD=http
+
+# 运行 JAR 文件
+java -jar svc-topo-1.0.0.jar
 ```
 
 ## 🛡️ 错误处理
