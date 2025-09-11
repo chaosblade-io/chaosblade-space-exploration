@@ -11,6 +11,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.time.Duration;
 
@@ -26,6 +27,9 @@ import java.time.Duration;
 public class TopologyAutoRefreshService {
 
     private static final Logger logger = LoggerFactory.getLogger(TopologyAutoRefreshService.class);
+
+    // 基础时间间隔（秒）
+    private static final int BASE_INTERVAL_SECONDS = 15;
 
     @Autowired
     private JaegerQueryService jaegerQueryService;
@@ -71,15 +75,107 @@ public class TopologyAutoRefreshService {
     @Value("${topo.visualizer.mock:false}")
     private boolean mockMode;
 
+    // 全局变量，代表历史上首次获取 trace 不为空的时间区间
+    private volatile TopologyCacheService.TimeKey lastHistoricalTimeKey = null;
+
     private volatile boolean isRefreshing = false;
     private long lastRefreshTime = 0;
     private int successfulRefreshCount = 0;
     private int failedRefreshCount = 0;
 
     /**
-     * 定时刷新拓扑数据 - 每隔 15 秒执行一次
+     * 初始化方法，在服务启动时执行
      */
-    @Scheduled(fixedRateString = "${topology.auto-refresh.interval-seconds:15}000") // 15 秒 = 15000 毫秒
+    @PostConstruct
+    public void init() {
+        logger.info("拓扑数据自动刷新服务初始化开始");
+        if (!mockMode) {
+            // 在非mock模式下，寻找历史数据
+            findHistoricalTimeKey();
+        }
+        logger.info("拓扑数据自动刷新服务初始化完成");
+    }
+
+    /**
+     * 使用指数退避方式向前寻找首个获取 trace 记录不为空的时间区间
+     */
+    private void findHistoricalTimeKey() {
+        logger.info("开始寻找历史时间区间");
+        
+        long currentTime = System.currentTimeMillis();
+        long endTime = currentTime;
+        int multiplier = 1; // 倍数，用于指数增长
+        
+        // 按照 15*1, 15*2, 15*4, 15*8 的方式向前查找
+        while (multiplier <= 1024) {
+            int interval = BASE_INTERVAL_SECONDS * multiplier;
+            long startTime = endTime - Duration.ofSeconds(interval).toMillis();
+            
+            logger.debug("尝试查询时间区间: {} - {}", startTime, endTime);
+            
+            try {
+                // 尝试查询该时间区间的 trace 数据
+                TraceData traceData = queryTracesByConfiguredMethod(startTime, endTime);
+                
+                if (traceData != null && traceData.getData() != null && !traceData.getData().isEmpty()) {
+                    // 找到了有数据的时间区间
+                    lastHistoricalTimeKey = new TopologyCacheService.TimeKey(startTime, endTime);
+                    logger.info("找到历史时间区间: {} - {}, 区间长度: {}秒", startTime, endTime, interval);
+                    
+                    // 将该时间区间的拓扑数据存入缓存
+                    TopologyGraph topology = topologyConverterService.convertTraceToTopology(traceData);
+                    topologyCacheService.put(startTime, endTime, topology);
+                    logger.debug("历史时间区间的拓扑数据已存入缓存");
+                    return;
+                } else {
+                    logger.debug("时间区间 {} - {} 没有找到 trace 数据", startTime, endTime);
+                }
+            } catch (Exception e) {
+                logger.warn("查询时间区间 {} - {} 时发生异常: {}", startTime, endTime, e.getMessage());
+            }
+            
+            // 更新 endTime 和 multiplier，进行指数退避
+            endTime = startTime;
+            multiplier *= 2; // 指数增长
+        }
+        
+        logger.info("未找到历史时间区间，将使用当前时间区间作为默认值");
+        // 如果没找到历史数据，使用当前时间区间作为默认值
+        long startTime = currentTime - Duration.ofSeconds(timeRangeSeconds).toMillis();
+        lastHistoricalTimeKey = new TopologyCacheService.TimeKey(startTime, currentTime);
+    }
+
+    /**
+     * 根据配置的方法查询 trace 数据
+     */
+    private TraceData queryTracesByConfiguredMethod(long startTime, long endTime) {
+        if ("http".equalsIgnoreCase(jaegerQueryMethod)) {
+            // 使用HTTP API查询
+            if (serviceName != null && !serviceName.isEmpty() && operationName != null && !operationName.isEmpty() &&
+                !"all".equalsIgnoreCase(operationName)) {
+                // 如果指定了服务和操作，使用queryTracesByOperationHttp方法
+                return jaegerQueryService.queryTracesByOperationHttp(
+                        jaegerHost, jaegerHttpPort, serviceName, operationName, startTime, endTime);
+            } else if (serviceName != null && !serviceName.isEmpty()) {
+                // 如果只指定了服务，使用queryTracesByServiceHttp方法
+                return jaegerQueryService.queryTracesByServiceHttp(
+                        jaegerHost, jaegerHttpPort, serviceName, startTime, endTime);
+            } else {
+                // 否则使用queryTracesHttp方法（不指定特定服务和操作）
+                return jaegerQueryService.queryTracesHttp(
+                        jaegerHost, jaegerHttpPort, startTime, endTime);
+            }
+        } else {
+            // 默认使用gRPC查询
+            return jaegerQueryService.queryTracesByOperation(
+                    jaegerHost, jaegerPort, serviceName, operationName, startTime, endTime);
+        }
+    }
+
+    /**
+     * 定时刷新拓扑数据 - 每隔 interval-seconds 秒执行一次
+     */
+    @Scheduled(fixedRateString = "${topology.auto-refresh.interval-seconds:15}000") // interval-seconds 秒 = interval-seconds*1000 毫秒
     public void refreshTopologyPeriodically() {
         if (!autoRefreshEnabled) {
             logger.debug("自动刷新功能已禁用");
@@ -170,6 +266,30 @@ public class TopologyAutoRefreshService {
                     logger.info("使用gRPC查询Jaeger数据: host={}, port={}, service={}, operation={}",
                                jaegerHost, jaegerPort, serviceName, operationName);
                 }
+                
+                // 如果当前时间查询不到数据，使用历史时间区间的拓扑数据
+                if (traceData == null || traceData.getData() == null || traceData.getData().isEmpty()) {
+                    logger.warn("获取当前时间 trace 记录为空，尝试使用历史时间区间的拓扑数据");
+                    
+                    if (lastHistoricalTimeKey != null) {
+                        // 从缓存中获取历史时间区间的拓扑数据
+                        TopologyGraph historicalTopology = topologyCacheService.get(
+                            lastHistoricalTimeKey.getStart(), lastHistoricalTimeKey.getEnd());
+                        
+                        if (historicalTopology != null) {
+                            logger.info("使用历史时间区间的拓扑数据: {} - {}", 
+                                lastHistoricalTimeKey.getStart(), lastHistoricalTimeKey.getEnd());
+                            
+                            // 更新当前拓扑
+                            topologyConverterService.setCurrentTopology(historicalTopology);
+                            return; // 直接返回，不继续执行后续逻辑
+                        } else {
+                            logger.warn("缓存中未找到历史时间区间的拓扑数据");
+                        }
+                    } else {
+                        logger.warn("未设置历史时间区间");
+                    }
+                }
             }
 
             if (traceData == null || traceData.getData() == null || traceData.getData().isEmpty()) {
@@ -248,6 +368,7 @@ public class TopologyAutoRefreshService {
         status.setTimeRangeSeconds(timeRangeSeconds);
         status.setMockMode(mockMode);
         status.setJaegerQueryMethod(jaegerQueryMethod);
+        status.setLastHistoricalTimeKey(lastHistoricalTimeKey);
         return status;
     }
 
@@ -299,6 +420,13 @@ public class TopologyAutoRefreshService {
     }
 
     /**
+     * 获取 lastHistoricalTimeKey
+     */
+    public TopologyCacheService.TimeKey getLastHistoricalTimeKey() {
+        return lastHistoricalTimeKey;
+    }
+
+    /**
      * 刷新状态信息类
      */
     public static class RefreshStatus {
@@ -315,6 +443,7 @@ public class TopologyAutoRefreshService {
         private int timeRangeSeconds;
         private boolean mockMode;
         private String jaegerQueryMethod;
+        private TopologyCacheService.TimeKey lastHistoricalTimeKey;
 
         // Getters and Setters
         public boolean isEnabled() {
@@ -419,6 +548,14 @@ public class TopologyAutoRefreshService {
 
         public void setJaegerQueryMethod(String jaegerQueryMethod) {
             this.jaegerQueryMethod = jaegerQueryMethod;
+        }
+
+        public TopologyCacheService.TimeKey getLastHistoricalTimeKey() {
+            return lastHistoricalTimeKey;
+        }
+
+        public void setLastHistoricalTimeKey(TopologyCacheService.TimeKey lastHistoricalTimeKey) {
+            this.lastHistoricalTimeKey = lastHistoricalTimeKey;
         }
     }
 
