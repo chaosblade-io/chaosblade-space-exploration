@@ -9,8 +9,8 @@ public class JaegerFetchRequest {
     private int port = 16685;
     private String serviceName;
     private String operationName;
-    private long startTime;
-    private long endTime;
+    private long startTime; // 毫秒级Unix时间戳
+    private long endTime;   // 毫秒级Unix时间戳
     
     public JaegerFetchRequest() {
     }
@@ -47,18 +47,34 @@ public class JaegerFetchRequest {
         this.operationName = operationName;
     }
     
+    /**
+     * 获取查询开始时间
+     * @return 毫秒级Unix时间戳
+     */
     public long getStartTime() {
         return startTime;
     }
     
+    /**
+     * 设置查询开始时间
+     * @param startTime 毫秒级Unix时间戳
+     */
     public void setStartTime(long startTime) {
         this.startTime = startTime;
     }
     
+    /**
+     * 获取查询结束时间
+     * @return 毫秒级Unix时间戳
+     */
     public long getEndTime() {
         return endTime;
     }
     
+    /**
+     * 设置查询结束时间
+     * @param endTime 毫秒级Unix时间戳
+     */
     public void setEndTime(long endTime) {
         this.endTime = endTime;
     }

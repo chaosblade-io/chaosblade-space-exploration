@@ -35,8 +35,8 @@ class JaegerQueryServiceTest {
         validPort = JaegerTestConfig.JAEGER_PORT;
         validServiceName = JaegerTestConfig.SERVICE_NAME;
         validOperationName = JaegerTestConfig.OPERATION_NAME;
-        validEndTime = System.currentTimeMillis() * 1000; // 当前时间（微秒）
-        validStartTime = validEndTime - Duration.ofMinutes(1).toNanos() / 1000; // 1小时前（微秒）
+        validEndTime = System.currentTimeMillis(); // 当前时间（毫秒）
+        validStartTime = validEndTime - Duration.ofMinutes(1).toMillis(); // 1小时前（毫秒）
     }
 
     @Test
@@ -157,9 +157,9 @@ class JaegerQueryServiceTest {
 
     @Test
     void testQueryTracesByOperationWithTooLargeTimeRange() {
-        // 时间范围超过7天
-        long sevenDaysInMicros = Duration.ofDays(8).toNanos() / 1000;
-        long startTime = validEndTime - sevenDaysInMicros;
+        // 时间范围超过7天 (使用毫秒)
+        long sevenDaysInMillis = Duration.ofDays(8).toMillis();
+        long startTime = validEndTime - sevenDaysInMillis;
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             jaegerQueryService.queryTracesByOperation(validJaegerHost, validPort, validServiceName, validOperationName, startTime, validEndTime);

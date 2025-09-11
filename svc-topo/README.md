@@ -302,8 +302,8 @@ chaosblade-topo-visualizer/
 topology:
   auto-refresh:
     enabled: true                    # 是否启用自动刷新
-    interval: 15000                  # 刷新间隔（毫秒），15秒
-    time-range-minutes: 15           # 查询时间范围（分钟）
+    interval-seconds: 15             # 刷新间隔（秒）
+    time-range-seconds: 15           # 查询时间范围（秒）
     jaeger:
       host: localhost                # Jaeger 主机地址
       port: 14250                    # Jaeger gRPC 端口
@@ -347,7 +347,7 @@ curl -X POST http://localhost:8106/api/xflow/auto-refresh/config \
     "port": 14250,
     "serviceName": "my-service",
     "operationName": "all",
-    "timeRangeMinutes": 30
+    "timeRangeSeconds": 30
   }'
 
 # 启用/禁用自动刷新
@@ -376,7 +376,7 @@ java -jar svc-topo-1.0.0.jar \
   --topology.auto-refresh.jaeger.http-port=16686 \
   --topology.auto-refresh.jaeger.query-method=http \
   --topology.auto-refresh.service-name=frontend \
-  --topology.auto-refresh.time-range-minutes=30
+  --topology.auto-refresh.time-range-seconds=30
 ```
 
 ### 使用环境变量指定配置

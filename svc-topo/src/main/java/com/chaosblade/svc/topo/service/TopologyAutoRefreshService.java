@@ -18,7 +18,7 @@ import java.time.Duration;
  * 拓扑数据自动刷新服务
  *
  * 功能：
- * 1. 每隔 15 秒自动刷新拓扑数据
+ * 1. 每隔 interval-seconds 秒自动刷新拓扑数据
  * 2. 从 Jaeger 查询最新的 trace 数据
  * 3. 转换为拓扑图并更新 currentTopology
  */
@@ -57,8 +57,8 @@ public class TopologyAutoRefreshService {
     @Value("${topology.auto-refresh.operation-name:all}")
     private String operationName;
 
-    @Value("${topology.auto-refresh.time-range-minutes:15}")
-    private int timeRangeMinutes;
+    @Value("${topology.auto-refresh.time-range-seconds:15}")
+    private int timeRangeSeconds;
 
     @Value("${topology.auto-refresh.enabled:true}")
     private boolean autoRefreshEnabled;
@@ -79,7 +79,7 @@ public class TopologyAutoRefreshService {
     /**
      * 定时刷新拓扑数据 - 每隔 15 秒执行一次
      */
-    @Scheduled(fixedRate = 15000) // 15 秒 = 15000 毫秒
+    @Scheduled(fixedRateString = "${topology.auto-refresh.interval-seconds:15}000") // 15 秒 = 15000 毫秒
     public void refreshTopologyPeriodically() {
         if (!autoRefreshEnabled) {
             logger.debug("自动刷新功能已禁用");
@@ -136,9 +136,9 @@ public class TopologyAutoRefreshService {
                 traceData = loadMockTraceData();
                 logger.info("使用mock模式加载trace数据");
             } else {
-                // 计算查询时间范围：当前时间向前推 timeRangeMinutes 分钟
-                long endTime = System.currentTimeMillis() * 1000; // 转换为微秒
-                long startTime = endTime - Duration.ofMinutes(timeRangeMinutes).toNanos() / 1000; // 向前推指定分钟数
+                // 计算查询时间范围：当前时间向前推 timeRangeSeconds 秒 (使用毫秒时间戳)
+                long endTime = System.currentTimeMillis(); // 毫秒时间戳
+                long startTime = endTime - Duration.ofSeconds(timeRangeSeconds).toMillis(); // 向前推指定秒数
 
                 // 根据配置选择查询方式
                 if ("http".equalsIgnoreCase(jaegerQueryMethod)) {
@@ -182,9 +182,9 @@ public class TopologyAutoRefreshService {
             // 转换为拓扑图
             TopologyGraph newTopology = topologyConverterService.convertTraceToTopology(traceData);
 
-            // 将拓扑图存入缓存
-            long endTime = System.currentTimeMillis() * 1000; // 转换为微秒
-            long startTime = endTime - Duration.ofMinutes(timeRangeMinutes).toNanos() / 1000; // 向前推指定分钟数
+            // 将拓扑图存入缓存 (使用毫秒时间戳)
+            long endTime = System.currentTimeMillis(); // 毫秒时间戳
+            long startTime = endTime - Duration.ofSeconds(timeRangeSeconds).toMillis(); // 向前推指定秒数
             topologyCacheService.put(startTime, endTime, newTopology);
 
             // 更新当前拓扑
@@ -245,7 +245,7 @@ public class TopologyAutoRefreshService {
         status.setJaegerHttpPort(jaegerHttpPort);
         status.setServiceName(serviceName);
         status.setOperationName(operationName);
-        status.setTimeRangeMinutes(timeRangeMinutes);
+        status.setTimeRangeSeconds(timeRangeSeconds);
         status.setMockMode(mockMode);
         status.setJaegerQueryMethod(jaegerQueryMethod);
         return status;
@@ -275,9 +275,9 @@ public class TopologyAutoRefreshService {
         this.jaegerPort = port;
         this.serviceName = service;
         this.operationName = operation;
-        this.timeRangeMinutes = timeRange;
+        this.timeRangeSeconds = timeRange;
 
-        logger.info("已更新 Jaeger 配置: host={}, port={}, service={}, operation={}, timeRange={}分钟",
+        logger.info("已更新 Jaeger 配置: host={}, port={}, service={}, operation={}, timeRange={}秒",
                    host, port, service, operation, timeRange);
     }
 
@@ -291,10 +291,10 @@ public class TopologyAutoRefreshService {
         this.jaegerHttpPort = httpPort;
         this.serviceName = service;
         this.operationName = operation;
-        this.timeRangeMinutes = timeRange;
+        this.timeRangeSeconds = timeRange;
         this.jaegerQueryMethod = queryMethod;
 
-        logger.info("已更新 Jaeger 配置: host={}, grpcPort={}, httpPort={}, service={}, operation={}, timeRange={}分钟, queryMethod={}",
+        logger.info("已更新 Jaeger 配置: host={}, grpcPort={}, httpPort={}, service={}, operation={}, timeRange={}秒, queryMethod={}",
                    host, grpcPort, httpPort, service, operation, timeRange, queryMethod);
     }
 
@@ -312,7 +312,7 @@ public class TopologyAutoRefreshService {
         private int jaegerHttpPort;
         private String serviceName;
         private String operationName;
-        private int timeRangeMinutes;
+        private int timeRangeSeconds;
         private boolean mockMode;
         private String jaegerQueryMethod;
 
@@ -397,12 +397,12 @@ public class TopologyAutoRefreshService {
             this.operationName = operationName;
         }
 
-        public int getTimeRangeMinutes() {
-            return timeRangeMinutes;
+        public int getTimeRangeSeconds() {
+            return timeRangeSeconds;
         }
 
-        public void setTimeRangeMinutes(int timeRangeMinutes) {
-            this.timeRangeMinutes = timeRangeMinutes;
+        public void setTimeRangeSeconds(int timeRangeSeconds) {
+            this.timeRangeSeconds = timeRangeSeconds;
         }
 
         public boolean isMockMode() {
