@@ -12,6 +12,7 @@
 - **🔄 前后端分离架构**: 前端使用React + XFlow，后端使用Spring Boot，通过RESTful API通信
 - **⏰ 自动刷新**: 支持每隔15秒自动从Jaeger查询最新trace数据并更新拓扑图
 - **🔧 动态配置**: 支持运行时修改Jaeger连接参数和刷新策略
+- **ing 拓扑数据缓存**: 基于哈希表的拓扑数据缓存，提高查询性能
 
 ## 🏗️ 技术架构
 
@@ -32,6 +33,7 @@ end
     subgraph "服务层"
         PARSER[Trace解析服务]
         CONVERTER[拓扑转换服务]
+        CACHE[拓扑缓存服务]
     end
     
     subgraph "模型层"
@@ -48,6 +50,7 @@ end
     PROXY --> BACKEND
     BACKEND --> PARSER
     PARSER --> CONVERTER
+    CONVERTER --> CACHE
 ```
 
 ## 🛠️ 技术栈
@@ -295,7 +298,7 @@ chaosblade-topo-visualizer/
 
 在 `application.yml` 中可以配置自动刷新功能：
 
-```yaml
+```
 topology:
   auto-refresh:
     enabled: true                    # 是否启用自动刷新
@@ -308,13 +311,34 @@ topology:
       query-method: http             # Jaeger 查询方式：grpc 或 http
     service-name: frontend           # 默认查询的服务名
     operation-name: all              # 默认查询的操作名
+  cache:
+    max-size: 100                   # 拓扑缓存最大条目数
+```
+
+### 拓扑缓存功能
+
+系统实现了基于哈希表的拓扑数据缓存机制，以提高查询性能：
+
+1. **时间索引**: 使用start转秒后整除15秒的结果作为时间索引
+2. **缓存键**: 以(start, end)时间范围作为缓存键
+3. **容量控制**: 通过配置参数[topology.cache.max-size](file:///Users/leo/IdeaProjects/chaosblade-space-exploration/svc-topo/src/main/java/com/chaosblade/svc/topo/service/TopologyCacheService.java#L22-L22)控制缓存最大条目数
+4. **淘汰策略**: 采用LRU（最近最少使用）淘汰策略
+
+### 缓存管理接口
+
+提供以下REST API接口用于管理缓存：
+
+```
+GET  /v1/cache/stats                  # 获取缓存统计信息
+DELETE /v1/cache/clear               # 清空缓存
+GET  /v1/cache/time-index/{index}    # 按时间索引查询缓存项数量
 ```
 
 ### 运行时配置修改
 
 除了配置文件，还可以通过 API 接口在运行时修改配置：
 
-```bash
+```
 # 更新 Jaeger 配置
 curl -X POST http://localhost:8106/api/xflow/auto-refresh/config \
   -H "Content-Type: application/json" \
@@ -335,7 +359,7 @@ curl -X POST http://localhost:8106/api/xflow/auto-refresh/disable
 
 运行 JAR 文件时，可以通过命令行参数指定配置项：
 
-```bash
+```
 # 指定 Jaeger 主机和 HTTP 端口
 java -jar svc-topo-1.0.0.jar \
   --topology.auto-refresh.jaeger.host=your-jaeger-host \
@@ -359,7 +383,7 @@ java -jar svc-topo-1.0.0.jar \
 
 也可以使用环境变量来设置配置：
 
-```bash
+```
 # 设置环境变量
 export TOPOLOGY_AUTO_REFRESH_JAEGER_HOST=your-jaeger-host
 export TOPOLOGY_AUTO_REFRESH_JAEGER_HTTP_PORT=16686

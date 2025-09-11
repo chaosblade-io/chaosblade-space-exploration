@@ -36,6 +36,10 @@ public class TopologyAutoRefreshService {
     @Autowired
     private TraceParserService traceParserService;
 
+    // 添加缓存服务
+    @Autowired
+    private TopologyCacheService topologyCacheService;
+
     // Jaeger 配置参数，可通过 application.yml 配置
     @Value("${topology.auto-refresh.jaeger.host:localhost}")
     private String jaegerHost;
@@ -177,6 +181,11 @@ public class TopologyAutoRefreshService {
 
             // 转换为拓扑图
             TopologyGraph newTopology = topologyConverterService.convertTraceToTopology(traceData);
+
+            // 将拓扑图存入缓存
+            long endTime = System.currentTimeMillis() * 1000; // 转换为微秒
+            long startTime = endTime - Duration.ofMinutes(timeRangeMinutes).toNanos() / 1000; // 向前推指定分钟数
+            topologyCacheService.put(startTime, endTime, newTopology);
 
             // 更新当前拓扑
             topologyConverterService.setCurrentTopology(newTopology);

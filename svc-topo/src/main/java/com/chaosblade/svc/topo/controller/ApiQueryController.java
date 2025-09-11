@@ -8,6 +8,7 @@ import com.chaosblade.svc.topo.model.TopologyByApiRequest;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import com.chaosblade.svc.topo.service.ApiQueryService;
 import com.chaosblade.svc.topo.service.TopologyConverterService;
+import com.chaosblade.svc.topo.service.TopologyCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,10 @@ public class ApiQueryController {
 
     @Autowired
     private TopologyConverterService topologyConverterService;
+    
+    // 添加缓存服务依赖
+    @Autowired
+    private TopologyCacheService topologyCacheService;
 
     /**
      * 查询API列表
@@ -45,13 +50,9 @@ public class ApiQueryController {
             request.getAppSelector() != null ? request.getAppSelector().getServices() : "all");
 
         try {
-            // 从TopologyConverterService获取当前拓扑图
-            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
-            if (currentTopology == null) {
-                logger.warn("当前拓扑图为空");
-                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
-            }
-
+            // 尝试从缓存中获取拓扑图
+            TopologyGraph currentTopology = getTopologyFromCacheOrCurrentForApiQuery(request);
+            
             ApiQueryResponse response = apiQueryService.queryApisFromTopology(currentTopology, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -75,13 +76,9 @@ public class ApiQueryController {
             request.getApiId());
 
         try {
-            // 从TopologyConverterService获取当前拓扑图
-            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
-            if (currentTopology == null) {
-                logger.warn("当前拓扑图为空");
-                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
-            }
-
+            // 尝试从缓存中获取拓扑图
+            TopologyGraph currentTopology = getTopologyFromCacheOrCurrentForTopologyQuery(request);
+            
             TopologyGraph response = apiQueryService.queryTopologyByApiId(currentTopology, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -102,13 +99,9 @@ public class ApiQueryController {
         logger.info("收到指标查询请求: apiId={}", request.getApiId());
 
         try {
-            // 从TopologyConverterService获取当前拓扑图
-            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
-            if (currentTopology == null) {
-                logger.warn("当前拓扑图为空");
-                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
-            }
-
+            // 尝试从缓存中获取拓扑图
+            TopologyGraph currentTopology = getTopologyFromCacheOrCurrentForMetricsQuery(request);
+            
             MetricsByApiResponse response = apiQueryService.queryMetricsByApiId(currentTopology, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -116,5 +109,86 @@ public class ApiQueryController {
             return ResponseEntity.internalServerError().build();
         }
     }
-
+    
+    /**
+     * 从缓存或当前拓扑中获取拓扑图（用于API查询）
+     * 
+     * @param request API查询请求对象（用于提取时间范围）
+     * @return 拓扑图
+     */
+    private TopologyGraph getTopologyFromCacheOrCurrentForApiQuery(ApiQueryRequest request) {
+        TopologyGraph currentTopology = null;
+        
+        // 如果请求包含时间范围，尝试从缓存中获取
+        if (request != null && request.getTimeRange() != null) {
+            Long start = request.getTimeRange().getStart();
+            Long end = request.getTimeRange().getEnd();
+            
+            if (start != null && end != null) {
+                currentTopology = topologyCacheService.get(start, end);
+                if (currentTopology != null) {
+                    logger.debug("从缓存中获取到拓扑图，时间范围: {}-{}", start, end);
+                }
+            }
+        }
+        
+        // 如果缓存中没有找到，从当前拓扑获取
+        if (currentTopology == null) {
+            currentTopology = topologyConverterService.getCurrentTopology();
+            if (currentTopology == null) {
+                logger.warn("当前拓扑图为空");
+                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
+            }
+        }
+        
+        return currentTopology;
+    }
+    
+    /**
+     * 从缓存或当前拓扑中获取拓扑图（用于指标查询）
+     * 
+     * @param request 指标查询请求对象（用于提取时间范围）
+     * @return 拓扑图
+     */
+    private TopologyGraph getTopologyFromCacheOrCurrentForMetricsQuery(MetricsByApiRequest request) {
+        // MetricsByApiRequest也包含时间范围，可以类似处理
+        if (request != null && request.getTimeRange() != null) {
+            Long start = request.getTimeRange().getStart();
+            Long end = request.getTimeRange().getEnd();
+            
+            if (start != null && end != null) {
+                TopologyGraph cachedTopology = topologyCacheService.get(start, end);
+                if (cachedTopology != null) {
+                    logger.debug("从缓存中获取到拓扑图，时间范围: {}-{}", start, end);
+                    return cachedTopology;
+                }
+            }
+        }
+        
+        // 如果缓存中没有找到，从当前拓扑获取
+        TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+        if (currentTopology == null) {
+            logger.warn("当前拓扑图为空");
+            currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
+        }
+        
+        return currentTopology;
+    }
+    
+    /**
+     * 从缓存或当前拓扑中获取拓扑图（用于拓扑查询）
+     * 
+     * @param request 拓扑查询请求对象
+     * @return 拓扑图
+     */
+    private TopologyGraph getTopologyFromCacheOrCurrentForTopologyQuery(TopologyByApiRequest request) {
+        // TopologyByApiRequest不包含时间范围，直接从当前拓扑获取
+        TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+        if (currentTopology == null) {
+            logger.warn("当前拓扑图为空");
+            currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
+        }
+        
+        return currentTopology;
+    }
 }

@@ -9,6 +9,7 @@ import com.chaosblade.svc.topo.model.entity.*;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -27,6 +28,10 @@ public class ApiQueryService {
     
     // EntityId到Node的并发安全缓存
     private final Map<String, Node> entityNodeCache = new ConcurrentHashMap<>();
+    
+    // 添加缓存服务依赖
+    @Autowired
+    private TopologyCacheService topologyCacheService;
 
     /**
      * 根据查询请求从拓扑图中提取API列表
