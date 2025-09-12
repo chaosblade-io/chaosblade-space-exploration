@@ -151,6 +151,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- 添加 Spring Boot Actuator 依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- 添加Jaeger gRPC依赖 -->
         <dependency>
             <groupId>io.grpc</groupId>

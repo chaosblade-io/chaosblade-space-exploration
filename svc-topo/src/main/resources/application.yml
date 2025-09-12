@@ -26,6 +26,20 @@ spring:
         deserialization:
             accept-single-value-as-array: true
 
+# Actuator 配置
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info
+            base-path: /actuator
+    endpoint:
+        health:
+            show-details: always
+            enabled: true
+    server:
+        port: 8106
+
 logging:
     level:
         org.springframework.web: INFO
