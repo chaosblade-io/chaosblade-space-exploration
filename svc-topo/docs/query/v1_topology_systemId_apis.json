@@ -1,0 +1,41 @@
+// 作用
+// 获取系统（也就是k8s名字空间）的API列表
+//
+// 请求：
+// GET /v1/topology/{systemId}/apis
+// 系统标识符 systemId 会使用到前一步 GET /v1/topology/namespaces 响应中的 id 作为 systemId。
+//
+// 响应：
+{
+    "success": true,
+    "data": {
+        "items": [
+            {
+                "id": 1,  // API 标识号
+                "systemId": 1,  // systemId
+                "k8sNamespace": "default",
+                "operationId": "preserveservice_preserve",  // 这个是 API 的名称，也就是 operation
+                "method": "POST",  // 这个是 API 的方法
+                "path": "/api/v1/preserveservice/preserve",  // 这个是 API 的路径
+                "summary": "订票",  // 这个是 API 的描述，可以为空
+                "tags": "[\"订票\", \"preserve\", \"preserveservice\", \"v1\"]",  // 这个是 API 的标签，可以为空
+                "baseUrl": "http://116.63.51.45:32677",  // 这个是 API 的基础 URL
+                // 以下是 API 请求头相关内容，目前无法从 topology 获取，所以为空
+//                 "contentType": "application/json",
+//                 "headersTemplate": "{\"Authorization\": \"Bearer ${token}\"}",
+//                 "authType": "TOKEN",
+//                 "authTemplate": "{\"header\": \"Authorization\", \"scheme\": \"Bearer\", \"token_variable\": \"token\"}",
+//                 "pathParams": "[]",
+//                 "queryParams": "[]",
+//                 "bodyTemplate": "{\"to\": \"${terminalStation}\", \"date\": \"2025-08-28\", \"from\": \"${startingStation}\", \"tripId\": \"D1345\", \"foodName\": \"Bone Soup\", \"foodType\": 1, \"isWithin\": false, \"seatType\": \"2\", \"accountId\": \"${accountId}\", \"assurance\": \"0\", \"foodPrice\": 2.5, \"storeName\": \"\", \"contactsId\": \"${contactsId}\", \"handleDate\": \"2025-08-28\", \"stationName\": \"\", \"consigneeName\": \"11\", \"consigneePhone\": \"22\", \"consigneeWeight\": 33}",
+//                 "variables": "[{\"desc\": \"Bearer Token\", \"name\": \"token\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}, {\"desc\": \"账号ID\", \"name\": \"accountId\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}, {\"desc\": \"联系人ID\", \"name\": \"contactsId\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}, {\"desc\": \"起始站\", \"name\": \"startingStation\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}, {\"desc\": \"终点站\", \"name\": \"terminalStation\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}]",
+//                 "timeoutMs": 15000,
+//                 "retryConfig": "{\"enabled\": false}",
+                // API 的观测时间
+                "createdAt": "2025-08-28 15:07:03",
+                "updatedAt": "2025-08-28 15:07:03"
+            }
+        ],
+        "total": 1,
+    }
+}

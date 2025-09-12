@@ -7,12 +7,15 @@ import com.chaosblade.svc.topo.model.MetricsByApiResponse;
 import com.chaosblade.svc.topo.model.NamespacesResponse;
 import com.chaosblade.svc.topo.model.NamespaceDetail;
 import com.chaosblade.svc.topo.model.NamespaceListResponse;
+import com.chaosblade.svc.topo.model.SystemApiListResponse;
 import com.chaosblade.svc.topo.model.TopologyByApiRequest;
-import com.chaosblade.svc.topo.model.topology.TopologyGraph;
-import com.chaosblade.svc.topo.service.ApiQueryService;
-import com.chaosblade.svc.topo.service.TopologyConverterService;
+import com.chaosblade.svc.topo.model.SystemApiListResponse.SystemApiDetail;
+import com.chaosblade.svc.topo.model.entity.Entity;
 import com.chaosblade.svc.topo.model.entity.EntityType;
 import com.chaosblade.svc.topo.model.entity.Node;
+import com.chaosblade.svc.topo.service.ApiQueryService;
+import com.chaosblade.svc.topo.service.TopologyConverterService;
+import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -172,5 +176,94 @@ public class ApiQueryController {
             logger.error("查询命名空间列表失败: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    // 添加一个静态计数器用于生成递增的ID
+    private static final java.util.concurrent.atomic.AtomicLong idCounter = new java.util.concurrent.atomic.AtomicLong(1);
+
+    /**
+     * 获取指定系统ID的API列表
+     * 根据systemId获取对应的API列表信息
+     *
+     * @param systemId 系统ID
+     * @return 系统API列表响应对象
+     */
+    @GetMapping("/topology/{systemId}/apis")
+    public ResponseEntity<SystemApiListResponse> getApisBySystemId(@PathVariable("systemId") Long systemId) {
+        logger.info("收到系统API列表查询请求: systemId={}", systemId);
+
+        // 重置计数器，确保每次请求都从1开始编号
+        idCounter.set(1);
+
+        try {
+            // 从TopologyConverterService获取当前拓扑图
+            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+            if (currentTopology == null) {
+                logger.warn("当前拓扑图为空");
+                SystemApiListResponse.SystemApiListData data = new SystemApiListResponse.SystemApiListData(new ArrayList<>(), 0);
+                return ResponseEntity.ok(new SystemApiListResponse(true, data));
+            }
+
+            // 获取所有RPC类型的节点（代表API）
+            List<Node> rpcNodes = currentTopology.getNodesByType(EntityType.RPC);
+            
+            // 过滤出属于指定systemId的节点
+            // 这里我们假设systemId为1时对应"default"命名空间
+            final String targetNamespace = systemId == 1 ? "default" : "default"; // 根据实际需求调整映射关系
+            
+            List<SystemApiDetail> apiDetails = rpcNodes.stream()
+                .filter(node -> {
+                    Entity entity = node.getEntity();
+                    if (entity == null) return false;
+                    
+                    // 根据实体的namespace属性进行过滤
+                    String namespace = entity.getNamespace();
+                    return targetNamespace.equals(namespace);
+                })
+                .map(this::convertNodeToSystemApiDetail)
+                .collect(Collectors.toList());
+
+            SystemApiListResponse.SystemApiListData data = new SystemApiListResponse.SystemApiListData(apiDetails, apiDetails.size());
+            SystemApiListResponse response = new SystemApiListResponse(true, data);
+            logger.info("返回 {} 个API", apiDetails.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("查询系统API列表失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 将节点转换为系统API详情对象
+     */
+    private SystemApiDetail convertNodeToSystemApiDetail(Node node) {
+        SystemApiDetail detail = new SystemApiDetail();
+        
+        Entity entity = node.getEntity();
+        if (entity != null) {
+            // ID使用递增编号从1开始
+            detail.setId(idCounter.getAndIncrement());
+            detail.setSystemId(1L); // 默认系统ID
+            detail.setK8sNamespace(entity.getNamespace());
+            detail.setOperationId(entity.getDisplayName());
+            
+            // 从属性中提取方法和路径信息
+            Map<String, Object> attributes = entity.getAttributes();
+            if (attributes != null) {
+                detail.setMethod((String) attributes.getOrDefault("method", "GET"));
+                detail.setPath((String) attributes.getOrDefault("path", ""));
+            } else {
+                detail.setMethod("GET");
+                detail.setPath("");
+            }
+            
+            detail.setSummary(entity.getDisplayName());
+            detail.setTags("[\"api\"]"); // 默认标签
+            detail.setBaseUrl("http://localhost:8080"); // 默认基础URL
+            detail.setCreatedAt("2025-09-12 10:00:00"); // 默认创建时间
+            detail.setUpdatedAt("2025-09-12 10:00:00"); // 默认更新时间
+        }
+        
+        return detail;
     }
 }
