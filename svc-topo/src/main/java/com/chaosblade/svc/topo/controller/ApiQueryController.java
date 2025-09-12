@@ -7,12 +7,15 @@ import com.chaosblade.svc.topo.model.MetricsByApiResponse;
 import com.chaosblade.svc.topo.model.NamespacesResponse;
 import com.chaosblade.svc.topo.model.NamespaceDetail;
 import com.chaosblade.svc.topo.model.NamespaceListResponse;
+import com.chaosblade.svc.topo.model.ServiceTopologyResponse;
 import com.chaosblade.svc.topo.model.SystemApiListResponse;
 import com.chaosblade.svc.topo.model.TopologyByApiRequest;
 import com.chaosblade.svc.topo.model.SystemApiListResponse.SystemApiDetail;
+import com.chaosblade.svc.topo.model.entity.Edge;
 import com.chaosblade.svc.topo.model.entity.Entity;
 import com.chaosblade.svc.topo.model.entity.EntityType;
 import com.chaosblade.svc.topo.model.entity.Node;
+import com.chaosblade.svc.topo.model.entity.RelationType;
 import com.chaosblade.svc.topo.service.ApiQueryService;
 import com.chaosblade.svc.topo.service.TopologyConverterService;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
@@ -23,8 +26,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.stream.Collectors;
 
 /**
@@ -265,5 +271,191 @@ public class ApiQueryController {
         }
         
         return detail;
+    }
+
+    /**
+     * 获取服务拓扑图
+     * 根据根API ID获取服务级别的拓扑图，只包含Service节点和DEPENDS_ON边
+     *
+     * @param rootApiId 根API ID
+     * @return 服务拓扑响应对象
+     */
+    @GetMapping("/topology/{rootApiId}/services")
+    public ResponseEntity<ServiceTopologyResponse> getServiceTopology(@PathVariable("rootApiId") Long rootApiId) {
+        logger.info("收到服务拓扑查询请求: rootApiId={}", rootApiId);
+
+        try {
+            // 从TopologyConverterService获取当前拓扑图
+            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+            if (currentTopology == null) {
+                logger.warn("当前拓扑图为空");
+                return ResponseEntity.ok(new ServiceTopologyResponse(false, null));
+            }
+
+            // 创建服务拓扑响应
+            ServiceTopologyResponse response = buildServiceTopologyResponse(currentTopology, rootApiId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("查询服务拓扑失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 构建服务拓扑响应对象
+     */
+    private ServiceTopologyResponse buildServiceTopologyResponse(TopologyGraph topologyGraph, Long rootApiId) {
+        // 创建响应对象
+        ServiceTopologyResponse response = new ServiceTopologyResponse();
+        response.setSuccess(true);
+        
+        ServiceTopologyResponse.ServiceTopologyData data = new ServiceTopologyResponse.ServiceTopologyData();
+        
+        // 创建拓扑信息
+        ServiceTopologyResponse.TopologyInfo topologyInfo = new ServiceTopologyResponse.TopologyInfo();
+        topologyInfo.setId(1L); // 服务拓扑ID
+        topologyInfo.setSystemId(1L); // 系统ID，默认为1
+        topologyInfo.setApiId(rootApiId); // 根API标识符
+        topologyInfo.setDiscoveredAt(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); // 发现时间
+        topologyInfo.setCreatedAt(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); // 创建时间
+        
+        data.setTopology(topologyInfo);
+        
+        // 过滤出Service类型的节点
+        List<Node> serviceNodes = topologyGraph.getNodesByType(EntityType.SERVICE);
+        
+        // 过滤出DEPENDS_ON类型的边
+        List<Edge> dependsOnEdges = topologyGraph.getEdgesByType(RelationType.DEPENDS_ON);
+        
+        // 为节点分配ID映射（用于边的转换）
+        Map<String, Long> nodeKeyToIdMap = new HashMap<>();
+        long nodeIdCounter = 1;
+        for (Node node : serviceNodes) {
+            nodeKeyToIdMap.put(node.getNodeId(), nodeIdCounter++);
+        }
+        
+        // 构建邻接表用于拓扑排序
+        Map<String, List<String>> adjacencyList = new HashMap<>();
+        Map<String, Integer> inDegree = new HashMap<>();
+        
+        // 初始化邻接表和入度
+        for (Node node : serviceNodes) {
+            adjacencyList.put(node.getNodeId(), new ArrayList<>());
+            inDegree.put(node.getNodeId(), 0);
+        }
+        
+        // 构建依赖关系图
+        for (Edge edge : dependsOnEdges) {
+            String fromNode = edge.getFrom();
+            String toNode = edge.getTo();
+            
+            // 只处理Service节点之间的边
+            if (nodeKeyToIdMap.containsKey(fromNode) && nodeKeyToIdMap.containsKey(toNode)) {
+                adjacencyList.get(fromNode).add(toNode);
+                inDegree.put(toNode, inDegree.get(toNode) + 1);
+            }
+        }
+        
+        // 执行拓扑排序计算节点层级
+        Map<String, Integer> nodeLayers = calculateNodeLayers(adjacencyList, inDegree);
+        
+        // 转换节点
+        List<ServiceTopologyResponse.ServiceNode> serviceNodeList = new ArrayList<>();
+        long serviceNodeId = 20; // 从示例中的20开始
+        Map<String, Long> serviceNodeIds = new HashMap<>(); // 保存新生成的节点ID映射
+        
+        for (Node node : serviceNodes) {
+            ServiceTopologyResponse.ServiceNode serviceNode = new ServiceTopologyResponse.ServiceNode();
+            long newId = serviceNodeId++;
+            serviceNodeIds.put(node.getNodeId(), newId);
+            
+            serviceNode.setId(newId);
+            serviceNode.setTopologyId(1L);
+            serviceNode.setNodeKey(node.getDisplayName());
+            serviceNode.setName(node.getDisplayName());
+            serviceNode.setProtocol("HTTP"); // 协议写死为HTTP
+            serviceNode.setLayer(nodeLayers.getOrDefault(node.getNodeId(), 1));
+            serviceNodeList.add(serviceNode);
+        }
+        
+        // 转换边
+        List<ServiceTopologyResponse.ServiceEdge> serviceEdgeList = new ArrayList<>();
+        long serviceEdgeId = 27; // 从示例中的27开始
+        
+        for (Edge edge : dependsOnEdges) {
+            String fromNode = edge.getFrom();
+            String toNode = edge.getTo();
+            
+            // 检查边的源节点和目标节点是否都在serviceNodes中
+            if (serviceNodeIds.containsKey(fromNode) && serviceNodeIds.containsKey(toNode)) {
+                ServiceTopologyResponse.ServiceEdge serviceEdge = new ServiceTopologyResponse.ServiceEdge();
+                serviceEdge.setId(serviceEdgeId++);
+                serviceEdge.setTopologyId(1L);
+                serviceEdge.setFromNodeId(serviceNodeIds.get(fromNode));
+                serviceEdge.setToNodeId(serviceNodeIds.get(toNode));
+                serviceEdgeList.add(serviceEdge);
+            }
+        }
+        
+        // 更新拓扑信息中的notes字段
+        topologyInfo.setNotes(String.format("{ \"totalEdges\": %d, \"totalServices\": %d}", 
+            serviceEdgeList.size(), serviceNodeList.size()));
+        
+        data.setNodes(serviceNodeList);
+        data.setEdges(serviceEdgeList);
+        response.setData(data);
+        
+        return response;
+    }
+    
+    /**
+     * 使用拓扑排序算法计算节点层级
+     * @param adjacencyList 邻接表
+     * @param inDegree 入度表
+     * @return 节点层级映射
+     */
+    private Map<String, Integer> calculateNodeLayers(Map<String, List<String>> adjacencyList, Map<String, Integer> inDegree) {
+        Map<String, Integer> nodeLayers = new HashMap<>();
+        Queue<String> queue = new LinkedList<>();
+        
+        // 将所有入度为0的节点加入队列，层級設為1
+        for (Map.Entry<String, Integer> entry : inDegree.entrySet()) {
+            if (entry.getValue() == 0) {
+                queue.offer(entry.getKey());
+                nodeLayers.put(entry.getKey(), 1);
+            }
+        }
+        
+        // 执行拓扑排序
+        while (!queue.isEmpty()) {
+            String currentNode = queue.poll();
+            int currentLayer = nodeLayers.get(currentNode);
+            
+            // 遍历当前节点的所有邻居
+            for (String neighbor : adjacencyList.get(currentNode)) {
+                // 减少邻居节点的入度
+                inDegree.put(neighbor, inDegree.get(neighbor) - 1);
+                
+                // 如果邻居节点的入度变为0，将其加入队列
+                if (inDegree.get(neighbor) == 0) {
+                    queue.offer(neighbor);
+                    // 邻居节点的层级为当前节点层级+1
+                    nodeLayers.put(neighbor, currentLayer + 1);
+                } else if (inDegree.get(neighbor) < 0) {
+                    // 处理已经访问过的节点，确保层级正确
+                    int existingLayer = nodeLayers.getOrDefault(neighbor, 0);
+                    nodeLayers.put(neighbor, Math.max(existingLayer, currentLayer + 1));
+                }
+            }
+        }
+        
+        // 对于仍有入度的节点（可能存在环），设置默认层级
+        for (String node : inDegree.keySet()) {
+            if (!nodeLayers.containsKey(node)) {
+                nodeLayers.put(node, 1);
+            }
+        }
+        
+        return nodeLayers;
     }
 }
