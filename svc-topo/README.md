@@ -15,7 +15,7 @@
 
 ## 🏗️ 技术架构
 
-``mermaid
+```mermaid
 graph TB
 subgraph "前端层"
 UI[React + XFlow UI]
@@ -128,6 +128,127 @@ java -jar target/svc-topo-1.0.0.jar \
 - 生产模式: http://localhost:8080
 - 开发模式前端: http://localhost:3000
 - 开发模式后端API: http://localhost:8080/api/
+
+## 🏗️ 构建和部署
+
+### 目录结构
+
+```
+svc-topo/
+├── Dockerfile              # Docker 镜像构建文件
+├── Makefile                # 构建和打包命令
+├── k8s/                    # Kubernetes 部署文件
+│   └── k8s.yaml            # Kubernetes 部署配置（包含 ConfigMap、Deployment 和 Service）
+```
+
+### 构建 Docker 镜像
+
+#### 使用 Make 命令构建
+
+```bash
+# 构建项目
+make build
+
+# 打包项目为 JAR 文件
+make package
+
+# 构建 Docker 镜像
+make docker-build
+```
+
+#### 手动构建 Docker 镜像
+
+```bash
+# 1. 打包项目
+mvn clean package -DskipTests
+
+# 2. 构建 Docker 镜像
+docker build -t chaosblade/svc-topo:1.0.0 .
+```
+
+### 环境变量配置
+
+Docker 镜像支持以下环境变量来覆盖默认配置：
+
+- `JaegerHost`: Jaeger 主机地址，对应 `topology.auto-refresh.jaeger.host`
+- `JaegerPort`: Jaeger 端口，对应 `topology.auto-refresh.jaeger.http-port`
+- `EntryService`: 入口服务名称，对应 `topology.auto-refresh.service-name`
+
+如果未指定环境变量，将使用 `application.yml` 中的默认配置。
+
+### Kubernetes 部署
+
+#### 部署到 Kubernetes
+
+```bash
+# 应用 Kubernetes 配置
+kubectl apply -f k8s/k8s.yaml
+```
+
+#### 配置自定义参数
+
+修改 `k8s.yaml` 文件中的 ConfigMap 参数以适应您的环境：
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: svc-topo-config
+  namespace: chaosblade
+data:
+  # Jaeger 配置
+  jaeger-host: "your-jaeger-host"
+  jaeger-port: "16686"
+  # 入口服务名称
+  entry-service: "your-entry-service"
+```
+
+#### 创建 imagePullSecrets
+
+如果使用私有镜像仓库，需要创建 imagePullSecrets：
+
+```bash
+# 创建 ghcr-stleox secret
+kubectl create secret docker-registry ghcr-stleox \
+  --docker-server=ghcr.io \
+  --docker-username=<your-username> \
+  --docker-password=<your-password> \
+  --docker-email=<your-email> \
+  -n chaosblade
+```
+
+#### 访问服务
+
+部署完成后，可以通过以下方式访问服务：
+
+```bash
+# 获取服务信息
+kubectl get svc svc-topo-service -n chaosblade
+
+# 端口转发访问
+kubectl port-forward svc/svc-topo-service 8106:8106 -n chaosblade
+```
+
+然后在浏览器中访问 `http://localhost:8106`
+
+### 故障排除
+
+#### 查看日志
+
+```bash
+# 查看 Pod 日志
+kubectl logs -l app=svc-topo -n chaosblade
+```
+
+#### 检查部署状态
+
+```bash
+# 检查部署状态
+kubectl get deployments -n chaosblade
+
+# 检查 Pod 状态
+kubectl get pods -n chaosblade
+```
 
 ## 📖 使用指南
 
