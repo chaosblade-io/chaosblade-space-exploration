@@ -135,10 +135,48 @@ java -jar target/svc-topo-1.0.0.jar \
 
 ```
 svc-topo/
-├── Dockerfile              # Docker 镜像构建文件
-├── Makefile                # 构建和打包命令
-├── k8s/                    # Kubernetes 部署文件
-│   └── k8s.yaml            # Kubernetes 部署配置（包含 ConfigMap、Deployment 和 Service）
+├── .github/
+│   └── workflows/
+│       └── build.yml           # GitHub CI 配置
+├── Dockerfile                  # Docker 镜像构建文件
+├── Makefile                    # 构建和打包命令
+├── k8s/                        # Kubernetes 部署文件
+│   └── k8s.yaml                # Kubernetes 部署配置（包含 ConfigMap、Deployment 和 Service）
+```
+
+### GitHub CI
+
+项目使用 GitHub Actions 进行持续集成和持续部署：
+
+- **构建和测试**: 在每次推送或创建 Pull Request 时自动运行
+- **Docker 镜像构建**: 在推送到 main 分支时自动构建并推送到 GitHub Container Registry
+
+#### GITHUB_TOKEN 配置
+
+GitHub Actions 会自动为每个工作流运行提供一个内置的 `GITHUB_TOKEN`，您无需手动创建。这个令牌具有访问仓库内容的权限，足以用于推送到 GitHub Container Registry (GHCR)。
+
+如果您需要推送 Docker 镜像到 GHCR，确保您的仓库设置中启用了以下权限：
+1. 转到仓库的 Settings 页面
+2. 点击左侧的 Actions 选项
+3. 在 "General" 部分，确保 "Allow all actions and reusable workflows" 被选中
+4. 在 "Workflow permissions" 部分，确保 "Read and write permissions" 被选中
+
+#### 自定义 Docker 镜像仓库配置
+
+如果您需要使用自定义的 Docker 镜像仓库，可以在 GitHub Secrets 中配置以下变量：
+- `DOCKER_REGISTRY`: Docker 仓库地址
+- `DOCKER_USERNAME`: Docker 仓库用户名
+- `DOCKER_PASSWORD`: Docker 仓库密码
+
+然后修改 [.github/workflows/build.yml](file:///Users/leo/IdeaProjects/chaosblade-space-exploration/svc-topo/.github/workflows/build.yml) 文件中的登录部分：
+
+```yaml
+- name: Login to Docker Registry
+  uses: docker/login-action@v2
+  with:
+    registry: ${{ secrets.DOCKER_REGISTRY }}
+    username: ${{ secrets.DOCKER_USERNAME }}
+    password: ${{ secrets.DOCKER_PASSWORD }}
 ```
 
 ### 构建 Docker 镜像
