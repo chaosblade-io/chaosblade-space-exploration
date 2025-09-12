@@ -1,0 +1,19 @@
+// GET http://localhost:8106/v1/topology/namespaces
+
+{
+    "success": true,
+    "data": {
+        "items": [
+            {
+                "id": 1,
+                "systemKey": "train-ticket",
+                "k8sNamespace": "default",
+                "name": "订票系统",
+                "description": "火车票订票系统（被测系统）",
+                "owner": "admin",
+                "defaultEnvironment": "prod"
+            }
+        ],
+        "total": 1
+    }
+}

@@ -5,6 +5,8 @@ import com.chaosblade.svc.topo.model.ApiQueryResponse;
 import com.chaosblade.svc.topo.model.MetricsByApiRequest;
 import com.chaosblade.svc.topo.model.MetricsByApiResponse;
 import com.chaosblade.svc.topo.model.NamespacesResponse;
+import com.chaosblade.svc.topo.model.NamespaceDetail;
+import com.chaosblade.svc.topo.model.NamespaceListResponse;
 import com.chaosblade.svc.topo.model.TopologyByApiRequest;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import com.chaosblade.svc.topo.service.ApiQueryService;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -130,7 +133,7 @@ public class ApiQueryController {
      * @return 命名空间列表响应对象
      */
     @GetMapping("/topology/namespaces")
-    public ResponseEntity<NamespacesResponse> getNamespaces() {
+    public ResponseEntity<NamespaceListResponse> getNamespaces() {
         logger.info("收到命名空间列表查询请求");
 
         try {
@@ -138,17 +141,32 @@ public class ApiQueryController {
             TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
             if (currentTopology == null) {
                 logger.warn("当前拓扑图为空");
-                return ResponseEntity.ok(new NamespacesResponse(List.of())); // 返回空列表而不是null
+                NamespaceListResponse.NamespaceListData data = new NamespaceListResponse.NamespaceListData(List.of(), 0);
+                return ResponseEntity.ok(new NamespaceListResponse(true, data)); // 返回空列表而不是null
             }
 
             // 过滤出EntityType为NAMESPACE的节点，并提取显示名称
-            List<String> namespaces = currentTopology.getNodes().stream()
+            List<String> namespaceNames = currentTopology.getNodes().stream()
                     .filter(node -> EntityType.NAMESPACE.equals(node.getEntityType()))
                     .map(Node::getDisplayName)
                     .collect(Collectors.toList());
 
-            NamespacesResponse response = new NamespacesResponse(namespaces);
-            logger.info("返回 {} 个命名空间", namespaces.size());
+            // 转换为NamespaceDetail对象列表
+            List<NamespaceDetail> namespaceDetails = new ArrayList<>();
+            NamespaceDetail TrainTicket = new NamespaceDetail(
+                    (long) 1,           // id
+                    "train-ticket",           // systemKey
+                    "default",                // k8sNamespace
+                    "订票系统",                     // name
+                    "火车票订票系统（被测系统）",    // description
+                    "admin",                  // owner
+                    "prod"                    // defaultEnvironment
+            );
+            namespaceDetails.add(TrainTicket);
+
+            NamespaceListResponse.NamespaceListData data = new NamespaceListResponse.NamespaceListData(namespaceDetails, namespaceDetails.size());
+            NamespaceListResponse response = new NamespaceListResponse(true, data);
+            logger.info("返回 {} 个命名空间", namespaceDetails.size());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("查询命名空间列表失败: {}", e.getMessage(), e);
