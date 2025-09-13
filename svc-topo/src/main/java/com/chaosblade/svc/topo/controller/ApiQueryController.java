@@ -488,14 +488,9 @@ public class ApiQueryController {
 
         return nodeLayers;
     }
-}
-
 
     /**
-     * 从缓存或当前拓扑中获取拓扑图（用于API查询）
-     *
-     * @param request API查询请求对象（用于提取时间范围）
-     * @return 拓扑图
+     * 为API查询获取拓扑图（从缓存或当前拓扑）
      */
     private TopologyGraph getTopologyFromCacheOrCurrentForApiQuery(ApiQueryRequest request) {
         TopologyGraph currentTopology = null;
@@ -526,10 +521,21 @@ public class ApiQueryController {
     }
 
     /**
-     * 从缓存或当前拓扑中获取拓扑图（用于指标查询）
-     *
-     * @param request 指标查询请求对象（用于提取时间范围）
-     * @return 拓扑图
+     * 为拓扑查询获取拓扑图（从缓存或当前拓扑）
+     */
+    private TopologyGraph getTopologyFromCacheOrCurrentForTopologyQuery(TopologyByApiRequest request) {
+        // TopologyByApiRequest不包含时间范围，直接从当前拓扑获取
+        TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+        if (currentTopology == null) {
+            logger.warn("当前拓扑图为空");
+            currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
+        }
+
+        return currentTopology;
+    }
+
+    /**
+     * 为指标查询获取拓扑图（从缓存或当前拓扑）
      */
     private TopologyGraph getTopologyFromCacheOrCurrentForMetricsQuery(MetricsByApiRequest request) {
         // MetricsByApiRequest也包含时间范围，可以类似处理
@@ -547,23 +553,6 @@ public class ApiQueryController {
         }
 
         // 如果缓存中没有找到，从当前拓扑获取
-        TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
-        if (currentTopology == null) {
-            logger.warn("当前拓扑图为空");
-            currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
-        }
-
-        return currentTopology;
-    }
-
-    /**
-     * 从缓存或当前拓扑中获取拓扑图（用于拓扑查询）
-     *
-     * @param request 拓扑查询请求对象
-     * @return 拓扑图
-     */
-    private TopologyGraph getTopologyFromCacheOrCurrentForTopologyQuery(TopologyByApiRequest request) {
-        // TopologyByApiRequest不包含时间范围，直接从当前拓扑获取
         TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
         if (currentTopology == null) {
             logger.warn("当前拓扑图为空");

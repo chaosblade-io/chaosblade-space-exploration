@@ -118,7 +118,7 @@ class TopologyAutoRefreshServiceTest {
         assertEquals(14250, status.getJaegerPort());
         assertEquals("frontend", status.getServiceName());
         assertEquals("all", status.getOperationName());
-        assertEquals(15, status.getTimeRangeMinutes());
+        assertEquals(15, status.getTimeRangeSeconds());
         assertEquals(0, status.getSuccessfulRefreshCount());
         assertEquals(0, status.getFailedRefreshCount());
     }
@@ -157,7 +157,7 @@ class TopologyAutoRefreshServiceTest {
         assertEquals(16685, status.getJaegerPort());
         assertEquals("new-service", status.getServiceName());
         assertEquals("new-operation", status.getOperationName());
-        assertEquals(30, status.getTimeRangeMinutes());
+        assertEquals(30, status.getTimeRangeSeconds());
     }
 
     @Test

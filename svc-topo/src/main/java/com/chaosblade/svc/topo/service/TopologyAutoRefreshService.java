@@ -46,20 +46,20 @@ public class TopologyAutoRefreshService {
     private TopologyCacheService topologyCacheService;
 
     // Jaeger 配置参数，可通过 application.yml 配置
-    @Value("${topology.auto-refresh.jaeger.host:localhost}")
+    @Value("${topology.jaeger.host:localhost}")
     private String jaegerHost;
 
-    @Value("${topology.auto-refresh.jaeger.port:16685}")
+    @Value("${topology.jaeger.port:16685}")
     private int jaegerPort;
 
     // 添加HTTP API端口配置
-    @Value("${topology.auto-refresh.jaeger.http-port:16686}")
+    @Value("${topology.jaeger.http-port:16686}")
     private int jaegerHttpPort;
 
-    @Value("${topology.auto-refresh.service-name:frontend}")
+    @Value("${topology.sut.service-name:frontend}")
     private String serviceName;
 
-    @Value("${topology.auto-refresh.operation-name:all}")
+    @Value("${topology.sut.operation-name:all}")
     private String operationName;
 
     @Value("${topology.auto-refresh.time-range-seconds:15}")
@@ -69,7 +69,7 @@ public class TopologyAutoRefreshService {
     private boolean autoRefreshEnabled;
 
     // 添加Jaeger查询方式配置：grpc 或 http
-    @Value("${topology.auto-refresh.jaeger.query-method:grpc}")
+    @Value("${topology.jaeger.query-method:grpc}")
     private String jaegerQueryMethod;
 
     // 是否启用mock模式，如果为true则从本地文件读取trace数据而不是从Jaeger拉取
@@ -107,10 +107,19 @@ public class TopologyAutoRefreshService {
         long endTime = currentTime;
         int multiplier = 1; // 倍数，用于指数增长
 
-        // 按照 15*1, 15*2, 15*4, 15*8 的方式向前查找
-        while (multiplier <= 1024) {
+        // 12小时的毫秒数
+        long twelveHoursInMillis = 12 * 60 * 60 * 1000L;
+
+        // 按照 15*1, 15*2, 15*4, 15*8 的方式向前查找，直到累积到大约12小时的回推时间
+        while (multiplier <= 4*60*12) {
             int interval = BASE_INTERVAL_SECONDS * multiplier;
             long startTime = endTime - Duration.ofSeconds(interval).toMillis();
+
+            // 检查是否超过了12小时的回推时间限制
+            if (currentTime - startTime > twelveHoursInMillis) {
+                logger.info("回推时间已超过12小时限制，停止寻找历史时间区间");
+                break;
+            }
 
             logger.debug("尝试查询时间区间: {} - {}", startTime, endTime);
 
@@ -159,8 +168,11 @@ public class TopologyAutoRefreshService {
                         jaegerHost, jaegerHttpPort, serviceName, operationName, startTime, endTime);
             } else if (serviceName != null && !serviceName.isEmpty()) {
                 // 如果只指定了服务，使用queryTracesByServiceHttp方法
-                return jaegerQueryService.queryTracesByServiceHttp(
-                        jaegerHost, jaegerHttpPort, serviceName, startTime, endTime);
+                JaegerSource jaegerSource = new JaegerSource();
+                jaegerSource.setHost(jaegerHost);
+                jaegerSource.setHttpPort(jaegerHttpPort);
+                jaegerSource.setEntryService(serviceName);
+                return jaegerQueryService.queryTracesByServiceHttp(jaegerSource, startTime, endTime);
             } else {
                 // 否则使用queryTracesHttp方法（不指定特定服务和操作）
                 return jaegerQueryService.queryTracesHttp(
@@ -329,6 +341,10 @@ public class TopologyAutoRefreshService {
             long endTime = System.currentTimeMillis(); // 毫秒时间戳
             long startTime = endTime - Duration.ofSeconds(timeRangeSeconds).toMillis(); // 向前推指定秒数
             topologyCacheService.put(startTime, endTime, newTopology);
+            
+            // 更新 lastHistoricalTimeKey 为当前时间区间
+            lastHistoricalTimeKey = new TopologyCacheService.TimeKey(startTime, endTime);
+            logger.debug("更新 lastHistoricalTimeKey 为当前时间区间: {} - {}", startTime, endTime);
 
             // 更新当前拓扑
             topologyConverterService.setCurrentTopology(newTopology);

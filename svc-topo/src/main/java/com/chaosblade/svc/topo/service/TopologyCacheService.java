@@ -51,7 +51,7 @@ public class TopologyCacheService {
             this.start = start;
             this.end = end;
             // 使用start转秒后整除15秒的结果作为时间索引
-            this.timeIndex = (int) ((start / 1000000) / 15); // 微秒转秒后整除15
+            this.timeIndex = (int) ((start / 1000) / 15); // 毫秒转秒后整除15
         }
 
         public long getStart() {
@@ -201,6 +201,37 @@ public class TopologyCacheService {
         lock.readLock().lock();
         try {
             return String.format("缓存大小: %d/%d", cache.size(), maxCacheSize);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * 获取最新的缓存项
+     * 
+     * @return 最新的拓扑图数据，如果缓存为空则返回null
+     */
+    public TopologyGraph getLatest() {
+        lock.readLock().lock();
+        try {
+            if (cache.isEmpty()) {
+                return null;
+            }
+            
+            // 获取最后一个条目（最新的）
+            TimeKey lastKey = null;
+            TopologyGraph lastValue = null;
+            for (Map.Entry<TimeKey, TopologyGraph> entry : cache.entrySet()) {
+                lastKey = entry.getKey();
+                lastValue = entry.getValue();
+            }
+            
+            if (lastKey != null && lastValue != null) {
+                logger.debug("获取到最新的缓存项，时间范围: {}-{}", lastKey.getStart(), lastKey.getEnd());
+                return lastValue;
+            }
+            
+            return null;
         } finally {
             lock.readLock().unlock();
         }

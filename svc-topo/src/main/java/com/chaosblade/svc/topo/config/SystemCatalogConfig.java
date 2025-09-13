@@ -24,10 +24,10 @@ public class SystemCatalogConfig {
     
     private static final Logger logger = LoggerFactory.getLogger(SystemCatalogConfig.class);
     
-    @Value("${topology.auto-refresh.jaeger.host:localhost}")
+    @Value("${topology.jaeger.host:localhost}")
     private String jaegerHost;
     
-    @Value("${topology.auto-refresh.jaeger.http-port:16686}")
+    @Value("${topology.jaeger.http-port:16686}")
     private int jaegerHttpPort;
     
     @Value("${topology.sut.service-name:ts-preserve-service}")

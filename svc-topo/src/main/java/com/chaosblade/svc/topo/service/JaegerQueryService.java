@@ -289,9 +289,9 @@ public class JaegerQueryService {
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-                // 构建查询URL (直接使用毫秒时间戳)
-                long startMs = startTime;
-                long endMs = endTime;
+                // 构建查询URL (需要毫秒1e-3转微秒1e-6时间戳，Jaeger使用微秒)
+                long startUs = startTime*1000;
+                long endUs = endTime*1000;
 
                 // 构建查询参数
                 StringBuilder urlBuilder = new StringBuilder();
@@ -299,8 +299,8 @@ public class JaegerQueryService {
                           .append(jaegerSource.getBasePath() != null ? jaegerSource.getBasePath() : "/api/traces")
                           .append("?limit=").append(limit)
                           .append("&service=").append(jaegerSource.getEntryService())
-                          .append("&start=").append(startMs)
-                          .append("&end=").append(endMs);
+                          .append("&start=").append(startUs)
+                          .append("&end=").append(endUs);
 
                 String url = urlBuilder.toString();
                 logger.debug("Jaeger HTTP查询URL: {}", url);
@@ -392,9 +392,9 @@ public class JaegerQueryService {
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-                // 构建查询URL (直接使用毫秒时间戳)
-                long startMs = startTime;
-                long endMs = endTime;
+                // 构建查询URL (需要毫秒1e-3转微秒1e-6时间戳，Jaeger使用微秒)
+                long startUs = startTime*1000;
+                long endUs = endTime*1000;
 
                 // 构建查询参数
                 StringBuilder urlBuilder = new StringBuilder();
@@ -402,8 +402,8 @@ public class JaegerQueryService {
                           .append("/api/traces?limit=").append(limit)
                           .append("&service=").append(serviceName)
                           .append("&operation=").append(operationName)
-                          .append("&start=").append(startMs)
-                          .append("&end=").append(endMs);
+                          .append("&start=").append(startUs)
+                          .append("&end=").append(endUs);
 
                 String url = urlBuilder.toString();
                 logger.debug("Jaeger HTTP查询URL: {}", url);

@@ -7,6 +7,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import javax.annotation.PostConstruct;
+import java.util.TimeZone;
+
 /**
  * Topology Visualizer 应用启动类
  *
@@ -22,6 +25,21 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @SpringBootApplication
 @EnableScheduling
 public class TopoApplication {
+
+    @PostConstruct
+    public void checkTimeZone() {
+        TimeZone currentTimeZone = TimeZone.getDefault();
+        String timeZoneId = currentTimeZone.getID();
+        
+        if (!"Asia/Shanghai".equals(timeZoneId)) {
+            System.out.println("\n=== WARNING: 时区设置不是 Asia/Shanghai ===");
+            System.out.println("当前时区: " + timeZoneId);
+            System.out.println("建议设置时区为 Asia/Shanghai 以确保时间处理正确");
+            System.out.println("==========================================\n");
+        } else {
+            System.out.println("\n=== 时区设置正确: " + timeZoneId + " ===\n");
+        }
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(TopoApplication.class, args);
