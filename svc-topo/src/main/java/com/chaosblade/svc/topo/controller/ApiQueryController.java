@@ -58,7 +58,7 @@ public class ApiQueryController {
 
     @Autowired
     private SystemCatalogConfig systemCatalogConfig;
-    
+
     @Autowired
     private ApiRequestConfig apiRequestConfig;
 
@@ -383,7 +383,7 @@ public class ApiQueryController {
             ApiRequestPayload payload = payloadOptional.get();
             rootApiDetail.setRootService(payload.getRootService());
             rootApiDetail.setRootOperation(payload.getRootOperation());
-            
+
             // 设置新增字段的值
             rootApiDetail.setContentType(payload.getContentType());
             rootApiDetail.setHeadersTemplate(payload.getHeadersTemplate());
@@ -395,7 +395,7 @@ public class ApiQueryController {
             rootApiDetail.setVariables(payload.getVariables());
             rootApiDetail.setTimeoutMs(payload.getTimeoutMs());
             rootApiDetail.setRetryConfig(payload.getRetryConfig());
-        } 
+        }
 
         return rootApiDetail;
     }
@@ -550,9 +550,9 @@ public class ApiQueryController {
 
             serviceNode.setId(newId);
             serviceNode.setTopologyId(1L);
-            serviceNode.setNodeKey(node.getDisplayName());
+            serviceNode.setNodeKey(node.getNodeId().substring(4));
             serviceNode.setName(node.getDisplayName());
-            serviceNode.setProtocol("HTTP"); // 协议写死为HTTP
+            serviceNode.setProtocol("HTTP");
             serviceNode.setLayer(nodeLayers.getOrDefault(node.getNodeId(), 1));
             serviceNodeList.add(serviceNode);
         }
@@ -713,18 +713,18 @@ public class ApiQueryController {
 
     /**
      * 保存API请求负载数据到system-request.json文件
-     * 
+     *
      * @param payload 要保存的ApiRequestPayload对象
      * @return 保存结果响应
      */
     @PostMapping("/topology/api-request")
     public ResponseEntity<String> saveApiRequestPayload(@RequestBody ApiRequestPayload payload) {
         logger.info("收到保存API请求负载的请求: {}", payload);
-        
+
         try {
             // 获取现有的API请求负载列表
             List<ApiRequestPayload> payloads = new ArrayList<>(apiRequestConfig.getApiRequestPayloads());
-            
+
             // 检查是否已存在相同的operationId，如果存在则更新，否则添加
             boolean updated = false;
             for (int i = 0; i < payloads.size(); i++) {
@@ -734,25 +734,25 @@ public class ApiQueryController {
                     break;
                 }
             }
-            
+
             if (!updated) {
                 payloads.add(payload);
             }
-            
+
             // 将更新后的列表写入system-request.json文件
             ObjectMapper objectMapper = new ObjectMapper();
             String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payloads);
-            
+
             // 获取应用程序根目录下的system-request.json文件路径
             // 使用相对路径，文件将保存在项目根目录下
             File file = new File("system-request.json");
             try (FileWriter writer = new FileWriter(file)) {
                 writer.write(jsonString);
             }
-            
+
             // 更新内存中的配置
             apiRequestConfig.updateOrAddApiRequestPayload(payload);
-            
+
             logger.info("成功保存API请求负载到system-request.json文件");
             return ResponseEntity.ok("API请求负载保存成功");
         } catch (IOException e) {
@@ -763,16 +763,16 @@ public class ApiQueryController {
             return ResponseEntity.internalServerError().body("保存API请求负载时发生未知错误: " + e.getMessage());
         }
     }
-    
+
     /**
      * 获取所有API请求负载
-     * 
+     *
      * @return API请求负载列表
      */
     @GetMapping("/topology/api-requests")
     public ResponseEntity<List<ApiRequestPayload>> getApiRequestPayloads() {
         logger.info("收到获取API请求负载列表的请求");
-        
+
         try {
             List<ApiRequestPayload> payloads = apiRequestConfig.getApiRequestPayloads();
             logger.info("返回 {} 个API请求负载", payloads.size());
