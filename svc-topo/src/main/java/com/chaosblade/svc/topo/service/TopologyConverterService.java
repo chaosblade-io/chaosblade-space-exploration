@@ -279,6 +279,14 @@ public class TopologyConverterService {
                 rpcEntity.setRegionId("unknown");
                 rpcEntity.addAttribute("rpc", rpc.getInterfaceName());
                 rpcEntity.addAttribute("protocol", rpc.getProtocol());
+                
+                // 添加 method 和 path 到 attributes 中（如果存在）
+                if (rpc.getMethod() != null) {
+                    rpcEntity.addAttribute("method", rpc.getMethod());
+                }
+                if (rpc.getPath() != null) {
+                    rpcEntity.addAttribute("path", rpc.getPath());
+                }
 
                 Node rpcNode = new Node(rpcEntity.getEntityId(), rpcEntity);
                 topology.addNode(rpcNode);

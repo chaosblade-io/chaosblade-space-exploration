@@ -41,7 +41,7 @@ jobs:
   docker:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # if: github.ref == 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v4
@@ -67,4 +67,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/stleox/chaosblade/svc-topo:1.0.0
+          tags: ghcr.io/stleox/chaosblade/svc-topo:latest

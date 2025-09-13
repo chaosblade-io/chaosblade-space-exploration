@@ -234,7 +234,7 @@ public class TraceParserService {
                 if ("internal".equals(spanKind)) {
                     continue;
                 }
-                
+
                 String serviceName = processToService.get(span.getProcessId());
                 if (serviceName == null) continue;
 
@@ -333,6 +333,8 @@ public class TraceParserService {
         private final String protocol;
         private final Long duration;
         private final boolean isError;
+        private final String method;
+        private final String path;
 
         public RpcInterface(String serviceName, String interfaceName, String protocol, Long duration, boolean isError) {
             this.serviceName = serviceName;
@@ -349,14 +351,22 @@ public class TraceParserService {
                     String path = matcher.group(2);
                     if (path != null) {
                         this.interfaceName = method + " " + path;
+                        this.method = method;
+                        this.path = path;
                     } else {
                         this.interfaceName = method;
+                        this.method = method;
+                        this.path = "/";
                     }
                 } else {
                     this.interfaceName = interfaceName;
+                    this.method = null;  // 无法解析时设置为null
+                    this.path = null;    // 无法解析时设置为null
                 }
             } else {
                 this.interfaceName = interfaceName;
+                this.method = null;  // 非HTTP协议时设置为null
+                this.path = null;    // 非HTTP协议时设置为null
             }
             this.protocol = protocol;
             this.duration = duration;
@@ -368,6 +378,8 @@ public class TraceParserService {
         public String getProtocol() { return protocol; }
         public Long getDuration() { return duration; }
         public boolean isError() { return isError; }
+        public String getMethod() { return method; }  // 新增getter方法
+        public String getPath() { return path; }      // 新增getter方法
 
         @Override
         public String toString() {

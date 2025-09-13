@@ -2,6 +2,7 @@ package com.chaosblade.svc.topo.model;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -28,6 +29,12 @@ public class SystemInfo {
 
     @JsonProperty("defaultEnvironment")
     private String defaultEnvironment;
+
+    @JsonProperty("rootService")
+    private String rootService;
+
+    @JsonProperty("rootOperation")
+    private String rootOperation;
 
     // Getters and Setters
 
@@ -87,6 +94,22 @@ public class SystemInfo {
         this.defaultEnvironment = defaultEnvironment;
     }
 
+    public String getRootService() {
+        return rootService;
+    }
+
+    public void setRootService(String rootService) {
+        this.rootService = rootService;
+    }
+
+    public String getRootOperation() {
+        return rootOperation;
+    }
+
+    public void setRootOperation(String rootOperation) {
+        this.rootOperation = rootOperation;
+    }
+
     @Override
     public String toString() {
         return "SystemInfo{" +
@@ -97,6 +120,8 @@ public class SystemInfo {
                 ", description='" + description + '\'' +
                 ", owner='" + owner + '\'' +
                 ", defaultEnvironment='" + defaultEnvironment + '\'' +
+                ", rootService='" + rootService + '\'' +
+                ", rootOperation='" + rootOperation + '\'' +
                 '}';
     }
 }

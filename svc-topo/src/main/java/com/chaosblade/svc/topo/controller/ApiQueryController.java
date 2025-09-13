@@ -1,20 +1,11 @@
 package com.chaosblade.svc.topo.controller;
 
+import com.chaosblade.svc.topo.config.ApiRequestConfig;
 import com.chaosblade.svc.topo.config.SystemCatalogConfig;
-import com.chaosblade.svc.topo.model.SystemInfo;
-import com.chaosblade.svc.topo.model.SystemListResponse;
-import com.chaosblade.svc.topo.model.ApiQueryRequest;
-import com.chaosblade.svc.topo.model.ApiQueryResponse;
-import com.chaosblade.svc.topo.model.MetricsByApiRequest;
-import com.chaosblade.svc.topo.model.MetricsByApiResponse;
-import com.chaosblade.svc.topo.model.NamespacesResponse;
-import com.chaosblade.svc.topo.model.NamespaceDetail;
-import com.chaosblade.svc.topo.model.NamespaceListResponse;
-import com.chaosblade.svc.topo.model.ServiceTopologyResponse;
-import com.chaosblade.svc.topo.model.SystemApiListResponse;
-import com.chaosblade.svc.topo.model.TopologyByApiRequest;
+import com.chaosblade.svc.topo.model.*;
 import com.chaosblade.svc.topo.model.SystemApiListResponse.SystemApiDetail;
 import com.chaosblade.svc.topo.model.SystemListResponse;
+import com.chaosblade.svc.topo.model.SystemRootApiListResponse;
 import com.chaosblade.svc.topo.model.entity.Edge;
 import com.chaosblade.svc.topo.model.entity.Entity;
 import com.chaosblade.svc.topo.model.entity.EntityType;
@@ -24,6 +15,7 @@ import com.chaosblade.svc.topo.service.ApiQueryService;
 import com.chaosblade.svc.topo.service.TopologyConverterService;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import com.chaosblade.svc.topo.service.TopologyCacheService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,8 +27,13 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.stream.Collectors;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * API查询控制器
@@ -61,6 +58,12 @@ public class ApiQueryController {
 
     @Autowired
     private SystemCatalogConfig systemCatalogConfig;
+    
+    @Autowired
+    private ApiRequestConfig apiRequestConfig;
+
+    @Autowired
+    private SystemUnderTest systemUnderTest;  // todo 目前是单例，之后有张表
 
     /**
      * 查询API列表
@@ -270,7 +273,7 @@ public class ApiQueryController {
     }
 
     /**
-     * 将节点转换为系统API详情对象
+     * 将节点转换为系统API详情对象。已经过滤出类型为 RPC 的节点。
      */
     private SystemApiDetail convertNodeToSystemApiDetail(Node node) {
         SystemApiDetail detail = new SystemApiDetail();
@@ -279,28 +282,174 @@ public class ApiQueryController {
         if (entity != null) {
             // ID使用递增编号从1开始
             detail.setId(idCounter.getAndIncrement());
-            detail.setSystemId(1L); // 默认系统ID
+            detail.setSystemId(systemUnderTest.getSystemInfo().getId());
             detail.setK8sNamespace(entity.getNamespace());
             detail.setOperationId(entity.getDisplayName());
 
-            // 从属性中提取方法和路径信息
+            // 从属性中拿到方法和路径信息
             Map<String, Object> attributes = entity.getAttributes();
             if (attributes != null) {
                 detail.setMethod((String) attributes.getOrDefault("method", "GET"));
                 detail.setPath((String) attributes.getOrDefault("path", ""));
-            } else {
-                detail.setMethod("GET");
-                detail.setPath("");
             }
 
-            detail.setSummary(entity.getDisplayName());
-            detail.setTags("[\"api\"]"); // 默认标签
-            detail.setBaseUrl("http://localhost:8080"); // 默认基础URL
-            detail.setCreatedAt("2025-09-12 10:00:00"); // 默认创建时间
-            detail.setUpdatedAt("2025-09-12 10:00:00"); // 默认更新时间
+            detail.setSummary("");  // 默认无描述
+
+            // 提取版本信息
+            String path = detail.getPath();
+            String version = ""; // 默认版本为空
+
+            if (path != null && !path.isEmpty()) {
+                // 按 / 拆分路径
+                String[] pathParts = path.split("/");
+
+                // 查找版本信息（v1, v2, v3 等）
+                for (String part : pathParts) {
+                    if (part != null && !part.isEmpty() &&
+                        (part.equals("v1") || part.equals("v2") || part.equals("v3"))) {
+                        version = part;
+                        break; // 找到第一个版本信息就停止
+                    }
+                }
+            }
+
+            detail.setVersion(version);
+
+            // 实现切 tag 的逻辑：将 path 按 / 拆成列表，过滤掉 "api"、"v1" 等词，再将非空 summary 加入列表，作为 tags
+            List<String> tags = new ArrayList<>();
+
+            if (path != null && !path.isEmpty()) {
+                // 按 / 拆分路径
+                String[] pathParts = path.split("/");
+
+                // 过滤掉空字符串、"api"、"v1" 等词
+                for (String part : pathParts) {
+                    if (part != null && !part.isEmpty() &&
+                        !"api".equals(part) && !"v1".equals(part) &&
+                        !"v2".equals(part) && !"v3".equals(part)) {
+                        tags.add(part);
+                    }
+                }
+            }
+
+            // 如果 summary 非空，也加入 tags 列表
+            String summary = detail.getSummary();
+            if (summary != null && !summary.isEmpty()) {
+                tags.add(summary);
+            }
+
+            // 如果没有标签，则使用默认的 "api" 标签
+            if (tags.isEmpty()) {
+                tags.add("api");
+            }
+
+            // 将标签列表转换为 JSON 格式的字符串
+            String tagsJson = tags.stream()
+                .map(tag -> "\"" + tag + "\"")
+                .collect(Collectors.joining(",", "[", "]"));
+            detail.setTags(tagsJson);
+
+            detail.setBaseUrl(""); // 默认基础URL
+            // todo 在 RpcInterface 构造函数中提取 baseUrl，例如 http://details:9080
+            detail.setCreatedAt(""); // 默认无创建时间
+            detail.setUpdatedAt(""); // 默认无更新时间
         }
 
         return detail;
+    }
+
+    /**
+     * 将 SystemApiDetail 转换为 SystemRootApiDetail
+     */
+    private SystemRootApiListResponse.SystemRootApiDetail convertSystemApiDetailToSystemRootApiDetail(SystemApiListResponse.SystemApiDetail apiDetail) {
+        SystemRootApiListResponse.SystemRootApiDetail rootApiDetail = new SystemRootApiListResponse.SystemRootApiDetail();
+
+        // 复制基础字段
+        rootApiDetail.setId(apiDetail.getId());
+        rootApiDetail.setSystemId(apiDetail.getSystemId());
+        rootApiDetail.setOperationId(apiDetail.getOperationId());
+        rootApiDetail.setMethod(apiDetail.getMethod());
+        rootApiDetail.setPath(apiDetail.getPath());
+        rootApiDetail.setSummary(apiDetail.getSummary());
+        rootApiDetail.setTags(apiDetail.getTags());
+        rootApiDetail.setVersion(apiDetail.getVersion());
+        rootApiDetail.setBaseUrl(apiDetail.getBaseUrl());
+        rootApiDetail.setCreatedAt(apiDetail.getCreatedAt());
+        rootApiDetail.setUpdatedAt(apiDetail.getUpdatedAt());
+
+        // 通过operationId查找对应的ApiRequestPayload
+        Optional<ApiRequestPayload> payloadOptional = apiRequestConfig.findByOperationId(apiDetail.getOperationId());
+        if (payloadOptional.isPresent()) {
+            ApiRequestPayload payload = payloadOptional.get();
+            rootApiDetail.setRootService(payload.getRootService());
+            rootApiDetail.setRootOperation(payload.getRootOperation());
+            
+            // 设置新增字段的值
+            rootApiDetail.setContentType(payload.getContentType());
+            rootApiDetail.setHeadersTemplate(payload.getHeadersTemplate());
+            rootApiDetail.setAuthType(payload.getAuthType());
+            rootApiDetail.setAuthTemplate(payload.getAuthTemplate());
+            rootApiDetail.setPathParams(payload.getPathParams());
+            rootApiDetail.setQueryParams(payload.getQueryParams());
+            rootApiDetail.setBodyTemplate(payload.getBodyTemplate());
+            rootApiDetail.setVariables(payload.getVariables());
+            rootApiDetail.setTimeoutMs(payload.getTimeoutMs());
+            rootApiDetail.setRetryConfig(payload.getRetryConfig());
+        } 
+
+        return rootApiDetail;
+    }
+
+    /**
+     * 获取指定系统ID的根API列表
+     * 根据systemId获取对应的根API列表信息，返回SystemRootApiDetail对象列表
+     *
+     * @param systemId 系统ID
+     * @return 系统根API列表响应对象
+     */
+    @GetMapping("/topology/{systemId}/apis/root")
+    public ResponseEntity<SystemRootApiListResponse> getRootApisBySystemId(@PathVariable("systemId") Long systemId) {
+        logger.info("收到系统根API列表查询请求: systemId={}", systemId);
+
+        try {
+            // 从TopologyConverterService获取当前拓扑图
+            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+            if (currentTopology == null) {
+                logger.warn("当前拓扑图为空");
+                SystemRootApiListResponse.SystemRootApiListData data = new SystemRootApiListResponse.SystemRootApiListData(new ArrayList<>(), 0);
+                return ResponseEntity.ok(new SystemRootApiListResponse(true, data));
+            }
+
+            // 获取所有RPC类型的节点（代表API）
+            List<Node> rpcNodes = currentTopology.getNodesByType(EntityType.RPC);
+
+            // 过滤出属于指定systemId的节点
+            // 这里我们假设systemId为1时对应"default"命名空间
+            final String targetNamespace = systemId == 1 ? "default" : "default"; // 根据实际需求调整映射关系
+
+            List<SystemRootApiListResponse.SystemRootApiDetail> rootApiDetails = rpcNodes.stream()
+                .filter(node -> {
+                    Entity entity = node.getEntity();
+                    if (entity == null) return false;
+
+                    // 根据实体的namespace属性进行过滤
+                    String namespace = entity.getNamespace();
+                    return targetNamespace.equals(namespace);
+                })
+                .map(this::convertNodeToSystemApiDetail)
+                .map(this::convertSystemApiDetailToSystemRootApiDetail)
+                // 过滤出根API，根据operationId
+                .filter(rootApiDetail -> systemUnderTest.getSystemInfo().getRootOperation().equals(rootApiDetail.getOperationId()))
+                .collect(Collectors.toList());
+
+            SystemRootApiListResponse.SystemRootApiListData data = new SystemRootApiListResponse.SystemRootApiListData(rootApiDetails, rootApiDetails.size());
+            SystemRootApiListResponse response = new SystemRootApiListResponse(true, data);
+            logger.info("返回 {} 个根API", rootApiDetails.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("查询系统根API列表失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**
@@ -391,7 +540,7 @@ public class ApiQueryController {
 
         // 转换节点
         List<ServiceTopologyResponse.ServiceNode> serviceNodeList = new ArrayList<>();
-        long serviceNodeId = 20; // 从示例中的20开始
+        long serviceNodeId = 1;
         Map<String, Long> serviceNodeIds = new HashMap<>(); // 保存新生成的节点ID映射
 
         for (Node node : serviceNodes) {
@@ -410,7 +559,7 @@ public class ApiQueryController {
 
         // 转换边
         List<ServiceTopologyResponse.ServiceEdge> serviceEdgeList = new ArrayList<>();
-        long serviceEdgeId = 27; // 从示例中的27开始
+        long serviceEdgeId = 1;
 
         for (Edge edge : dependsOnEdges) {
             String fromNode = edge.getFrom();
@@ -560,5 +709,77 @@ public class ApiQueryController {
         }
 
         return currentTopology;
+    }
+
+    /**
+     * 保存API请求负载数据到system-request.json文件
+     * 
+     * @param payload 要保存的ApiRequestPayload对象
+     * @return 保存结果响应
+     */
+    @PostMapping("/topology/api-request")
+    public ResponseEntity<String> saveApiRequestPayload(@RequestBody ApiRequestPayload payload) {
+        logger.info("收到保存API请求负载的请求: {}", payload);
+        
+        try {
+            // 获取现有的API请求负载列表
+            List<ApiRequestPayload> payloads = new ArrayList<>(apiRequestConfig.getApiRequestPayloads());
+            
+            // 检查是否已存在相同的operationId，如果存在则更新，否则添加
+            boolean updated = false;
+            for (int i = 0; i < payloads.size(); i++) {
+                if (payloads.get(i).getOperationId().equals(payload.getOperationId())) {
+                    payloads.set(i, payload);
+                    updated = true;
+                    break;
+                }
+            }
+            
+            if (!updated) {
+                payloads.add(payload);
+            }
+            
+            // 将更新后的列表写入system-request.json文件
+            ObjectMapper objectMapper = new ObjectMapper();
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payloads);
+            
+            // 获取应用程序根目录下的system-request.json文件路径
+            // 使用相对路径，文件将保存在项目根目录下
+            File file = new File("system-request.json");
+            try (FileWriter writer = new FileWriter(file)) {
+                writer.write(jsonString);
+            }
+            
+            // 更新内存中的配置
+            apiRequestConfig.updateOrAddApiRequestPayload(payload);
+            
+            logger.info("成功保存API请求负载到system-request.json文件");
+            return ResponseEntity.ok("API请求负载保存成功");
+        } catch (IOException e) {
+            logger.error("保存API请求负载失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body("保存API请求负载失败: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("保存API请求负载时发生未知错误: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body("保存API请求负载时发生未知错误: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取所有API请求负载
+     * 
+     * @return API请求负载列表
+     */
+    @GetMapping("/topology/api-requests")
+    public ResponseEntity<List<ApiRequestPayload>> getApiRequestPayloads() {
+        logger.info("收到获取API请求负载列表的请求");
+        
+        try {
+            List<ApiRequestPayload> payloads = apiRequestConfig.getApiRequestPayloads();
+            logger.info("返回 {} 个API请求负载", payloads.size());
+            return ResponseEntity.ok(payloads);
+        } catch (Exception e) {
+            logger.error("获取API请求负载列表失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

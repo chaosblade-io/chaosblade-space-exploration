@@ -2,15 +2,16 @@ package com.chaosblade.svc.topo.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
 
 /**
- * 系统API列表响应对象
- * 用于封装 /v1/topology/{systemId}/apis 接口的响应数据
+ * 系统根API列表响应对象
+ * 用于封装 /v1/topology/{systemId}/apis/root 接口的响应数据
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class SystemApiListResponse {
+public class SystemRootApiListResponse {
 
     /**
      * 请求是否成功
@@ -22,13 +23,13 @@ public class SystemApiListResponse {
      * 响应数据
      */
     @JsonProperty("data")
-    private SystemApiListData data;
+    private SystemRootApiListData data;
 
     // 构造函数
-    public SystemApiListResponse() {
+    public SystemRootApiListResponse() {
     }
 
-    public SystemApiListResponse(Boolean success, SystemApiListData data) {
+    public SystemRootApiListResponse(Boolean success, SystemRootApiListData data) {
         this.success = success;
         this.data = data;
     }
@@ -42,33 +43,33 @@ public class SystemApiListResponse {
         this.success = success;
     }
 
-    public SystemApiListData getData() {
+    public SystemRootApiListData getData() {
         return data;
     }
 
-    public void setData(SystemApiListData data) {
+    public void setData(SystemRootApiListData data) {
         this.data = data;
     }
 
     @Override
     public String toString() {
-        return "SystemApiListResponse{" +
+        return "SystemRootApiListResponse{" +
                 "success=" + success +
                 ", data=" + data +
                 '}';
     }
 
     /**
-     * 系统API列表数据对象
+     * 系统根API列表数据对象
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class SystemApiListData {
+    public static class SystemRootApiListData {
 
         /**
-         * API详情列表
+         * 根API详情列表
          */
         @JsonProperty("items")
-        private List<SystemApiDetail> items;
+        private List<SystemRootApiDetail> items;
 
         /**
          * 总数
@@ -77,20 +78,20 @@ public class SystemApiListResponse {
         private Integer total;
 
         // 构造函数
-        public SystemApiListData() {
+        public SystemRootApiListData() {
         }
 
-        public SystemApiListData(List<SystemApiDetail> items, Integer total) {
+        public SystemRootApiListData(List<SystemRootApiDetail> items, Integer total) {
             this.items = items;
             this.total = total;
         }
 
         // Getter and Setter methods
-        public List<SystemApiDetail> getItems() {
+        public List<SystemRootApiDetail> getItems() {
             return items;
         }
 
-        public void setItems(List<SystemApiDetail> items) {
+        public void setItems(List<SystemRootApiDetail> items) {
             this.items = items;
         }
 
@@ -104,228 +105,13 @@ public class SystemApiListResponse {
 
         @Override
         public String toString() {
-            return "SystemApiListData{" +
+            return "SystemRootApiListData{" +
                     "items=" + items +
                     ", total=" + total +
                     '}';
         }
     }
-
-    /**
-     * 系统API详情对象
-     */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class SystemApiDetail {
-
-        /**
-         * API标识号
-         */
-        @JsonProperty("id")
-        private Long id;
-
-        /**
-         * 系统ID
-         */
-        @JsonProperty("systemId")
-        private Long systemId;
-
-        /**
-         * Kubernetes命名空间
-         */
-        @JsonProperty("k8sNamespace")
-        private String k8sNamespace;
-
-        /**
-         * 操作ID（API名称）
-         */
-        @JsonProperty("operationId")
-        private String operationId;
-
-        /**
-         * HTTP方法
-         */
-        @JsonProperty("method")
-        private String method;
-
-        /**
-         * API路径
-         */
-        @JsonProperty("path")
-        private String path;
-
-        /**
-         * API版本
-         */
-        @JsonProperty("version")
-        private String version;
-
-        /**
-         * API摘要描述
-         */
-        @JsonProperty("summary")
-        private String summary;
-
-        /**
-         * 标签
-         */
-        @JsonProperty("tags")
-        private String tags;
-
-        /**
-         * 基础URL
-         */
-        @JsonProperty("baseUrl")
-        private String baseUrl;
-
-        /**
-         * 创建时间
-         */
-        @JsonProperty("createdAt")
-        private String createdAt;
-
-        /**
-         * 更新时间
-         */
-        @JsonProperty("updatedAt")
-        private String updatedAt;
-
-        // 构造函数
-        public SystemApiDetail() {
-        }
-
-        public SystemApiDetail(Long id, Long systemId, String k8sNamespace, String operationId,
-                              String method, String path, String version, String summary, String tags, String baseUrl,
-                              String createdAt, String updatedAt) {
-            this.id = id;
-            this.systemId = systemId;
-            this.k8sNamespace = k8sNamespace;
-            this.operationId = operationId;
-            this.method = method;
-            this.path = path;
-            this.version = version;
-            this.summary = summary;
-            this.tags = tags;
-            this.baseUrl = baseUrl;
-            this.createdAt = createdAt;
-            this.updatedAt = updatedAt;
-        }
-
-        // Getter and Setter methods
-        public Long getId() {
-            return id;
-        }
-
-        public void setId(Long id) {
-            this.id = id;
-        }
-
-        public Long getSystemId() {
-            return systemId;
-        }
-
-        public void setSystemId(Long systemId) {
-            this.systemId = systemId;
-        }
-
-        public String getK8sNamespace() {
-            return k8sNamespace;
-        }
-
-        public void setK8sNamespace(String k8sNamespace) {
-            this.k8sNamespace = k8sNamespace;
-        }
-
-        public String getOperationId() {
-            return operationId;
-        }
-
-        public void setOperationId(String operationId) {
-            this.operationId = operationId;
-        }
-
-        public String getMethod() {
-            return method;
-        }
-
-        public void setMethod(String method) {
-            this.method = method;
-        }
-
-        public String getPath() {
-            return path;
-        }
-
-        public void setPath(String path) {
-            this.path = path;
-        }
-
-        public String getVersion() {
-            return version;
-        }
-
-        public void setVersion(String version) {
-            this.version = version;
-        }
-
-        public String getSummary() {
-            return summary;
-        }
-
-        public void setSummary(String summary) {
-            this.summary = summary;
-        }
-
-        public String getTags() {
-            return tags;
-        }
-
-        public void setTags(String tags) {
-            this.tags = tags;
-        }
-
-        public String getBaseUrl() {
-            return baseUrl;
-        }
-
-        public void setBaseUrl(String baseUrl) {
-            this.baseUrl = baseUrl;
-        }
-
-        public String getCreatedAt() {
-            return createdAt;
-        }
-
-        public void setCreatedAt(String createdAt) {
-            this.createdAt = createdAt;
-        }
-
-        public String getUpdatedAt() {
-            return updatedAt;
-        }
-
-        public void setUpdatedAt(String updatedAt) {
-            this.updatedAt = updatedAt;
-        }
-
-        @Override
-        public String toString() {
-            return "SystemApiDetail{" +
-                    "id=" + id +
-                    ", systemId=" + systemId +
-                    ", k8sNamespace='" + k8sNamespace + '\'' +
-                    ", operationId='" + operationId + '\'' +
-                    ", method='" + method + '\'' +
-                    ", path='" + path + '\'' +
-                    ", version='" + version + '\'' +
-                    ", summary='" + summary + '\'' +
-                    ", tags='" + tags + '\'' +
-                    ", baseUrl='" + baseUrl + '\'' +
-                    ", createdAt='" + createdAt + '\'' +
-                    ", updatedAt='" + updatedAt + '\'' +
-                    '}';
-        }
-    }
-
+    
     /**
      * 系统根API详情对象
      */
@@ -457,6 +243,18 @@ public class SystemApiListResponse {
          */
         @JsonProperty("retryConfig")
         private String retryConfig;
+
+        /**
+         * 根服务名称
+         */
+        @JsonIgnore
+        private String rootService;
+
+        /**
+         * 根操作名称
+         */
+        @JsonIgnore
+        private String rootOperation;
 
         // 构造函数
         public SystemRootApiDetail() {
@@ -643,6 +441,22 @@ public class SystemApiListResponse {
             this.variables = variables;
         }
 
+        public String getRootService() {
+            return rootService;
+        }
+
+        public void setRootService(String rootService) {
+            this.rootService = rootService;
+        }
+
+        public String getRootOperation() {
+            return rootOperation;
+        }
+
+        public void setRootOperation(String rootOperation) {
+            this.rootOperation = rootOperation;
+        }
+
         public Integer getTimeoutMs() {
             return timeoutMs;
         }
@@ -683,6 +497,8 @@ public class SystemApiListResponse {
                     ", variables='" + variables + '\'' +
                     ", timeoutMs=" + timeoutMs +
                     ", retryConfig='" + retryConfig + '\'' +
+                    ", rootService='" + rootService + '\'' +
+                    ", rootOperation='" + rootOperation + '\'' +
                     '}';
         }
     }

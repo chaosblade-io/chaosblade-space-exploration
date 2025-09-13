@@ -55,7 +55,7 @@ topo:
         graph:
             max-nodes: 10000
             max-edges: 50000
-        mock: false # 是否启用 trace-mock 数据
+        mock: true # 是否启用 trace-mock 数据
 
 # 拓扑配置
 topology:
