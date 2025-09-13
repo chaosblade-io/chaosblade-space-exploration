@@ -55,18 +55,23 @@ topo:
         graph:
             max-nodes: 10000
             max-edges: 50000
-        mock: true  # 是否启用 trace-mock 数据
+        mock: true # 是否启用 trace-mock 数据
 
-# 拓扑自动刷新配置
+# 拓扑配置
 topology:
+    # 自动刷新
     auto-refresh:
-        enabled: true                    # 是否启用自动刷新
-        interval: 15000                  # 刷新间隔（毫秒 = 秒*1000）
-        time-range-minutes: 5           # 查询时间范围（分钟）
-        jaeger:
-            host: localhost                # Jaeger 主机地址
-            port: 16685                    # Jaeger gRPC 端口
-            http-port: 16686               # Jaeger HTTP API 端口
-            query-method: http             # Jaeger 查询方式：grpc 或 http
-        service-name: ts-preserve-service           # 默认查询的服务名
-#        operation-name: all              # 默认查询的操作名
+        enabled: true # 是否启用自动刷新
+        interval: 15000 # 刷新间隔（毫秒 = 秒*1000）
+        time-range-minutes: 5 # 查询时间范围（分钟）
+    # 数据源
+    jaeger:
+        host: localhost # Jaeger 主机地址
+        port: 16685 # Jaeger gRPC 端口
+        http-port: 16686 # Jaeger HTTP API 端口
+        query-method: http # Jaeger 查询方式：grpc 或 http
+    # 被测系统
+    sut:
+        system-name: train-ticket # 被测系统名称
+        service-name: ts-preserve-service # 入口服务名称
+        # operation-name: all # 入口操作名称

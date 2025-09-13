@@ -1,5 +1,8 @@
 package com.chaosblade.svc.topo.controller;
 
+import com.chaosblade.svc.topo.config.SystemCatalogConfig;
+import com.chaosblade.svc.topo.model.SystemInfo;
+import com.chaosblade.svc.topo.model.SystemListResponse;
 import com.chaosblade.svc.topo.model.ApiQueryRequest;
 import com.chaosblade.svc.topo.model.ApiQueryResponse;
 import com.chaosblade.svc.topo.model.MetricsByApiRequest;
@@ -11,6 +14,7 @@ import com.chaosblade.svc.topo.model.ServiceTopologyResponse;
 import com.chaosblade.svc.topo.model.SystemApiListResponse;
 import com.chaosblade.svc.topo.model.TopologyByApiRequest;
 import com.chaosblade.svc.topo.model.SystemApiListResponse.SystemApiDetail;
+import com.chaosblade.svc.topo.model.SystemListResponse;
 import com.chaosblade.svc.topo.model.entity.Edge;
 import com.chaosblade.svc.topo.model.entity.Entity;
 import com.chaosblade.svc.topo.model.entity.EntityType;
@@ -49,6 +53,9 @@ public class ApiQueryController {
 
     @Autowired
     private TopologyConverterService topologyConverterService;
+
+    @Autowired
+    private SystemCatalogConfig systemCatalogConfig;
 
     /**
      * 查询API列表
@@ -132,6 +139,36 @@ public class ApiQueryController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("查询性能指标失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 获取所有系统列表
+     * 从系统目录中获取所有注册的系统信息
+     *
+     * @return 系统列表响应对象
+     */
+    @GetMapping("/topology/systems")
+    public ResponseEntity<SystemListResponse> getSystems() {
+        logger.info("收到系统列表查询请求");
+
+        try {
+            // 获取系统目录
+            List<SystemInfo> systemInfos = systemCatalogConfig.getSystemCatalog();
+
+            if (systemInfos == null) {
+                logger.warn("系统目录为空");
+                SystemListResponse.SystemListData data = new SystemListResponse.SystemListData(List.of(), 0);
+                return ResponseEntity.ok(new SystemListResponse(true, data));
+            }
+
+            SystemListResponse.SystemListData data = new SystemListResponse.SystemListData(systemInfos, systemInfos.size());
+            SystemListResponse response = new SystemListResponse(true, data);
+            logger.info("返回 {} 个系统", systemInfos.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("查询系统列表失败: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

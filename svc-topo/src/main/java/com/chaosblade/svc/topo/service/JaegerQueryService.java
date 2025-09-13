@@ -1,5 +1,6 @@
 package com.chaosblade.svc.topo.service;
 
+import com.chaosblade.svc.topo.model.JaegerSource;
 import com.chaosblade.svc.topo.model.trace.ProcessData;
 import com.chaosblade.svc.topo.model.trace.SpanData;
 import com.chaosblade.svc.topo.model.trace.TraceData;
@@ -255,26 +256,22 @@ public class JaegerQueryService {
     /**
      * 根据服务名通过HTTP API查询Trace数据
      *
-     * @param jaegerHost Jaeger服务主机地址
-     * @param port Jaeger服务端口
-     * @param serviceName 服务名称
+     * @param jaegerSource Jaeger数据源配置
      * @param startTime 查询开始时间（微秒）
      * @param endTime 查询结束时间（微秒）
      * @return Trace数据
      * @throws IllegalArgumentException 当参数无效时
      * @throws RuntimeException 当连接或查询失败时
      */
-    public TraceData queryTracesByServiceHttp(String jaegerHost, int port, String serviceName,
+    public TraceData queryTracesByServiceHttp(JaegerSource jaegerSource,
                                              long startTime, long endTime) {
-        return queryTracesByServiceHttp(jaegerHost, port, serviceName, startTime, endTime, DEFAULT_TRACE_LIMIT);
+        return queryTracesByServiceHttp(jaegerSource, startTime, endTime, jaegerSource.getLimit() != null ? jaegerSource.getLimit() : DEFAULT_TRACE_LIMIT);
     }
 
     /**
      * 根据服务名通过HTTP API查询Trace数据
      *
-     * @param jaegerHost Jaeger服务主机地址
-     * @param port Jaeger服务端口
-     * @param serviceName 服务名称
+     * @param jaegerSource Jaeger数据源配置
      * @param startTime 查询开始时间（微秒）
      * @param endTime 查询结束时间（微秒）
      * @param limit 返回的最大Trace数量
@@ -282,13 +279,13 @@ public class JaegerQueryService {
      * @throws IllegalArgumentException 当参数无效时
      * @throws RuntimeException 当连接或查询失败时
      */
-    public TraceData queryTracesByServiceHttp(String jaegerHost, int port, String serviceName,
+    public TraceData queryTracesByServiceHttp(JaegerSource jaegerSource,
                                              long startTime, long endTime, int limit) {
         // 参数验证
-        validateServiceParameters(jaegerHost, port, serviceName, startTime, endTime);
+        validateJaegerSource(jaegerSource, startTime, endTime);
 
         logger.info("开始从Jaeger通过HTTP API查询trace数据 (/api/traces): host={}, port={}, service={}, startTime={}, endTime={}, limit={}",
-                   jaegerHost, port, serviceName, startTime, endTime, limit);
+                   jaegerSource.getHost(), jaegerSource.getHttpPort(), jaegerSource.getEntryService(), startTime, endTime, limit);
 
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
@@ -300,9 +297,10 @@ public class JaegerQueryService {
 
                 // 构建查询参数
                 StringBuilder urlBuilder = new StringBuilder();
-                urlBuilder.append("http://").append(jaegerHost).append(":").append(port)
-                          .append("/api/traces?limit=").append(limit)
-                          .append("&service=").append(serviceName)
+                urlBuilder.append("http://").append(jaegerSource.getHost()).append(":").append(jaegerSource.getHttpPort())
+                          .append(jaegerSource.getBasePath() != null ? jaegerSource.getBasePath() : "/api/traces")
+                          .append("?limit=").append(limit)
+                          .append("&service=").append(jaegerSource.getEntryService())
                           .append("&start=").append(startMs)
                           .append("&end=").append(endMs);
 
@@ -763,6 +761,30 @@ public class JaegerQueryService {
             throw new IllegalArgumentException("Port must be between 1 and 65535");
         }
         if (serviceName == null || serviceName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Service name cannot be null or empty");
+        }
+        if (startTime >= endTime) {
+            throw new IllegalArgumentException("Start time must be before end time");
+        }
+        if (endTime - startTime > Duration.ofDays(7).toNanos() / 1000) {
+            throw new IllegalArgumentException("Time range cannot exceed 7 days");
+        }
+    }
+
+    /**
+     * 验证JaegerSource查询参数
+     */
+    private void validateJaegerSource(JaegerSource jaegerSource, long startTime, long endTime) {
+        if (jaegerSource == null) {
+            throw new IllegalArgumentException("JaegerSource cannot be null");
+        }
+        if (jaegerSource.getHost() == null || jaegerSource.getHost().trim().isEmpty()) {
+            throw new IllegalArgumentException("Jaeger host cannot be null or empty");
+        }
+        if (jaegerSource.getHttpPort() == null || jaegerSource.getHttpPort() <= 0 || jaegerSource.getHttpPort() > 65535) {
+            throw new IllegalArgumentException("Port must be between 1 and 65535");
+        }
+        if (jaegerSource.getEntryService() == null || jaegerSource.getEntryService().trim().isEmpty()) {
             throw new IllegalArgumentException("Service name cannot be null or empty");
         }
         if (startTime >= endTime) {

@@ -1,5 +1,6 @@
 package com.chaosblade.svc.topo.service;
 
+import com.chaosblade.svc.topo.model.JaegerSource;
 import com.chaosblade.svc.topo.model.trace.TraceData;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -166,33 +167,52 @@ public class JaegerQueryServiceHttpTest {
     @Test
     public void testQueryTracesByServiceHttpMethod() {
         // 测试queryTracesByServiceHttp方法的参数验证
+        JaegerSource jaegerSource = new JaegerSource();
+        
+        // 测试null host
+        jaegerSource.setHost(null);
+        jaegerSource.setHttpPort(16686);
+        jaegerSource.setEntryService("frontend");
         assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesByServiceHttp(null, 16686, "frontend", 0, 1000);
+            jaegerQueryService.queryTracesByServiceHttp(jaegerSource, 0, 1000);
         });
         
+        // 测试空host
+        jaegerSource.setHost("");
         assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesByServiceHttp("", 16686, "frontend", 0, 1000);
+            jaegerQueryService.queryTracesByServiceHttp(jaegerSource, 0, 1000);
         });
         
+        // 测试无效端口(0)
+        jaegerSource.setHost("localhost");
+        jaegerSource.setHttpPort(0);
         assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesByServiceHttp("localhost", 0, "frontend", 0, 1000);
+            jaegerQueryService.queryTracesByServiceHttp(jaegerSource, 0, 1000);
         });
         
+        // 测试无效端口(65536)
+        jaegerSource.setHttpPort(65536);
         assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesByServiceHttp("localhost", 65536, "frontend", 0, 1000);
+            jaegerQueryService.queryTracesByServiceHttp(jaegerSource, 0, 1000);
         });
         
+        // 测试null service
+        jaegerSource.setHttpPort(16686);
+        jaegerSource.setEntryService(null);
         assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesByServiceHttp("localhost", 16686, null, 0, 1000);
+            jaegerQueryService.queryTracesByServiceHttp(jaegerSource, 0, 1000);
         });
         
+        // 测试空service
+        jaegerSource.setEntryService("");
         assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesByServiceHttp("localhost", 16686, "", 0, 1000);
+            jaegerQueryService.queryTracesByServiceHttp(jaegerSource, 0, 1000);
         });
         
         // 验证正常参数不会抛出异常（虽然实际调用会因为没有Jaeger服务而失败）
+        jaegerSource.setEntryService("frontend");
         try {
-            jaegerQueryService.queryTracesByServiceHttp("localhost", 16686, "frontend", 0, 1000);
+            jaegerQueryService.queryTracesByServiceHttp(jaegerSource, 0, 1000);
         } catch (RuntimeException e) {
             // 期望的异常，因为没有Jaeger服务运行
             assertTrue(e.getMessage().contains("Failed to query Jaeger"));

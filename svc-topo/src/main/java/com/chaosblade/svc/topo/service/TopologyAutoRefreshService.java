@@ -1,5 +1,6 @@
 package com.chaosblade.svc.topo.service;
 
+import com.chaosblade.svc.topo.model.JaegerSource;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
 import com.chaosblade.svc.topo.model.trace.TraceData;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -167,8 +168,11 @@ public class TopologyAutoRefreshService {
                                    effectiveJaegerHost, effectiveJaegerHttpPort, effectiveServiceName, operationName);
                     } else if (effectiveServiceName != null && !effectiveServiceName.isEmpty()) {
                         // 如果只指定了服务，使用queryTracesByServiceHttp方法
-                        traceData = jaegerQueryService.queryTracesByServiceHttp(
-                                effectiveJaegerHost, effectiveJaegerHttpPort, effectiveServiceName, startTime, endTime);
+                        JaegerSource jaegerSource = new JaegerSource();
+                        jaegerSource.setHost(effectiveJaegerHost);
+                        jaegerSource.setHttpPort(effectiveJaegerHttpPort);
+                        jaegerSource.setEntryService(effectiveServiceName);
+                        traceData = jaegerQueryService.queryTracesByServiceHttp(jaegerSource, startTime, endTime);
                         logger.info("使用HTTP API查询Jaeger数据（仅指定服务）: host={}, port={}, service={}",
                                    effectiveJaegerHost, effectiveJaegerHttpPort, effectiveServiceName);
                     } else {
