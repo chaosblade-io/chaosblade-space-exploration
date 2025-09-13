@@ -72,4 +72,4 @@ jobs:
         with:
           context: ./svc-topo
           push: true
-          tags: ghcr.io/stleox/chaosblade/svc-topo:latest
+          tags: ghcr.io/chaosblade-io/chaosblade-space-exploration/svc-topo:latest

@@ -86,16 +86,39 @@ public class SystemCatalogConfig {
     @Bean
     public JaegerSource jaegerSource() {
         JaegerSource jaegerSource = new JaegerSource();
-        jaegerSource.setHost(jaegerHost);
-        jaegerSource.setHttpPort(jaegerHttpPort);
-        jaegerSource.setEntryService(entryService);
-        jaegerSource.setSystemKey(systemName);
+        
+        // 检查环境变量并覆盖配置
+        String envJaegerHost = System.getenv("JaegerHost");
+        String envJaegerPort = System.getenv("JaegerPort");
+        String envEntryService = System.getenv("EntryService");
+        
+        // 使用环境变量或application.yml中的默认配置
+        String effectiveJaegerHost = (envJaegerHost != null && !envJaegerHost.isEmpty()) ? envJaegerHost : jaegerHost;
+        int effectiveJaegerHttpPort = jaegerHttpPort;
+        String effectiveEntryService = (envEntryService != null && !envEntryService.isEmpty()) ? envEntryService : entryService;
+        String effectiveSystemName = System.getenv("SystemName") != null && !System.getenv("SystemName").isEmpty() ? 
+                                   System.getenv("SystemName") : systemName;
+        
+        // 解析端口环境变量
+        if (envJaegerPort != null && !envJaegerPort.isEmpty()) {
+            try {
+                effectiveJaegerHttpPort = Integer.parseInt(envJaegerPort);
+            } catch (NumberFormatException e) {
+                logger.warn("无效的 JaegerPort 环境变量值: {}, 使用默认值: {}", envJaegerPort, jaegerHttpPort);
+            }
+        }
+        
+        jaegerSource.setHost(effectiveJaegerHost);
+        jaegerSource.setHttpPort(effectiveJaegerHttpPort);
+        jaegerSource.setEntryService(effectiveEntryService);
+        jaegerSource.setSystemKey(effectiveSystemName);
         
         // 设置默认值
         jaegerSource.setBasePath("/api/traces");
         jaegerSource.setLimit(20);
         
-        logger.info("Created JaegerSource: {}", jaegerSource);
+        logger.info("Created JaegerSource with effective config: host={}, httpPort={}, entryService={}, systemKey={}", 
+                   effectiveJaegerHost, effectiveJaegerHttpPort, effectiveEntryService, effectiveSystemName);
         return jaegerSource;
     }
     

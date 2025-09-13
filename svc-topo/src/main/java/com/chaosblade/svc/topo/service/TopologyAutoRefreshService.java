@@ -45,6 +45,10 @@ public class TopologyAutoRefreshService {
     @Autowired
     private TopologyCacheService topologyCacheService;
 
+    // 注入JaegerSource bean，它已经正确处理了环境变量
+    @Autowired
+    private JaegerSource jaegerSource;
+
     // Jaeger 配置参数，可通过 application.yml 配置
     @Value("${topology.jaeger.host:localhost}")
     private String jaegerHost;
@@ -164,30 +168,38 @@ public class TopologyAutoRefreshService {
             if (serviceName != null && !serviceName.isEmpty() && operationName != null && !operationName.isEmpty() &&
                 !"all".equalsIgnoreCase(operationName)) {
                 // 如果指定了服务和操作，使用queryTracesByOperationHttp方法
-                JaegerSource jaegerSource = new JaegerSource();
-                jaegerSource.setHost(jaegerHost);
-                jaegerSource.setHttpPort(jaegerHttpPort);
+                // 使用注入的JaegerSource bean，但更新service和operation信息
+                JaegerSource effectiveJaegerSource = new JaegerSource();
+                effectiveJaegerSource.setHost(jaegerSource.getHost());
+                effectiveJaegerSource.setHttpPort(jaegerSource.getHttpPort());
+                effectiveJaegerSource.setEntryService(serviceName);
+                effectiveJaegerSource.setBasePath(jaegerSource.getBasePath());
+                effectiveJaegerSource.setLimit(jaegerSource.getLimit());
+                effectiveJaegerSource.setSystemKey(jaegerSource.getSystemKey());
+                
                 return jaegerQueryService.queryTracesByOperationHttp(
-                        jaegerSource, serviceName, operationName, startTime, endTime);
+                        effectiveJaegerSource, serviceName, operationName, startTime, endTime);
             } else if (serviceName != null && !serviceName.isEmpty()) {
                 // 如果只指定了服务，使用queryTracesByServiceHttp方法
-                JaegerSource jaegerSource = new JaegerSource();
-                jaegerSource.setHost(jaegerHost);
-                jaegerSource.setHttpPort(jaegerHttpPort);
-                jaegerSource.setEntryService(serviceName);
-                return jaegerQueryService.queryTracesByServiceHttp(jaegerSource, startTime, endTime);
+                // 使用注入的JaegerSource bean，但更新service信息
+                JaegerSource effectiveJaegerSource = new JaegerSource();
+                effectiveJaegerSource.setHost(jaegerSource.getHost());
+                effectiveJaegerSource.setHttpPort(jaegerSource.getHttpPort());
+                effectiveJaegerSource.setEntryService(serviceName);
+                effectiveJaegerSource.setBasePath(jaegerSource.getBasePath());
+                effectiveJaegerSource.setLimit(jaegerSource.getLimit());
+                effectiveJaegerSource.setSystemKey(jaegerSource.getSystemKey());
+                
+                return jaegerQueryService.queryTracesByServiceHttp(effectiveJaegerSource, startTime, endTime);
             } else {
                 // 否则使用queryTracesByServiceHttp方法（不指定特定服务和操作）
-                JaegerSource jaegerSource = new JaegerSource();
-                jaegerSource.setHost(jaegerHost);
-                jaegerSource.setHttpPort(jaegerHttpPort);
-                jaegerSource.setEntryService("all");
+                // 直接使用注入的JaegerSource bean
                 return jaegerQueryService.queryTracesByServiceHttp(jaegerSource, startTime, endTime);
             }
         } else {
             // 默认使用gRPC查询
             return jaegerQueryService.queryTracesByOperation(
-                    jaegerHost, jaegerPort, serviceName, operationName, startTime, endTime);
+                    jaegerSource.getHost(), jaegerPort, jaegerSource.getEntryService(), operationName, startTime, endTime);
         }
     }
 
@@ -251,17 +263,32 @@ public class TopologyAutoRefreshService {
                 traceData = loadMockTraceData();
                 logger.info("使用mock模式加载trace数据");
             } else {
-                // 检查环境变量并覆盖配置
+                // 使用注入的JaegerSource bean中的配置作为基础配置
+                String effectiveJaegerHost = jaegerSource.getHost();
+                int effectiveJaegerPort = jaegerPort;
+                int effectiveJaegerHttpPort = jaegerSource.getHttpPort();
+                String effectiveServiceName = jaegerSource.getEntryService();
+
+                // 检查环境变量并覆盖配置（保持原有的环境变量处理逻辑）
+                // 环境变量优先级高于application.yml配置和注入的bean配置
                 String envJaegerHost = System.getenv("JaegerHost");
                 String envJaegerPort = System.getenv("JaegerPort");
                 String envEntryService = System.getenv("EntryService");
+                
+                // 添加调试日志
+                logger.debug("环境变量检查: JaegerHost={}, JaegerPort={}, EntryService={}", envJaegerHost, envJaegerPort, envEntryService);
+                logger.debug("注入的JaegerSource配置: host={}, httpPort={}, entryService={}", 
+                           jaegerSource.getHost(), jaegerSource.getHttpPort(), jaegerSource.getEntryService());
 
-                String effectiveJaegerHost = (envJaegerHost != null && !envJaegerHost.isEmpty()) ? envJaegerHost : jaegerHost;
-                int effectiveJaegerPort = jaegerPort;
-                int effectiveJaegerHttpPort = jaegerHttpPort;
-                String effectiveServiceName = (envEntryService != null && !envEntryService.isEmpty()) ? envEntryService : serviceName;
+                // 使用环境变量覆盖配置
+                if (envJaegerHost != null && !envJaegerHost.isEmpty()) {
+                    effectiveJaegerHost = envJaegerHost;
+                }
+                if (envEntryService != null && !envEntryService.isEmpty()) {
+                    effectiveServiceName = envEntryService;
+                }
 
-                // 解析端口环境变量
+                // 解析端口环境变量（JaegerPort环境变量对应HTTP端口）
                 if (envJaegerPort != null && !envJaegerPort.isEmpty()) {
                     try {
                         effectiveJaegerHttpPort = Integer.parseInt(envJaegerPort);
@@ -269,6 +296,10 @@ public class TopologyAutoRefreshService {
                         logger.warn("无效的 JaegerPort 环境变量值: {}, 使用默认值: {}", envJaegerPort, jaegerHttpPort);
                     }
                 }
+                
+                // 添加调试日志
+                logger.debug("生效的配置: effectiveJaegerHost={}, effectiveJaegerHttpPort={}, effectiveServiceName={}", 
+                           effectiveJaegerHost, effectiveJaegerHttpPort, effectiveServiceName);
 
                 // 计算查询时间范围：当前时间向前推 timeRangeSeconds 秒 (使用毫秒时间戳)
                 long endTime = System.currentTimeMillis(); // 毫秒时间戳
@@ -280,31 +311,44 @@ public class TopologyAutoRefreshService {
                     if (effectiveServiceName != null && !effectiveServiceName.isEmpty() && operationName != null && !operationName.isEmpty() &&
                         !"all".equalsIgnoreCase(operationName)) {
                         // 如果指定了服务和操作，使用queryTracesByOperationHttp方法
-                        JaegerSource jaegerSource = new JaegerSource();
-                        jaegerSource.setHost(effectiveJaegerHost);
-                        jaegerSource.setHttpPort(effectiveJaegerHttpPort);
+                        JaegerSource effectiveJaegerSource = new JaegerSource();
+                        effectiveJaegerSource.setHost(effectiveJaegerHost);
+                        effectiveJaegerSource.setHttpPort(effectiveJaegerHttpPort);
+                        effectiveJaegerSource.setEntryService(effectiveServiceName); // 确保设置entryService
+                        effectiveJaegerSource.setBasePath(jaegerSource.getBasePath());
+                        effectiveJaegerSource.setLimit(jaegerSource.getLimit());
+                        effectiveJaegerSource.setSystemKey(jaegerSource.getSystemKey());
+                        
                         traceData = jaegerQueryService.queryTracesByOperationHttp(
-                                jaegerSource, effectiveServiceName, operationName, startTime, endTime);
+                                effectiveJaegerSource, effectiveServiceName, operationName, startTime, endTime);
                         logger.info("使用HTTP API查询Jaeger数据（指定服务和操作）: host={}, port={}, service={}, operation={}",
                                    effectiveJaegerHost, effectiveJaegerHttpPort, effectiveServiceName, operationName);
                     } else if (effectiveServiceName != null && !effectiveServiceName.isEmpty()) {
                         // 如果只指定了服务，使用queryTracesByServiceHttp方法
-                        JaegerSource jaegerSource = new JaegerSource();
-                        jaegerSource.setHost(effectiveJaegerHost);
-                        jaegerSource.setHttpPort(effectiveJaegerHttpPort);
-                        jaegerSource.setEntryService(effectiveServiceName);
-                        traceData = jaegerQueryService.queryTracesByServiceHttp(jaegerSource, startTime, endTime);
+                        JaegerSource effectiveJaegerSource = new JaegerSource();
+                        effectiveJaegerSource.setHost(effectiveJaegerHost);
+                        effectiveJaegerSource.setHttpPort(effectiveJaegerHttpPort);
+                        effectiveJaegerSource.setEntryService(effectiveServiceName); // 确保设置entryService
+                        effectiveJaegerSource.setBasePath(jaegerSource.getBasePath());
+                        effectiveJaegerSource.setLimit(jaegerSource.getLimit());
+                        effectiveJaegerSource.setSystemKey(jaegerSource.getSystemKey());
+                        
+                        traceData = jaegerQueryService.queryTracesByServiceHttp(effectiveJaegerSource, startTime, endTime);
                         logger.info("使用HTTP API查询Jaeger数据（仅指定服务）: host={}, port={}, service={}",
                                    effectiveJaegerHost, effectiveJaegerHttpPort, effectiveServiceName);
                     } else {
                         // 否则使用queryTracesByServiceHttp方法（不指定特定服务和操作）
-                        JaegerSource jaegerSource = new JaegerSource();
-                        jaegerSource.setHost(effectiveJaegerHost);
-                        jaegerSource.setHttpPort(effectiveJaegerHttpPort);
-                        jaegerSource.setEntryService("all");
-                        traceData = jaegerQueryService.queryTracesByServiceHttp(jaegerSource, startTime, endTime);
-                        logger.info("使用HTTP API查询Jaeger数据（不指定服务和操作）: host={}, port={}",
-                                   effectiveJaegerHost, effectiveJaegerHttpPort);
+                        JaegerSource effectiveJaegerSource = new JaegerSource();
+                        effectiveJaegerSource.setHost(effectiveJaegerHost);
+                        effectiveJaegerSource.setHttpPort(effectiveJaegerHttpPort);
+                        effectiveJaegerSource.setEntryService(serviceName); // 使用默认服务名
+                        effectiveJaegerSource.setBasePath(jaegerSource.getBasePath());
+                        effectiveJaegerSource.setLimit(jaegerSource.getLimit());
+                        effectiveJaegerSource.setSystemKey(jaegerSource.getSystemKey());
+                        
+                        traceData = jaegerQueryService.queryTracesByServiceHttp(effectiveJaegerSource, startTime, endTime);
+                        logger.info("使用HTTP API查询Jaeger数据（使用默认服务）: host={}, port={}, service={}",
+                                   effectiveJaegerHost, effectiveJaegerHttpPort, serviceName);
                     }
                 } else {
                     // 默认使用gRPC查询
