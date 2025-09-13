@@ -137,34 +137,6 @@ public class JaegerQueryServiceHttpTest {
     }
     
     @Test
-    public void testQueryTracesHttpMethod() {
-        // 测试queryTracesHttp方法的参数验证
-        assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesHttp(null, 16686, 0, 1000);
-        });
-        
-        assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesHttp("", 16686, 0, 1000);
-        });
-        
-        assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesHttp("localhost", 0, 0, 1000);
-        });
-        
-        assertThrows(IllegalArgumentException.class, () -> {
-            jaegerQueryService.queryTracesHttp("localhost", 65536, 0, 1000);
-        });
-        
-        // 验证正常参数不会抛出异常（虽然实际调用会因为没有Jaeger服务而失败）
-        try {
-            jaegerQueryService.queryTracesHttp("localhost", 16686, 0, 1000);
-        } catch (RuntimeException e) {
-            // 期望的异常，因为没有Jaeger服务运行
-            assertTrue(e.getMessage().contains("Failed to query Jaeger"));
-        }
-    }
-    
-    @Test
     public void testQueryTracesByServiceHttpMethod() {
         // 测试queryTracesByServiceHttp方法的参数验证
         JaegerSource jaegerSource = new JaegerSource();

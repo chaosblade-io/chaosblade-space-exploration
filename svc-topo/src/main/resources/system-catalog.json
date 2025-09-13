@@ -1,8 +1,8 @@
 [
   {
     "id": 1,
-    "key": "train-ticket",
-    "alias": ["train_ticket", "tt"],
+    "systemKey": "train-ticket",
+    "systemAlias": ["train_ticket", "tt"],
     "name": "订票系统",
     "description": "火车票订票系统（被测系统）",
     "owner": "admin",

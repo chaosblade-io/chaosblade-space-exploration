@@ -14,7 +14,7 @@ public class SystemInfo {
     @JsonProperty("systemKey")
     private String key;
 
-    @JsonProperty("alias")
+    @JsonProperty("systemAlias")
     private List<String> alias;
 
     @JsonProperty("name")

@@ -153,106 +153,6 @@ public class JaegerQueryService {
     }
 
     /**
-     * 通过HTTP API查询Trace数据（不指定特定服务和操作）
-     *
-     * @param jaegerHost Jaeger服务主机地址
-     * @param port Jaeger服务端口
-     * @param startTime 查询开始时间（毫秒）
-     * @param endTime 查询结束时间（毫秒）
-     * @return Trace数据
-     * @throws IllegalArgumentException 当参数无效时
-     * @throws RuntimeException 当连接或查询失败时
-     */
-    public TraceData queryTracesHttp(String jaegerHost, int port, long startTime, long endTime) {
-        return queryTracesHttp(jaegerHost, port, startTime, endTime, DEFAULT_TRACE_LIMIT);
-    }
-
-    /**
-     * 通过HTTP API查询Trace数据（不指定特定服务和操作）
-     *
-     * @param jaegerHost Jaeger服务主机地址
-     * @param port Jaeger服务端口
-     * @param startTime 查询开始时间（毫秒）
-     * @param endTime 查询结束时间（毫秒）
-     * @param limit 返回的最大Trace数量
-     * @return Trace数据
-     * @throws IllegalArgumentException 当参数无效时
-     * @throws RuntimeException 当连接或查询失败时
-     */
-    public TraceData queryTracesHttp(String jaegerHost, int port, long startTime, long endTime, int limit) {
-        // 参数验证
-        if (jaegerHost == null || jaegerHost.trim().isEmpty()) {
-            throw new IllegalArgumentException("Jaeger host cannot be null or empty");
-        }
-        if (port <= 0 || port > 65535) {
-            throw new IllegalArgumentException("Port must be between 1 and 65535");
-        }
-
-        logger.info("开始从Jaeger通过HTTP API查询trace数据 (/api/traces): host={}, port={}, startTime={}, endTime={}, limit={}",
-                   jaegerHost, port, startTime, endTime, limit);
-
-        Exception lastException = null;
-        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
-            try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-                // 构建查询URL (直接使用毫秒时间戳)
-                long startMs = startTime;
-                long endMs = endTime;
-
-                // 构建查询参数
-                StringBuilder urlBuilder = new StringBuilder();
-                urlBuilder.append("http://").append(jaegerHost).append(":").append(port)
-                          .append("/api/traces?limit=").append(limit)
-                          .append("&start=").append(startMs)
-                          .append("&end=").append(endMs);
-
-                String url = urlBuilder.toString();
-                logger.debug("Jaeger HTTP查询URL: {}", url);
-
-                // 创建HTTP GET请求
-                HttpGet httpGet = new HttpGet(url);
-                httpGet.setHeader("Accept", "application/json");
-
-                // 执行HTTP请求
-                ClassicHttpResponse response = httpClient.execute(httpGet);
-
-                // 检查响应状态
-                int statusCode = response.getCode();
-                if (statusCode != 200) {
-                    String responseContent = EntityUtils.toString(response.getEntity());
-                    logger.error("Jaeger HTTP API调用失败，状态码: {}, 响应内容: {}", statusCode, responseContent);
-                    throw new RuntimeException("Jaeger HTTP API调用失败，状态码: " + statusCode);
-                }
-
-                // 解析响应内容
-                String jsonResponse = EntityUtils.toString(response.getEntity());
-                logger.debug("Jaeger HTTP API响应长度: {} 字符", jsonResponse.length());
-
-                // 将JSON响应转换为TraceData对象
-                TraceData traceData = convertHttpTraceResponse(jsonResponse);
-
-                logger.info("成功从Jaeger通过HTTP API获取trace数据，共{}个trace记录",
-                           traceData.getData() != null ? traceData.getData().size() : 0);
-                return traceData;
-
-            } catch (Exception e) {
-                lastException = e;
-                logger.warn("通过HTTP API查询Jaeger trace数据时发生异常 (尝试 {}/{}): {}", attempt, MAX_RETRY_ATTEMPTS, e.getMessage(), e);
-                if (attempt < MAX_RETRY_ATTEMPTS) {
-                    try {
-                        Thread.sleep(RETRY_DELAY_MS);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException("查询被中断", ie);
-                    }
-                }
-            }
-        }
-
-        logger.error("经过{}次尝试后仍无法从Jaeger通过HTTP API查询trace数据", MAX_RETRY_ATTEMPTS, lastException);
-        throw new RuntimeException("Failed to query Jaeger via HTTP API after " + MAX_RETRY_ATTEMPTS + " attempts: " + lastException.getMessage(), lastException);
-    }
-
-    /**
      * 根据服务名通过HTTP API查询Trace数据
      *
      * @param jaegerSource Jaeger数据源配置
@@ -264,25 +164,10 @@ public class JaegerQueryService {
      */
     public TraceData queryTracesByServiceHttp(JaegerSource jaegerSource,
                                              long startTime, long endTime) {
-        return queryTracesByServiceHttp(jaegerSource, startTime, endTime, jaegerSource.getLimit() != null ? jaegerSource.getLimit() : DEFAULT_TRACE_LIMIT);
-    }
-
-    /**
-     * 根据服务名通过HTTP API查询Trace数据
-     *
-     * @param jaegerSource Jaeger数据源配置
-     * @param startTime 查询开始时间（微秒）
-     * @param endTime 查询结束时间（微秒）
-     * @param limit 返回的最大Trace数量
-     * @return Trace数据
-     * @throws IllegalArgumentException 当参数无效时
-     * @throws RuntimeException 当连接或查询失败时
-     */
-    public TraceData queryTracesByServiceHttp(JaegerSource jaegerSource,
-                                             long startTime, long endTime, int limit) {
         // 参数验证
         validateJaegerSource(jaegerSource, startTime, endTime);
 
+        int limit = jaegerSource.getLimit() != null ? jaegerSource.getLimit() : DEFAULT_TRACE_LIMIT;
         logger.info("开始从Jaeger通过HTTP API查询trace数据 (/api/traces): host={}, port={}, service={}, startTime={}, endTime={}, limit={}",
                    jaegerSource.getHost(), jaegerSource.getHttpPort(), jaegerSource.getEntryService(), startTime, endTime, limit);
 
@@ -352,8 +237,7 @@ public class JaegerQueryService {
     /**
      * 根据服务名和操作名通过HTTP API查询Trace数据
      *
-     * @param jaegerHost Jaeger服务主机地址
-     * @param port Jaeger服务端口
+     * @param jaegerSource Jaeger数据源配置
      * @param serviceName 服务名称
      * @param operationName 操作名称
      * @param startTime 查询开始时间（毫秒）
@@ -362,32 +246,17 @@ public class JaegerQueryService {
      * @throws IllegalArgumentException 当参数无效时
      * @throws RuntimeException 当连接或查询失败时
      */
-    public TraceData queryTracesByOperationHttp(String jaegerHost, int port, String serviceName,
+    public TraceData queryTracesByOperationHttp(JaegerSource jaegerSource, String serviceName,
                                                String operationName, long startTime, long endTime) {
-        return queryTracesByOperationHttp(jaegerHost, port, serviceName, operationName, startTime, endTime, DEFAULT_TRACE_LIMIT);
-    }
-
-    /**
-     * 根据服务名和操作名通过HTTP API查询Trace数据
-     *
-     * @param jaegerHost Jaeger服务主机地址
-     * @param port Jaeger服务端口
-     * @param serviceName 服务名称
-     * @param operationName 操作名称
-     * @param startTime 查询开始时间（毫秒）
-     * @param endTime 查询结束时间（毫秒）
-     * @param limit 返回的最大Trace数量
-     * @return Trace数据
-     * @throws IllegalArgumentException 当参数无效时
-     * @throws RuntimeException 当连接或查询失败时
-     */
-    public TraceData queryTracesByOperationHttp(String jaegerHost, int port, String serviceName,
-                                               String operationName, long startTime, long endTime, int limit) {
         // 参数验证
-        validateParameters(jaegerHost, port, serviceName, operationName, startTime, endTime);
+        if (jaegerSource == null) {
+            throw new IllegalArgumentException("JaegerSource cannot be null");
+        }
+        validateParameters(jaegerSource.getHost(), jaegerSource.getHttpPort(), serviceName, operationName, startTime, endTime);
 
+        int limit = jaegerSource.getLimit() != null ? jaegerSource.getLimit() : DEFAULT_TRACE_LIMIT;
         logger.info("开始从Jaeger通过HTTP API查询trace数据 (/api/traces): host={}, port={}, service={}, operation={}, startTime={}, endTime={}, limit={}",
-                   jaegerHost, port, serviceName, operationName, startTime, endTime, limit);
+                   jaegerSource.getHost(), jaegerSource.getHttpPort(), serviceName, operationName, startTime, endTime, limit);
 
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
@@ -398,8 +267,9 @@ public class JaegerQueryService {
 
                 // 构建查询参数
                 StringBuilder urlBuilder = new StringBuilder();
-                urlBuilder.append("http://").append(jaegerHost).append(":").append(port)
-                          .append("/api/traces?limit=").append(limit)
+                urlBuilder.append("http://").append(jaegerSource.getHost()).append(":").append(jaegerSource.getHttpPort())
+                          .append(jaegerSource.getBasePath() != null ? jaegerSource.getBasePath() : "/api/traces")
+                          .append("?limit=").append(limit)
                           .append("&service=").append(serviceName)
                           .append("&operation=").append(operationName)
                           .append("&start=").append(startUs)
