@@ -23,6 +23,7 @@ import com.chaosblade.svc.topo.model.entity.RelationType;
 import com.chaosblade.svc.topo.service.ApiQueryService;
 import com.chaosblade.svc.topo.service.TopologyConverterService;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
+import com.chaosblade.svc.topo.service.TopologyCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +55,10 @@ public class ApiQueryController {
     @Autowired
     private TopologyConverterService topologyConverterService;
 
+    // 添加缓存服务依赖
+    @Autowired
+    private TopologyCacheService topologyCacheService;
+
     @Autowired
     private SystemCatalogConfig systemCatalogConfig;
 
@@ -71,12 +76,8 @@ public class ApiQueryController {
             request.getAppSelector() != null ? request.getAppSelector().getServices() : "all");
 
         try {
-            // 从TopologyConverterService获取当前拓扑图
-            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
-            if (currentTopology == null) {
-                logger.warn("当前拓扑图为空");
-                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
-            }
+            // 尝试从缓存中获取拓扑图
+            TopologyGraph currentTopology = getTopologyFromCacheOrCurrentForApiQuery(request);
 
             ApiQueryResponse response = apiQueryService.queryApisFromTopology(currentTopology, request);
             return ResponseEntity.ok(response);
@@ -101,12 +102,8 @@ public class ApiQueryController {
             request.getApiId());
 
         try {
-            // 从TopologyConverterService获取当前拓扑图
-            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
-            if (currentTopology == null) {
-                logger.warn("当前拓扑图为空");
-                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
-            }
+            // 尝试从缓存中获取拓扑图
+            TopologyGraph currentTopology = getTopologyFromCacheOrCurrentForTopologyQuery(request);
 
             TopologyGraph response = apiQueryService.queryTopologyByApiId(currentTopology, request);
             return ResponseEntity.ok(response);
@@ -128,12 +125,8 @@ public class ApiQueryController {
         logger.info("收到指标查询请求: apiId={}", request.getApiId());
 
         try {
-            // 从TopologyConverterService获取当前拓扑图
-            TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
-            if (currentTopology == null) {
-                logger.warn("当前拓扑图为空");
-                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
-            }
+            // 尝试从缓存中获取拓扑图
+            TopologyGraph currentTopology = getTopologyFromCacheOrCurrentForMetricsQuery(request);
 
             MetricsByApiResponse response = apiQueryService.queryMetricsByApiId(currentTopology, request);
             return ResponseEntity.ok(response);
@@ -249,16 +242,16 @@ public class ApiQueryController {
 
             // 获取所有RPC类型的节点（代表API）
             List<Node> rpcNodes = currentTopology.getNodesByType(EntityType.RPC);
-            
+
             // 过滤出属于指定systemId的节点
             // 这里我们假设systemId为1时对应"default"命名空间
             final String targetNamespace = systemId == 1 ? "default" : "default"; // 根据实际需求调整映射关系
-            
+
             List<SystemApiDetail> apiDetails = rpcNodes.stream()
                 .filter(node -> {
                     Entity entity = node.getEntity();
                     if (entity == null) return false;
-                    
+
                     // 根据实体的namespace属性进行过滤
                     String namespace = entity.getNamespace();
                     return targetNamespace.equals(namespace);
@@ -281,7 +274,7 @@ public class ApiQueryController {
      */
     private SystemApiDetail convertNodeToSystemApiDetail(Node node) {
         SystemApiDetail detail = new SystemApiDetail();
-        
+
         Entity entity = node.getEntity();
         if (entity != null) {
             // ID使用递增编号从1开始
@@ -289,7 +282,7 @@ public class ApiQueryController {
             detail.setSystemId(1L); // 默认系统ID
             detail.setK8sNamespace(entity.getNamespace());
             detail.setOperationId(entity.getDisplayName());
-            
+
             // 从属性中提取方法和路径信息
             Map<String, Object> attributes = entity.getAttributes();
             if (attributes != null) {
@@ -299,14 +292,14 @@ public class ApiQueryController {
                 detail.setMethod("GET");
                 detail.setPath("");
             }
-            
+
             detail.setSummary(entity.getDisplayName());
             detail.setTags("[\"api\"]"); // 默认标签
             detail.setBaseUrl("http://localhost:8080"); // 默认基础URL
             detail.setCreatedAt("2025-09-12 10:00:00"); // 默认创建时间
             detail.setUpdatedAt("2025-09-12 10:00:00"); // 默认更新时间
         }
-        
+
         return detail;
     }
 
@@ -345,9 +338,9 @@ public class ApiQueryController {
         // 创建响应对象
         ServiceTopologyResponse response = new ServiceTopologyResponse();
         response.setSuccess(true);
-        
+
         ServiceTopologyResponse.ServiceTopologyData data = new ServiceTopologyResponse.ServiceTopologyData();
-        
+
         // 创建拓扑信息
         ServiceTopologyResponse.TopologyInfo topologyInfo = new ServiceTopologyResponse.TopologyInfo();
         topologyInfo.setId(1L); // 服务拓扑ID
@@ -355,57 +348,57 @@ public class ApiQueryController {
         topologyInfo.setApiId(rootApiId); // 根API标识符
         topologyInfo.setDiscoveredAt(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); // 发现时间
         topologyInfo.setCreatedAt(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); // 创建时间
-        
+
         data.setTopology(topologyInfo);
-        
+
         // 过滤出Service类型的节点
         List<Node> serviceNodes = topologyGraph.getNodesByType(EntityType.SERVICE);
-        
+
         // 过滤出DEPENDS_ON类型的边
         List<Edge> dependsOnEdges = topologyGraph.getEdgesByType(RelationType.DEPENDS_ON);
-        
+
         // 为节点分配ID映射（用于边的转换）
         Map<String, Long> nodeKeyToIdMap = new HashMap<>();
         long nodeIdCounter = 1;
         for (Node node : serviceNodes) {
             nodeKeyToIdMap.put(node.getNodeId(), nodeIdCounter++);
         }
-        
+
         // 构建邻接表用于拓扑排序
         Map<String, List<String>> adjacencyList = new HashMap<>();
         Map<String, Integer> inDegree = new HashMap<>();
-        
+
         // 初始化邻接表和入度
         for (Node node : serviceNodes) {
             adjacencyList.put(node.getNodeId(), new ArrayList<>());
             inDegree.put(node.getNodeId(), 0);
         }
-        
+
         // 构建依赖关系图
         for (Edge edge : dependsOnEdges) {
             String fromNode = edge.getFrom();
             String toNode = edge.getTo();
-            
+
             // 只处理Service节点之间的边
             if (nodeKeyToIdMap.containsKey(fromNode) && nodeKeyToIdMap.containsKey(toNode)) {
                 adjacencyList.get(fromNode).add(toNode);
                 inDegree.put(toNode, inDegree.get(toNode) + 1);
             }
         }
-        
+
         // 执行拓扑排序计算节点层级
         Map<String, Integer> nodeLayers = calculateNodeLayers(adjacencyList, inDegree);
-        
+
         // 转换节点
         List<ServiceTopologyResponse.ServiceNode> serviceNodeList = new ArrayList<>();
         long serviceNodeId = 20; // 从示例中的20开始
         Map<String, Long> serviceNodeIds = new HashMap<>(); // 保存新生成的节点ID映射
-        
+
         for (Node node : serviceNodes) {
             ServiceTopologyResponse.ServiceNode serviceNode = new ServiceTopologyResponse.ServiceNode();
             long newId = serviceNodeId++;
             serviceNodeIds.put(node.getNodeId(), newId);
-            
+
             serviceNode.setId(newId);
             serviceNode.setTopologyId(1L);
             serviceNode.setNodeKey(node.getDisplayName());
@@ -414,15 +407,15 @@ public class ApiQueryController {
             serviceNode.setLayer(nodeLayers.getOrDefault(node.getNodeId(), 1));
             serviceNodeList.add(serviceNode);
         }
-        
+
         // 转换边
         List<ServiceTopologyResponse.ServiceEdge> serviceEdgeList = new ArrayList<>();
         long serviceEdgeId = 27; // 从示例中的27开始
-        
+
         for (Edge edge : dependsOnEdges) {
             String fromNode = edge.getFrom();
             String toNode = edge.getTo();
-            
+
             // 检查边的源节点和目标节点是否都在serviceNodes中
             if (serviceNodeIds.containsKey(fromNode) && serviceNodeIds.containsKey(toNode)) {
                 ServiceTopologyResponse.ServiceEdge serviceEdge = new ServiceTopologyResponse.ServiceEdge();
@@ -433,18 +426,18 @@ public class ApiQueryController {
                 serviceEdgeList.add(serviceEdge);
             }
         }
-        
+
         // 更新拓扑信息中的notes字段
-        topologyInfo.setNotes(String.format("{ \"totalEdges\": %d, \"totalServices\": %d}", 
+        topologyInfo.setNotes(String.format("{ \"totalEdges\": %d, \"totalServices\": %d}",
             serviceEdgeList.size(), serviceNodeList.size()));
-        
+
         data.setNodes(serviceNodeList);
         data.setEdges(serviceEdgeList);
         response.setData(data);
-        
+
         return response;
     }
-    
+
     /**
      * 使用拓扑排序算法计算节点层级
      * @param adjacencyList 邻接表
@@ -454,7 +447,7 @@ public class ApiQueryController {
     private Map<String, Integer> calculateNodeLayers(Map<String, List<String>> adjacencyList, Map<String, Integer> inDegree) {
         Map<String, Integer> nodeLayers = new HashMap<>();
         Queue<String> queue = new LinkedList<>();
-        
+
         // 将所有入度为0的节点加入队列，层級設為1
         for (Map.Entry<String, Integer> entry : inDegree.entrySet()) {
             if (entry.getValue() == 0) {
@@ -462,17 +455,17 @@ public class ApiQueryController {
                 nodeLayers.put(entry.getKey(), 1);
             }
         }
-        
+
         // 执行拓扑排序
         while (!queue.isEmpty()) {
             String currentNode = queue.poll();
             int currentLayer = nodeLayers.get(currentNode);
-            
+
             // 遍历当前节点的所有邻居
             for (String neighbor : adjacencyList.get(currentNode)) {
                 // 减少邻居节点的入度
                 inDegree.put(neighbor, inDegree.get(neighbor) - 1);
-                
+
                 // 如果邻居节点的入度变为0，将其加入队列
                 if (inDegree.get(neighbor) == 0) {
                     queue.offer(neighbor);
@@ -485,14 +478,98 @@ public class ApiQueryController {
                 }
             }
         }
-        
+
         // 对于仍有入度的节点（可能存在环），设置默认层级
         for (String node : inDegree.keySet()) {
             if (!nodeLayers.containsKey(node)) {
                 nodeLayers.put(node, 1);
             }
         }
-        
+
         return nodeLayers;
+    }
+}
+
+
+    /**
+     * 从缓存或当前拓扑中获取拓扑图（用于API查询）
+     *
+     * @param request API查询请求对象（用于提取时间范围）
+     * @return 拓扑图
+     */
+    private TopologyGraph getTopologyFromCacheOrCurrentForApiQuery(ApiQueryRequest request) {
+        TopologyGraph currentTopology = null;
+
+        // 如果请求包含时间范围，尝试从缓存中获取
+        if (request != null && request.getTimeRange() != null) {
+            Long start = request.getTimeRange().getStart();
+            Long end = request.getTimeRange().getEnd();
+
+            if (start != null && end != null) {
+                currentTopology = topologyCacheService.get(start, end);
+                if (currentTopology != null) {
+                    logger.debug("从缓存中获取到拓扑图，时间范围: {}-{}", start, end);
+                }
+            }
+        }
+
+        // 如果缓存中没有找到，从当前拓扑获取
+        if (currentTopology == null) {
+            currentTopology = topologyConverterService.getCurrentTopology();
+            if (currentTopology == null) {
+                logger.warn("当前拓扑图为空");
+                currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
+            }
+        }
+
+        return currentTopology;
+    }
+
+    /**
+     * 从缓存或当前拓扑中获取拓扑图（用于指标查询）
+     *
+     * @param request 指标查询请求对象（用于提取时间范围）
+     * @return 拓扑图
+     */
+    private TopologyGraph getTopologyFromCacheOrCurrentForMetricsQuery(MetricsByApiRequest request) {
+        // MetricsByApiRequest也包含时间范围，可以类似处理
+        if (request != null && request.getTimeRange() != null) {
+            Long start = request.getTimeRange().getStart();
+            Long end = request.getTimeRange().getEnd();
+
+            if (start != null && end != null) {
+                TopologyGraph cachedTopology = topologyCacheService.get(start, end);
+                if (cachedTopology != null) {
+                    logger.debug("从缓存中获取到拓扑图，时间范围: {}-{}", start, end);
+                    return cachedTopology;
+                }
+            }
+        }
+
+        // 如果缓存中没有找到，从当前拓扑获取
+        TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+        if (currentTopology == null) {
+            logger.warn("当前拓扑图为空");
+            currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
+        }
+
+        return currentTopology;
+    }
+
+    /**
+     * 从缓存或当前拓扑中获取拓扑图（用于拓扑查询）
+     *
+     * @param request 拓扑查询请求对象
+     * @return 拓扑图
+     */
+    private TopologyGraph getTopologyFromCacheOrCurrentForTopologyQuery(TopologyByApiRequest request) {
+        // TopologyByApiRequest不包含时间范围，直接从当前拓扑获取
+        TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
+        if (currentTopology == null) {
+            logger.warn("当前拓扑图为空");
+            currentTopology = new TopologyGraph(); // 返回空的拓扑图而不是null
+        }
+
+        return currentTopology;
     }
 }

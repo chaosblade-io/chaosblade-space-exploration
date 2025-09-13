@@ -53,8 +53,8 @@ public class JaegerQueryService {
      * @param port Jaeger服务端口
      * @param serviceName 服务名称
      * @param operationName 操作名称
-     * @param startTime 查询开始时间（微秒）
-     * @param endTime 查询结束时间（微秒）
+     * @param startTime 查询开始时间（毫秒）
+     * @param endTime 查询结束时间（毫秒）
      * @return Trace数据
      * @throws IllegalArgumentException 当参数无效时
      * @throws RuntimeException 当连接或查询失败时
@@ -71,8 +71,8 @@ public class JaegerQueryService {
      * @param port Jaeger服务端口
      * @param serviceName 服务名称
      * @param operationName 操作名称
-     * @param startTime 查询开始时间（微秒）
-     * @param endTime 查询结束时间（微秒）
+     * @param startTime 查询开始时间（毫秒）
+     * @param endTime 查询结束时间（毫秒）
      * @param limit 返回的最大Trace数量
      * @return Trace数据
      * @throws IllegalArgumentException 当参数无效时
@@ -95,16 +95,16 @@ public class JaegerQueryService {
                 // 获取或创建gRPC stub
                 QueryServiceGrpc.QueryServiceBlockingStub stub = getOrCreateStub(channel, jaegerHost, port);
 
-                // 构建查询参数
+                // 构建查询参数 (将毫秒转换为秒和纳秒)
                 Query.TraceQueryParameters queryParameters = Query.TraceQueryParameters.newBuilder()
                         .setServiceName(serviceName)
                         .setOperationName(operationName)
                         .setStartTimeMin(com.google.protobuf.Timestamp.newBuilder()
-                                .setSeconds(startTime / 1_000_000)
-                                .setNanos((int) ((startTime % 1_000_000) * 1000)))
+                                .setSeconds(startTime / 1000)
+                                .setNanos((int) ((startTime % 1000) * 1_000_000)))
                         .setStartTimeMax(com.google.protobuf.Timestamp.newBuilder()
-                                .setSeconds(endTime / 1_000_000)
-                                .setNanos((int) ((endTime % 1_000_000) * 1000)))
+                                .setSeconds(endTime / 1000)
+                                .setNanos((int) ((endTime % 1000) * 1_000_000)))
                         .setSearchDepth(MAX_SPANS_PER_QUERY)
                         .build();
 
@@ -157,8 +157,8 @@ public class JaegerQueryService {
      *
      * @param jaegerHost Jaeger服务主机地址
      * @param port Jaeger服务端口
-     * @param startTime 查询开始时间（微秒）
-     * @param endTime 查询结束时间（微秒）
+     * @param startTime 查询开始时间（毫秒）
+     * @param endTime 查询结束时间（毫秒）
      * @return Trace数据
      * @throws IllegalArgumentException 当参数无效时
      * @throws RuntimeException 当连接或查询失败时
@@ -172,8 +172,8 @@ public class JaegerQueryService {
      *
      * @param jaegerHost Jaeger服务主机地址
      * @param port Jaeger服务端口
-     * @param startTime 查询开始时间（微秒）
-     * @param endTime 查询结束时间（微秒）
+     * @param startTime 查询开始时间（毫秒）
+     * @param endTime 查询结束时间（毫秒）
      * @param limit 返回的最大Trace数量
      * @return Trace数据
      * @throws IllegalArgumentException 当参数无效时
@@ -194,10 +194,9 @@ public class JaegerQueryService {
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-                // 构建查询URL
-                // 将微秒转换为毫秒
-                long startMs = startTime / 1000;
-                long endMs = endTime / 1000;
+                // 构建查询URL (直接使用毫秒时间戳)
+                long startMs = startTime;
+                long endMs = endTime;
 
                 // 构建查询参数
                 StringBuilder urlBuilder = new StringBuilder();
@@ -290,10 +289,9 @@ public class JaegerQueryService {
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-                // 构建查询URL
-                // 将微秒转换为毫秒
-                long startMs = startTime / 1000;
-                long endMs = endTime / 1000;
+                // 构建查询URL (直接使用毫秒时间戳)
+                long startMs = startTime;
+                long endMs = endTime;
 
                 // 构建查询参数
                 StringBuilder urlBuilder = new StringBuilder();
@@ -358,8 +356,8 @@ public class JaegerQueryService {
      * @param port Jaeger服务端口
      * @param serviceName 服务名称
      * @param operationName 操作名称
-     * @param startTime 查询开始时间（微秒）
-     * @param endTime 查询结束时间（微秒）
+     * @param startTime 查询开始时间（毫秒）
+     * @param endTime 查询结束时间（毫秒）
      * @return Trace数据
      * @throws IllegalArgumentException 当参数无效时
      * @throws RuntimeException 当连接或查询失败时
@@ -376,8 +374,8 @@ public class JaegerQueryService {
      * @param port Jaeger服务端口
      * @param serviceName 服务名称
      * @param operationName 操作名称
-     * @param startTime 查询开始时间（微秒）
-     * @param endTime 查询结束时间（微秒）
+     * @param startTime 查询开始时间（毫秒）
+     * @param endTime 查询结束时间（毫秒）
      * @param limit 返回的最大Trace数量
      * @return Trace数据
      * @throws IllegalArgumentException 当参数无效时
@@ -394,10 +392,9 @@ public class JaegerQueryService {
         Exception lastException = null;
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-                // 构建查询URL
-                // 将微秒转换为毫秒
-                long startMs = startTime / 1000;
-                long endMs = endTime / 1000;
+                // 构建查询URL (直接使用毫秒时间戳)
+                long startMs = startTime;
+                long endMs = endTime;
 
                 // 构建查询参数
                 StringBuilder urlBuilder = new StringBuilder();
