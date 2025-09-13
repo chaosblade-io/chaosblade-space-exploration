@@ -19,8 +19,8 @@
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <spring-boot.version>3.2.0</spring-boot.version>
         <apache.common.version>4.4</apache.common.version>
         <apache.common.lang3.version>3.13.0</apache.common.lang3.version>
