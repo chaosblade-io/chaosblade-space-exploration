@@ -9,4 +9,3 @@ public class TaskResourceApplication {
         SpringApplication.run(TaskResourceApplication.class, args);
     }
 }
-

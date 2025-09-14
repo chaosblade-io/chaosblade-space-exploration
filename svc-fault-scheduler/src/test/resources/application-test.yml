@@ -1,0 +1,55 @@
+server:
+  port: 0  # 随机端口用于测试
+
+spring:
+  application:
+    name: svc-fault-scheduler-test
+  
+  # 测试环境使用嵌入式 Redis（如果可用）或 Mock
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 15  # 使用不同的数据库避免冲突
+      timeout: 1000ms
+      lettuce:
+        pool:
+          max-active: 2
+          max-idle: 2
+          min-idle: 0
+          max-wait: 1000ms
+
+# 测试环境的 Kubernetes 配置（使用 Mock）
+kubernetes:
+  api-url: https://mock-k8s-api:6443
+  token: mock-token-for-testing
+  verify-ssl: false
+  connection-timeout: 5000
+  request-timeout: 10000
+
+# 测试环境的应用配置
+app:
+  faults:
+    default-ttl-seconds: 10   # 测试环境使用较短的 TTL
+    events-limit: 10          # 测试环境限制事件数量
+    name-prefix: "test-blade-"
+
+# 测试环境的日志配置
+logging:
+  level:
+    com.chaosblade.svc.faultscheduler: DEBUG
+    io.fabric8.kubernetes: WARN
+    org.springframework.data.redis: WARN
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

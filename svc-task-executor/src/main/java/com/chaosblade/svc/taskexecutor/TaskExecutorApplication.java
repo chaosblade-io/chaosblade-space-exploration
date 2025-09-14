@@ -9,4 +9,3 @@ public class TaskExecutorApplication {
         SpringApplication.run(TaskExecutorApplication.class, args);
     }
 }
-

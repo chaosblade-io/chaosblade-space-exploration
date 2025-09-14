@@ -1,6 +1,55 @@
 server:
   port: 8103
+
 spring:
   application:
     name: svc-fault-scheduler
+
+  # Redis Configuration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+# Kubernetes Configuration
+kubernetes:
+  api-url: https://localhost:6443
+  token: yourtoken
+  verify-ssl: false
+  connection-timeout: 10000
+  request-timeout: 30000
+
+# Application Configuration
+app:
+  faults:
+    default-ttl-seconds: 0   # 0 表示不自动删除；可按需设置
+    events-limit: 50         # 查询事件最大条数
+    name-prefix: "blade-"    # 故障名称前缀
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Logging Configuration
+logging:
+  level:
+    com.chaosblade.svc.faultscheduler: DEBUG
+    io.fabric8.kubernetes: INFO
+    org.springframework.data.redis: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 

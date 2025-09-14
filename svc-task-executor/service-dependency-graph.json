@@ -1,0 +1,519 @@
+{
+  "nodes": [
+    {
+      "service": "ts-preserve-service"
+    },
+    {
+      "service": "ts-security-service"
+    },
+    {
+      "service": "ts-order-service"
+    },
+    {
+      "service": "ts-order-other-service"
+    },
+    {
+      "service": "ts-contacts-service"
+    },
+    {
+      "service": "ts-travel-service"
+    },
+    {
+      "service": "ts-ticketinfo-service"
+    },
+    {
+      "service": "ts-basic-service"
+    },
+    {
+      "service": "ts-station-service"
+    },
+    {
+      "service": "ts-route-service"
+    },
+    {
+      "service": "ts-train-service"
+    },
+    {
+      "service": "ts-price-service"
+    },
+    {
+      "service": "ts-seat-service"
+    },
+    {
+      "service": "ts-config-service"
+    },
+    {
+      "service": "ts-food-service"
+    },
+    {
+      "service": "ts-consign-service"
+    },
+    {
+      "service": "ts-delivery-service"
+    },
+    {
+      "service": "ts-consign-price-service"
+    },
+    {
+      "service": "ts-user-service"
+    }
+  ],
+  "edges": [
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-security-service",
+      "method": "GET",
+      "port": "11188",
+      "url": "http://ts-security-service:11188/api/v1/securityservice/securityConfigs/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f",
+      "callCount": 1,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "11188"
+      ],
+      "exampleUrls": [
+        "http://ts-security-service:11188/api/v1/securityservice/securityConfigs/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f"
+      ]
+    },
+    {
+      "source": "ts-security-service",
+      "target": "ts-order-service",
+      "method": "GET",
+      "port": "12031",
+      "url": "http://ts-order-service:12031/api/v1/orderservice/order/security/Thu%20Aug%2028%2009:33:10%20CST%202025/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f",
+      "callCount": 1,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "12031"
+      ],
+      "exampleUrls": [
+        "http://ts-order-service:12031/api/v1/orderservice/order/security/Thu%20Aug%2028%2009:33:10%20CST%202025/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f"
+      ]
+    },
+    {
+      "source": "ts-security-service",
+      "target": "ts-order-other-service",
+      "method": "GET",
+      "port": "12032",
+      "url": "http://ts-order-other-service:12032/api/v1/orderOtherService/orderOther/security/Thu%20Aug%2028%2009:33:11%20CST%202025/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f",
+      "callCount": 1,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "12032"
+      ],
+      "exampleUrls": [
+        "http://ts-order-other-service:12032/api/v1/orderOtherService/orderOther/security/Thu%20Aug%2028%2009:33:11%20CST%202025/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-contacts-service",
+      "method": "GET",
+      "port": "12347",
+      "url": "http://ts-contacts-service:12347/api/v1/contactservice/contacts/a1766d95-ddd1-490a-919f-f07c42bcf405",
+      "callCount": 1,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "12347"
+      ],
+      "exampleUrls": [
+        "http://ts-contacts-service:12347/api/v1/contactservice/contacts/a1766d95-ddd1-490a-919f-f07c42bcf405"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-travel-service",
+      "method": "POST",
+      "port": "12346",
+      "url": "http://ts-travel-service:12346/api/v1/travelservice/trip_detail",
+      "callCount": 1,
+      "allMethods": [
+        "POST"
+      ],
+      "allPorts": [
+        "12346"
+      ],
+      "exampleUrls": [
+        "http://ts-travel-service:12346/api/v1/travelservice/trip_detail"
+      ]
+    },
+    {
+      "source": "ts-travel-service",
+      "target": "ts-ticketinfo-service",
+      "method": "GET,POST",
+      "port": "15681",
+      "url": "http://ts-ticketinfo-service:15681/api/v1/ticketinfoservice/ticketinfo/Shang%20Hai",
+      "callCount": 7,
+      "allMethods": [
+        "GET",
+        "POST"
+      ],
+      "allPorts": [
+        "15681"
+      ],
+      "exampleUrls": [
+        "http://ts-ticketinfo-service:15681/api/v1/ticketinfoservice/ticketinfo/Shang%20Hai",
+        "http://ts-ticketinfo-service:15681/api/v1/ticketinfoservice/ticketinfo/Su%20Zhou",
+        "http://ts-ticketinfo-service:15681/api/v1/ticketinfoservice/ticketinfo"
+      ]
+    },
+    {
+      "source": "ts-ticketinfo-service",
+      "target": "ts-basic-service",
+      "method": "GET,POST",
+      "port": "15680",
+      "url": "http://ts-basic-service:15680/api/v1/basicservice/basic/Shang%20Hai",
+      "callCount": 8,
+      "allMethods": [
+        "GET",
+        "POST"
+      ],
+      "allPorts": [
+        "15680"
+      ],
+      "exampleUrls": [
+        "http://ts-basic-service:15680/api/v1/basicservice/basic/Shang%20Hai",
+        "http://ts-basic-service:15680/api/v1/basicservice/basic/Su%20Zhou",
+        "http://ts-basic-service:15680/api/v1/basicservice/basic/travel"
+      ]
+    },
+    {
+      "source": "ts-basic-service",
+      "target": "ts-station-service",
+      "method": "GET",
+      "port": "12345",
+      "url": "http://ts-station-service:12345/api/v1/stationservice/stations/id/Shang%20Hai",
+      "callCount": 14,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "12345"
+      ],
+      "exampleUrls": [
+        "http://ts-station-service:12345/api/v1/stationservice/stations/id/Shang%20Hai",
+        "http://ts-station-service:12345/api/v1/stationservice/stations/id/Su%20Zhou"
+      ]
+    },
+    {
+      "source": "ts-travel-service",
+      "target": "ts-route-service",
+      "method": "GET",
+      "port": "11178",
+      "url": "http://ts-route-service:11178/api/v1/routeservice/routes/f3d4d4ef-693b-4456-8eed-59c0d717dd08",
+      "callCount": 4,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "11178"
+      ],
+      "exampleUrls": [
+        "http://ts-route-service:11178/api/v1/routeservice/routes/f3d4d4ef-693b-4456-8eed-59c0d717dd08"
+      ]
+    },
+    {
+      "source": "ts-basic-service",
+      "target": "ts-train-service",
+      "method": "GET",
+      "port": "14567",
+      "url": "http://ts-train-service:14567/api/v1/trainservice/trains/DongCheOne",
+      "callCount": 2,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "14567"
+      ],
+      "exampleUrls": [
+        "http://ts-train-service:14567/api/v1/trainservice/trains/DongCheOne"
+      ]
+    },
+    {
+      "source": "ts-basic-service",
+      "target": "ts-route-service",
+      "method": "GET",
+      "port": "11178",
+      "url": "http://ts-route-service:11178/api/v1/routeservice/routes/f3d4d4ef-693b-4456-8eed-59c0d717dd08",
+      "callCount": 2,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "11178"
+      ],
+      "exampleUrls": [
+        "http://ts-route-service:11178/api/v1/routeservice/routes/f3d4d4ef-693b-4456-8eed-59c0d717dd08"
+      ]
+    },
+    {
+      "source": "ts-basic-service",
+      "target": "ts-price-service",
+      "method": "GET",
+      "port": "16579",
+      "url": "http://ts-price-service:16579/api/v1/priceservice/prices/f3d4d4ef-693b-4456-8eed-59c0d717dd08/DongCheOne",
+      "callCount": 2,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "16579"
+      ],
+      "exampleUrls": [
+        "http://ts-price-service:16579/api/v1/priceservice/prices/f3d4d4ef-693b-4456-8eed-59c0d717dd08/DongCheOne"
+      ]
+    },
+    {
+      "source": "ts-travel-service",
+      "target": "ts-order-service",
+      "method": "GET",
+      "port": "12031",
+      "url": "http://ts-order-service:12031/api/v1/orderservice/order/Thu%20Aug%2028%2008:00:00%20CST%202025/D1345",
+      "callCount": 1,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "12031"
+      ],
+      "exampleUrls": [
+        "http://ts-order-service:12031/api/v1/orderservice/order/Thu%20Aug%2028%2008:00:00%20CST%202025/D1345"
+      ]
+    },
+    {
+      "source": "ts-travel-service",
+      "target": "ts-seat-service",
+      "method": "POST",
+      "port": "18898",
+      "url": "http://ts-seat-service:18898/api/v1/seatservice/seats/left_tickets",
+      "callCount": 2,
+      "allMethods": [
+        "POST"
+      ],
+      "allPorts": [
+        "18898"
+      ],
+      "exampleUrls": [
+        "http://ts-seat-service:18898/api/v1/seatservice/seats/left_tickets"
+      ]
+    },
+    {
+      "source": "ts-seat-service",
+      "target": "ts-travel-service",
+      "method": "GET",
+      "port": "12346",
+      "url": "http://ts-travel-service:12346/api/v1/travelservice/routes/D1345",
+      "callCount": 6,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "12346"
+      ],
+      "exampleUrls": [
+        "http://ts-travel-service:12346/api/v1/travelservice/routes/D1345",
+        "http://ts-travel-service:12346/api/v1/travelservice/train_types/D1345"
+      ]
+    },
+    {
+      "source": "ts-seat-service",
+      "target": "ts-order-service",
+      "method": "POST",
+      "port": "12031",
+      "url": "http://ts-order-service:12031/api/v1/orderservice/order/tickets",
+      "callCount": 3,
+      "allMethods": [
+        "POST"
+      ],
+      "allPorts": [
+        "12031"
+      ],
+      "exampleUrls": [
+        "http://ts-order-service:12031/api/v1/orderservice/order/tickets"
+      ]
+    },
+    {
+      "source": "ts-travel-service",
+      "target": "ts-train-service",
+      "method": "GET",
+      "port": "14567",
+      "url": "http://ts-train-service:14567/api/v1/trainservice/trains/DongCheOne",
+      "callCount": 4,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "14567"
+      ],
+      "exampleUrls": [
+        "http://ts-train-service:14567/api/v1/trainservice/trains/DongCheOne"
+      ]
+    },
+    {
+      "source": "ts-seat-service",
+      "target": "ts-config-service",
+      "method": "GET",
+      "port": "15679",
+      "url": "http://ts-config-service:15679/api/v1/configservice/configs/DirectTicketAllocationProportion",
+      "callCount": 2,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "15679"
+      ],
+      "exampleUrls": [
+        "http://ts-config-service:15679/api/v1/configservice/configs/DirectTicketAllocationProportion"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-station-service",
+      "method": "GET",
+      "port": "12345",
+      "url": "http://ts-station-service:12345/api/v1/stationservice/stations/id/Shang%20Hai",
+      "callCount": 2,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "12345"
+      ],
+      "exampleUrls": [
+        "http://ts-station-service:12345/api/v1/stationservice/stations/id/Shang%20Hai",
+        "http://ts-station-service:12345/api/v1/stationservice/stations/id/Su%20Zhou"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-ticketinfo-service",
+      "method": "POST",
+      "port": "15681",
+      "url": "http://ts-ticketinfo-service:15681/api/v1/ticketinfoservice/ticketinfo",
+      "callCount": 1,
+      "allMethods": [
+        "POST"
+      ],
+      "allPorts": [
+        "15681"
+      ],
+      "exampleUrls": [
+        "http://ts-ticketinfo-service:15681/api/v1/ticketinfoservice/ticketinfo"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-seat-service",
+      "method": "POST",
+      "port": "18898",
+      "url": "http://ts-seat-service:18898/api/v1/seatservice/seats",
+      "callCount": 1,
+      "allMethods": [
+        "POST"
+      ],
+      "allPorts": [
+        "18898"
+      ],
+      "exampleUrls": [
+        "http://ts-seat-service:18898/api/v1/seatservice/seats"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-order-service",
+      "method": "POST",
+      "port": "12031",
+      "url": "http://ts-order-service:12031/api/v1/orderservice/order",
+      "callCount": 1,
+      "allMethods": [
+        "POST"
+      ],
+      "allPorts": [
+        "12031"
+      ],
+      "exampleUrls": [
+        "http://ts-order-service:12031/api/v1/orderservice/order"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-food-service",
+      "method": "POST",
+      "port": "18856",
+      "url": "http://ts-food-service:18856/api/v1/foodservice/orders",
+      "callCount": 1,
+      "allMethods": [
+        "POST"
+      ],
+      "allPorts": [
+        "18856"
+      ],
+      "exampleUrls": [
+        "http://ts-food-service:18856/api/v1/foodservice/orders"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-consign-service",
+      "method": "POST",
+      "port": "16111",
+      "url": "http://ts-consign-service:16111/api/v1/consignservice/consigns",
+      "callCount": 1,
+      "allMethods": [
+        "POST"
+      ],
+      "allPorts": [
+        "16111"
+      ],
+      "exampleUrls": [
+        "http://ts-consign-service:16111/api/v1/consignservice/consigns"
+      ]
+    },
+    {
+      "source": "ts-consign-service",
+      "target": "ts-consign-price-service",
+      "method": "GET",
+      "port": "16110",
+      "url": "http://ts-consign-price-service:16110/api/v1/consignpriceservice/consignprice/33.0/false",
+      "callCount": 1,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "16110"
+      ],
+      "exampleUrls": [
+        "http://ts-consign-price-service:16110/api/v1/consignpriceservice/consignprice/33.0/false"
+      ]
+    },
+    {
+      "source": "ts-preserve-service",
+      "target": "ts-user-service",
+      "method": "GET",
+      "port": "12342",
+      "url": "http://ts-user-service:12342/api/v1/userservice/users/id/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f",
+      "callCount": 1,
+      "allMethods": [
+        "GET"
+      ],
+      "allPorts": [
+        "12342"
+      ],
+      "exampleUrls": [
+        "http://ts-user-service:12342/api/v1/userservice/users/id/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f"
+      ]
+    }
+  ],
+  "summary": {
+    "totalServices": 19,
+    "totalEdges": 26,
+    "totalCalls": 71
+  }
+}

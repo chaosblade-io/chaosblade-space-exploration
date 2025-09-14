@@ -1,0 +1,14 @@
+{
+  "reqDefId": 1,
+  "namespace": "train-ticket",
+  "serviceList": [
+    "ts-preserve-service",
+    "ts-security-service",
+    "ts-order-service"
+  ],
+  "durationSec": 300,
+  "autoTriggerRequest": false,
+  "requestDelaySeconds": 30,
+  "requestCount": 1,
+  "requestTimeoutSeconds": 120
+}

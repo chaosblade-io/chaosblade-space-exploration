@@ -1,0 +1,260 @@
+{
+  "namespace" : "train-ticket",
+  "recordId" : "8",
+  "ttlSec" : 600,
+  "items" : [ {
+    "serviceName" : "ts-order-other-service",
+    "method" : "GET",
+    "path" : "/api/v1/orderOtherService/orderOther/security/Fri Sep 05 04:34:14 CST 2025/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f",
+    "baggageTokens" : [ "chaos.f1=ts-order-other-service-remove", "chaos.f2=ts-order-other-service-remove", "chaos.f3=ts-order-other-service-remove", "chaos.f4=ts-order-other-service-remove", "chaos.f5=ts-order-other-service-remove", "chaos.f6=ts-order-other-service-remove", "chaos.f7=ts-order-other-service-remove", "chaos.f8=ts-order-other-service-remove", "chaos.f9=ts-order-other-service-remove", "chaos.f10=ts-order-other-service-remove", "chaos.f11=ts-order-other-service-remove", "chaos.f12=ts-order-other-service-remove", "chaos.f13=ts-order-other-service-remove", "chaos.f14=ts-order-other-service-remove", "chaos.f15=ts-order-other-service-remove", "chaos.f16=ts-order-other-service-remove", "chaos.f17=ts-order-other-service-remove", "chaos.f18=ts-order-other-service-remove" ],
+    "respStatus" : 0,
+    "respHeaders" : { },
+    "respBody" : ""
+  }, {
+    "serviceName" : "ts-order-service",
+    "method" : "GET",
+    "path" : "/api/v1/orderservice/order/Fri Sep 05 08:00:00 CST 2025/D1345",
+    "baggageTokens" : [ "chaos.f1=ts-order-service-remove", "chaos.f2=ts-order-service-remove", "chaos.f3=ts-order-service-remove", "chaos.f4=ts-order-service-remove", "chaos.f5=ts-order-service-remove", "chaos.f6=ts-order-service-remove", "chaos.f7=ts-order-service-remove", "chaos.f8=ts-order-service-remove", "chaos.f9=ts-order-service-remove", "chaos.f10=ts-order-service-remove", "chaos.f11=ts-order-service-remove", "chaos.f12=ts-order-service-remove", "chaos.f13=ts-order-service-remove", "chaos.f14=ts-order-service-remove", "chaos.f15=ts-order-service-remove", "chaos.f16=ts-order-service-remove", "chaos.f17=ts-order-service-remove", "chaos.f18=ts-order-service-remove" ],
+    "respStatus" : 0,
+    "respHeaders" : { },
+    "respBody" : ""
+  }, {
+    "serviceName" : "ts-ticketinfo-service",
+    "method" : "GET",
+    "path" : "/api/v1/ticketinfoservice/ticketinfo/Shang Hai",
+    "baggageTokens" : [ "chaos.f1=ts-ticketinfo-service-remove", "chaos.f2=ts-ticketinfo-service-remove", "chaos.f3=ts-ticketinfo-service-remove", "chaos.f4=ts-ticketinfo-service-remove", "chaos.f5=ts-ticketinfo-service-remove", "chaos.f6=ts-ticketinfo-service-remove", "chaos.f7=ts-ticketinfo-service-remove", "chaos.f8=ts-ticketinfo-service-remove", "chaos.f9=ts-ticketinfo-service-remove", "chaos.f10=ts-ticketinfo-service-remove", "chaos.f11=ts-ticketinfo-service-remove", "chaos.f12=ts-ticketinfo-service-remove", "chaos.f13=ts-ticketinfo-service-remove", "chaos.f14=ts-ticketinfo-service-remove", "chaos.f15=ts-ticketinfo-service-remove", "chaos.f16=ts-ticketinfo-service-remove", "chaos.f17=ts-ticketinfo-service-remove", "chaos.f18=ts-ticketinfo-service-remove" ],
+    "respStatus" : 0,
+    "respHeaders" : { },
+    "respBody" : ""
+  }, {
+    "serviceName" : "ts-travel-service",
+    "method" : "GET",
+    "path" : "/api/v1/travelservice/routes/D1345",
+    "baggageTokens" : [ "chaos.f1=ts-travel-service-remove", "chaos.f2=ts-travel-service-remove", "chaos.f3=ts-travel-service-remove", "chaos.f4=ts-travel-service-remove", "chaos.f5=ts-travel-service-remove", "chaos.f6=ts-travel-service-remove", "chaos.f7=ts-travel-service-remove", "chaos.f8=ts-travel-service-remove", "chaos.f9=ts-travel-service-remove", "chaos.f10=ts-travel-service-remove", "chaos.f11=ts-travel-service-remove", "chaos.f12=ts-travel-service-remove", "chaos.f13=ts-travel-service-remove", "chaos.f14=ts-travel-service-remove", "chaos.f15=ts-travel-service-remove", "chaos.f16=ts-travel-service-remove", "chaos.f17=ts-travel-service-remove", "chaos.f18=ts-travel-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:23 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-travel-service:12346" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Success\",\"data\":{\"id\":\"f3d4d4ef-693b-4456-8eed-59c0d717dd08\",\"stations\":[\"shanghai\",\"suzhou\"],\"distances\":[0,50],\"startStationId\":\"shanghai\",\"terminalStationId\":\"suzhou\"}}"
+  }, {
+    "serviceName" : "ts-basic-service",
+    "method" : "GET",
+    "path" : "/api/v1/basicservice/basic/Shang Hai",
+    "baggageTokens" : [ "chaos.f1=ts-basic-service-remove", "chaos.f2=ts-basic-service-remove", "chaos.f3=ts-basic-service-remove", "chaos.f4=ts-basic-service-remove", "chaos.f5=ts-basic-service-remove", "chaos.f6=ts-basic-service-remove", "chaos.f7=ts-basic-service-remove", "chaos.f8=ts-basic-service-remove", "chaos.f9=ts-basic-service-remove", "chaos.f10=ts-basic-service-remove", "chaos.f11=ts-basic-service-remove", "chaos.f12=ts-basic-service-remove", "chaos.f13=ts-basic-service-remove", "chaos.f14=ts-basic-service-remove", "chaos.f15=ts-basic-service-remove", "chaos.f16=ts-basic-service-remove", "chaos.f17=ts-basic-service-remove", "chaos.f18=ts-basic-service-remove" ],
+    "respStatus" : 0,
+    "respHeaders" : { },
+    "respBody" : ""
+  }, {
+    "serviceName" : "ts-contacts-service",
+    "method" : "GET",
+    "path" : "/api/v1/contactservice/contacts/829180af-7e07-4fff-a811-8c34051c6887",
+    "baggageTokens" : [ "chaos.f1=ts-contacts-service-remove", "chaos.f2=ts-contacts-service-remove", "chaos.f3=ts-contacts-service-remove", "chaos.f4=ts-contacts-service-remove", "chaos.f5=ts-contacts-service-remove", "chaos.f6=ts-contacts-service-remove", "chaos.f7=ts-contacts-service-remove", "chaos.f8=ts-contacts-service-remove", "chaos.f9=ts-contacts-service-remove", "chaos.f10=ts-contacts-service-remove", "chaos.f11=ts-contacts-service-remove", "chaos.f12=ts-contacts-service-remove", "chaos.f13=ts-contacts-service-remove", "chaos.f14=ts-contacts-service-remove", "chaos.f15=ts-contacts-service-remove", "chaos.f16=ts-contacts-service-remove", "chaos.f17=ts-contacts-service-remove", "chaos.f18=ts-contacts-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:23 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-contacts-service:12347" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Success\",\"data\":{\"id\":\"829180af-7e07-4fff-a811-8c34051c6887\",\"accountId\":\"4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f\",\"name\":\"Contacts_One\",\"documentType\":1,\"documentNumber\":\"DocumentNumber_One\",\"phoneNumber\":\"ContactsPhoneNum_One\"}}"
+  }, {
+    "serviceName" : "ts-security-service",
+    "method" : "GET",
+    "path" : "/api/v1/securityservice/securityConfigs/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f",
+    "baggageTokens" : [ "chaos.f1=ts-security-service-remove", "chaos.f2=ts-security-service-remove", "chaos.f3=ts-security-service-remove", "chaos.f4=ts-security-service-remove", "chaos.f5=ts-security-service-remove", "chaos.f6=ts-security-service-remove", "chaos.f7=ts-security-service-remove", "chaos.f8=ts-security-service-remove", "chaos.f9=ts-security-service-remove", "chaos.f10=ts-security-service-remove", "chaos.f11=ts-security-service-remove", "chaos.f12=ts-security-service-remove", "chaos.f13=ts-security-service-remove", "chaos.f14=ts-security-service-remove", "chaos.f15=ts-security-service-remove", "chaos.f16=ts-security-service-remove", "chaos.f17=ts-security-service-remove", "chaos.f18=ts-security-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:24 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-security-service:11188" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Success.r\",\"data\":\"4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f\"}"
+  }, {
+    "serviceName" : "ts-station-service",
+    "method" : "GET",
+    "path" : "/api/v1/stationservice/stations/id/Shang Hai",
+    "baggageTokens" : [ "chaos.f1=ts-station-service-remove", "chaos.f2=ts-station-service-remove", "chaos.f3=ts-station-service-remove", "chaos.f4=ts-station-service-remove", "chaos.f5=ts-station-service-remove", "chaos.f6=ts-station-service-remove", "chaos.f7=ts-station-service-remove", "chaos.f8=ts-station-service-remove", "chaos.f9=ts-station-service-remove", "chaos.f10=ts-station-service-remove", "chaos.f11=ts-station-service-remove", "chaos.f12=ts-station-service-remove", "chaos.f13=ts-station-service-remove", "chaos.f14=ts-station-service-remove", "chaos.f15=ts-station-service-remove", "chaos.f16=ts-station-service-remove", "chaos.f17=ts-station-service-remove", "chaos.f18=ts-station-service-remove" ],
+    "respStatus" : 0,
+    "respHeaders" : { },
+    "respBody" : ""
+  }, {
+    "serviceName" : "ts-route-service",
+    "method" : "GET",
+    "path" : "/api/v1/routeservice/routes/f3d4d4ef-693b-4456-8eed-59c0d717dd08",
+    "baggageTokens" : [ "chaos.f1=ts-route-service-remove", "chaos.f2=ts-route-service-remove", "chaos.f3=ts-route-service-remove", "chaos.f4=ts-route-service-remove", "chaos.f5=ts-route-service-remove", "chaos.f6=ts-route-service-remove", "chaos.f7=ts-route-service-remove", "chaos.f8=ts-route-service-remove", "chaos.f9=ts-route-service-remove", "chaos.f10=ts-route-service-remove", "chaos.f11=ts-route-service-remove", "chaos.f12=ts-route-service-remove", "chaos.f13=ts-route-service-remove", "chaos.f14=ts-route-service-remove", "chaos.f15=ts-route-service-remove", "chaos.f16=ts-route-service-remove", "chaos.f17=ts-route-service-remove", "chaos.f18=ts-route-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:26 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-route-service:11178" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Success\",\"data\":{\"id\":\"f3d4d4ef-693b-4456-8eed-59c0d717dd08\",\"stations\":[\"shanghai\",\"suzhou\"],\"distances\":[0,50],\"startStationId\":\"shanghai\",\"terminalStationId\":\"suzhou\"}}"
+  }, {
+    "serviceName" : "ts-train-service",
+    "method" : "GET",
+    "path" : "/api/v1/trainservice/trains/DongCheOne",
+    "baggageTokens" : [ "chaos.f1=ts-train-service-remove", "chaos.f2=ts-train-service-remove", "chaos.f3=ts-train-service-remove", "chaos.f4=ts-train-service-remove", "chaos.f5=ts-train-service-remove", "chaos.f6=ts-train-service-remove", "chaos.f7=ts-train-service-remove", "chaos.f8=ts-train-service-remove", "chaos.f9=ts-train-service-remove", "chaos.f10=ts-train-service-remove", "chaos.f11=ts-train-service-remove", "chaos.f12=ts-train-service-remove", "chaos.f13=ts-train-service-remove", "chaos.f14=ts-train-service-remove", "chaos.f15=ts-train-service-remove", "chaos.f16=ts-train-service-remove", "chaos.f17=ts-train-service-remove", "chaos.f18=ts-train-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:26 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-train-service:14567" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"success\",\"data\":{\"id\":\"DongCheOne\",\"economyClass\":2147483647,\"confortClass\":2147483647,\"averageSpeed\":180}}"
+  }, {
+    "serviceName" : "ts-price-service",
+    "method" : "GET",
+    "path" : "/api/v1/priceservice/prices/f3d4d4ef-693b-4456-8eed-59c0d717dd08/DongCheOne",
+    "baggageTokens" : [ "chaos.f1=ts-price-service-remove", "chaos.f2=ts-price-service-remove", "chaos.f3=ts-price-service-remove", "chaos.f4=ts-price-service-remove", "chaos.f5=ts-price-service-remove", "chaos.f6=ts-price-service-remove", "chaos.f7=ts-price-service-remove", "chaos.f8=ts-price-service-remove", "chaos.f9=ts-price-service-remove", "chaos.f10=ts-price-service-remove", "chaos.f11=ts-price-service-remove", "chaos.f12=ts-price-service-remove", "chaos.f13=ts-price-service-remove", "chaos.f14=ts-price-service-remove", "chaos.f15=ts-price-service-remove", "chaos.f16=ts-price-service-remove", "chaos.f17=ts-price-service-remove", "chaos.f18=ts-price-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:26 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-price-service:16579" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Success\",\"data\":{\"id\":\"d5c4523a-827c-468c-95be-e9024a40572e\",\"trainType\":\"DongCheOne\",\"routeId\":\"f3d4d4ef-693b-4456-8eed-59c0d717dd08\",\"basicPriceRate\":0.45,\"firstClassPriceRate\":1.0}}"
+  }, {
+    "serviceName" : "ts-seat-service",
+    "method" : "POST",
+    "path" : "/api/v1/seatservice/seats",
+    "baggageTokens" : [ "chaos.f1=ts-seat-service-remove", "chaos.f2=ts-seat-service-remove", "chaos.f3=ts-seat-service-remove", "chaos.f4=ts-seat-service-remove", "chaos.f5=ts-seat-service-remove", "chaos.f6=ts-seat-service-remove", "chaos.f7=ts-seat-service-remove", "chaos.f8=ts-seat-service-remove", "chaos.f9=ts-seat-service-remove", "chaos.f10=ts-seat-service-remove", "chaos.f11=ts-seat-service-remove", "chaos.f12=ts-seat-service-remove", "chaos.f13=ts-seat-service-remove", "chaos.f14=ts-seat-service-remove", "chaos.f15=ts-seat-service-remove", "chaos.f16=ts-seat-service-remove", "chaos.f17=ts-seat-service-remove", "chaos.f18=ts-seat-service-remove" ],
+    "respStatus" : 0,
+    "respHeaders" : { },
+    "respBody" : ""
+  }, {
+    "serviceName" : "ts-food-service",
+    "method" : "POST",
+    "path" : "/api/v1/foodservice/orders",
+    "baggageTokens" : [ "chaos.f1=ts-food-service-remove", "chaos.f2=ts-food-service-remove", "chaos.f3=ts-food-service-remove", "chaos.f4=ts-food-service-remove", "chaos.f5=ts-food-service-remove", "chaos.f6=ts-food-service-remove", "chaos.f7=ts-food-service-remove", "chaos.f8=ts-food-service-remove", "chaos.f9=ts-food-service-remove", "chaos.f10=ts-food-service-remove", "chaos.f11=ts-food-service-remove", "chaos.f12=ts-food-service-remove", "chaos.f13=ts-food-service-remove", "chaos.f14=ts-food-service-remove", "chaos.f15=ts-food-service-remove", "chaos.f16=ts-food-service-remove", "chaos.f17=ts-food-service-remove", "chaos.f18=ts-food-service-remove" ],
+    "respStatus" : 0,
+    "respHeaders" : { },
+    "respBody" : ""
+  }, {
+    "serviceName" : "ts-config-service",
+    "method" : "GET",
+    "path" : "/api/v1/configservice/configs/DirectTicketAllocationProportion",
+    "baggageTokens" : [ "chaos.f1=ts-config-service-remove", "chaos.f2=ts-config-service-remove", "chaos.f3=ts-config-service-remove", "chaos.f4=ts-config-service-remove", "chaos.f5=ts-config-service-remove", "chaos.f6=ts-config-service-remove", "chaos.f7=ts-config-service-remove", "chaos.f8=ts-config-service-remove", "chaos.f9=ts-config-service-remove", "chaos.f10=ts-config-service-remove", "chaos.f11=ts-config-service-remove", "chaos.f12=ts-config-service-remove", "chaos.f13=ts-config-service-remove", "chaos.f14=ts-config-service-remove", "chaos.f15=ts-config-service-remove", "chaos.f16=ts-config-service-remove", "chaos.f17=ts-config-service-remove", "chaos.f18=ts-config-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:28 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-config-service:15679" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Success\",\"data\":{\"name\":\"DirectTicketAllocationProportion\",\"value\":\"0.5\",\"description\":\"Allocation Proportion Of The Direct Ticket - From Start To End\"}}"
+  }, {
+    "serviceName" : "ts-consign-service",
+    "method" : "POST",
+    "path" : "/api/v1/consignservice/consigns",
+    "baggageTokens" : [ "chaos.f1=ts-consign-service-remove", "chaos.f2=ts-consign-service-remove", "chaos.f3=ts-consign-service-remove", "chaos.f4=ts-consign-service-remove", "chaos.f5=ts-consign-service-remove", "chaos.f6=ts-consign-service-remove", "chaos.f7=ts-consign-service-remove", "chaos.f8=ts-consign-service-remove", "chaos.f9=ts-consign-service-remove", "chaos.f10=ts-consign-service-remove", "chaos.f11=ts-consign-service-remove", "chaos.f12=ts-consign-service-remove", "chaos.f13=ts-consign-service-remove", "chaos.f14=ts-consign-service-remove", "chaos.f15=ts-consign-service-remove", "chaos.f16=ts-consign-service-remove", "chaos.f17=ts-consign-service-remove", "chaos.f18=ts-consign-service-remove" ],
+    "respStatus" : 0,
+    "respHeaders" : { },
+    "respBody" : ""
+  }, {
+    "serviceName" : "ts-preserve-service",
+    "method" : "POST",
+    "path" : "/api/v1/preserveservice/preserve",
+    "baggageTokens" : [ "chaos.f1=ts-preserve-service-remove", "chaos.f2=ts-preserve-service-remove", "chaos.f3=ts-preserve-service-remove", "chaos.f4=ts-preserve-service-remove", "chaos.f5=ts-preserve-service-remove", "chaos.f6=ts-preserve-service-remove", "chaos.f7=ts-preserve-service-remove", "chaos.f8=ts-preserve-service-remove", "chaos.f9=ts-preserve-service-remove", "chaos.f10=ts-preserve-service-remove", "chaos.f11=ts-preserve-service-remove", "chaos.f12=ts-preserve-service-remove", "chaos.f13=ts-preserve-service-remove", "chaos.f14=ts-preserve-service-remove", "chaos.f15=ts-preserve-service-remove", "chaos.f16=ts-preserve-service-remove", "chaos.f17=ts-preserve-service-remove", "chaos.f18=ts-preserve-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:33 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-preserve-service:14568" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Success.\",\"data\":\"Success\"}"
+  }, {
+    "serviceName" : "ts-consign-price-service",
+    "method" : "GET",
+    "path" : "/api/v1/consignpriceservice/consignprice/33.0/false",
+    "baggageTokens" : [ "chaos.f1=ts-consign-price-service-remove", "chaos.f2=ts-consign-price-service-remove", "chaos.f3=ts-consign-price-service-remove", "chaos.f4=ts-consign-price-service-remove", "chaos.f5=ts-consign-price-service-remove", "chaos.f6=ts-consign-price-service-remove", "chaos.f7=ts-consign-price-service-remove", "chaos.f8=ts-consign-price-service-remove", "chaos.f9=ts-consign-price-service-remove", "chaos.f10=ts-consign-price-service-remove", "chaos.f11=ts-consign-price-service-remove", "chaos.f12=ts-consign-price-service-remove", "chaos.f13=ts-consign-price-service-remove", "chaos.f14=ts-consign-price-service-remove", "chaos.f15=ts-consign-price-service-remove", "chaos.f16=ts-consign-price-service-remove", "chaos.f17=ts-consign-price-service-remove", "chaos.f18=ts-consign-price-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:48 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-consign-price-service:16110" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Success\",\"data\":136.0}"
+  }, {
+    "serviceName" : "ts-user-service",
+    "method" : "GET",
+    "path" : "/api/v1/userservice/users/id/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f",
+    "baggageTokens" : [ "chaos.f1=ts-user-service-remove", "chaos.f2=ts-user-service-remove", "chaos.f3=ts-user-service-remove", "chaos.f4=ts-user-service-remove", "chaos.f5=ts-user-service-remove", "chaos.f6=ts-user-service-remove", "chaos.f7=ts-user-service-remove", "chaos.f8=ts-user-service-remove", "chaos.f9=ts-user-service-remove", "chaos.f10=ts-user-service-remove", "chaos.f11=ts-user-service-remove", "chaos.f12=ts-user-service-remove", "chaos.f13=ts-user-service-remove", "chaos.f14=ts-user-service-remove", "chaos.f15=ts-user-service-remove", "chaos.f16=ts-user-service-remove", "chaos.f17=ts-user-service-remove", "chaos.f18=ts-user-service-remove" ],
+    "respStatus" : 200,
+    "respHeaders" : {
+      "Date" : [ "Thu, 04 Sep 2025 20:38:48 GMT" ],
+      "Pragma" : [ "no-cache" ],
+      "Expires" : [ "0" ],
+      "Content-Type" : [ "application/json;charset=UTF-8" ],
+      "Cache-Control" : [ "no-cache, no-store, max-age=0, must-revalidate" ],
+      "X-Frame-Options" : [ "DENY" ],
+      "X-XSS-Protection" : [ "1; mode=block" ],
+      "Transfer-Encoding" : [ "chunked" ],
+      "X-Application-Context" : [ "ts-user-service:12342" ],
+      "X-Content-Type-Options" : [ "nosniff" ]
+    },
+    "respBody" : "{\"status\":1,\"msg\":\"Find User Success\",\"data\":{\"userId\":\"4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f\",\"userName\":\"fdse_microservice\",\"password\":\"111111\",\"gender\":1,\"documentType\":1,\"documentNum\":\"2135488099312X\",\"email\":\"trainticket_notify@163.com\"}}"
+  } ]
+}

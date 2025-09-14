@@ -1,6 +1,70 @@
 server:
   port: 8105
+
 spring:
   application:
     name: svc-reqrsp-proxy
+  datasource:
+    url: jdbc:mysql://116.63.51.45:3306/spaceexploration?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:Zmzzmz010627!}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+    open-in-view: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non-null
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  data:
+    redis:
+      host: 116.63.51.45
+      port: 6379
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# Kubernetes configuration
+kubernetes:
+  api-url: https://122.112.193.220:6443
+  token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImctR3o3S2JGU2RQWUN6bzZac2tvOVcxb0lNWHkzOGdnR29jTWZtRjB3aWcifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzczNDE2NzExLCJpYXQiOjE3NDE4ODA3MTEsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0Iiwic2VydmljZWFjY291bnQiOnsibmFtZSI6ImFjY291bnQtY2x1c3Rlci1tYW5hZ2VyLWRwcmd6IiwidWlkIjoiZjcwYjJhODEtMjNmNy00Y2YyLWJhNjMtNjk1NDBhN2I2Yzk0In19LCJuYmYiOjE3NDE4ODA3MTEsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkZWZhdWx0OmFjY291bnQtY2x1c3Rlci1tYW5hZ2VyLWRwcmd6In0.gqryPjgClH5K6EecX6Gx8J6tLnkuPgZanqFsZGoDQxPJp4AzuTjKYtp5xWsw-2dU7G54f_qL7sLraXhmu2mCS-Sbyzo9CpGifZBpZmouA0v4wk28-HMMPkxJnM_UV3kH1PGrcSVd8L_OgJ4Oq1d-yqY7cGdqB-DgOf-G7JQB9IfcjKw6no5NVE4j8i_DGhNIJ5IsXu6Qyo10SvP7rTzC9ke71ma3ujqxvov1V0INsmog5eVwgynlNRoz389YoUM3-iGCYE-R23VwmAkXCDZCBXuR6d3zH0iNionCjLQStWBEhqRZK8DFQ78r9eSZ5Y5gt3mDmZxqoG_EWFRaIGvp3w
+  verify-ssl: false
+
+# Recording configuration
+recording:
+  envoy:
+    image: envoyproxy/envoy:v1.28.3
+    port: 15006
+    admin-port: 9901
+    tap-dir: /var/log/envoy/taps
+    max-buffered-bytes: 2097152
+  default-duration-sec: 600
+  auto-collect-interval-sec: 30
+
+# Logging configuration
+logging:
+  level:
+    com.chaosblade.svc.reqrspproxy: INFO
+    io.fabric8.kubernetes: INFO
+    org.springframework.data.redis: INFO
 
