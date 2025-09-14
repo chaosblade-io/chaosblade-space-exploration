@@ -29,7 +29,7 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
 
 proxy:
-  base-url: http://1.94.151.57:8105
+  base-url: http://122.112.193.220:8105
   connect-timeout-ms: 10000
   read-timeout-ms: 30000
   max-retries: 3
@@ -37,6 +37,11 @@ proxy:
   ttl-sec-for-interceptors: 600
   wait-analyze-timeout-sec: 600
   wait-interceptor-ready-sec: 30
+
+
+# Fault scheduler endpoint
+scheduler:
+  base-url: http://122.112.193.220:8103
 
 recording:
   default-port: 0
