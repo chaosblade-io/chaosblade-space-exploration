@@ -1,0 +1,106 @@
+admin:
+  address:
+    socket_address: { address: 0.0.0.0, port_value: {{adminPort}} }
+
+static_resources:
+  listeners:
+  - name: inbound
+    address:
+      socket_address: { address: 0.0.0.0, port_value: {{listenerPort}} }
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          http2_protocol_options: {}
+
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+              {{#intercepts}}
+              - name: "intercept-{{method}}-{{pathSanitized}}"
+                match:
+                  path: "{{path}}"
+                  headers:
+                  - name: ":method"
+                    exact_match: "{{method}}"
+                  - name: "baggage"
+                    {{#baggageRegex}}
+                    safe_regex_match:
+                      google_re2: {}
+                      regex: "{{&baggageRegex}}"
+                    {{/baggageRegex}}
+                    {{^baggageRegex}}
+                    string_match:
+                      contains: "{{&baggageContains}}"
+                    {{/baggageRegex}}
+                direct_response:
+                  status: {{respStatus}}
+                  body:
+                    inline_string: |
+                      {{&respBodyJson}}
+                response_headers_to_add:
+                - header: { key: "content-type", value: "{{&respContentType}}" }
+              {{/intercepts}}
+
+              # fallback：其余请求转发本地应用
+              - match: { prefix: "/" }
+                route: { cluster: local_app, timeout: 15s }
+
+          http_filters:
+          {{#tapEnabled}}
+          - name: envoy.filters.http.tap
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.tap.v3.Tap
+              common_config:
+                static_config:
+                  match_config:
+                    {{#multiIntercepts}}
+                    or_match:
+                      rules:
+                      {{#intercepts}}
+                      - http_request_headers_match:
+                          headers:
+                          - name: :path
+                            exact_match: "{{path}}"
+                          - name: :method
+                            exact_match: "{{method}}"
+                      {{/intercepts}}
+                    {{/multiIntercepts}}
+                    {{^multiIntercepts}}
+                    http_request_headers_match:
+                      headers:
+                      - name: :path
+                        exact_match: "{{firstIntercept.path}}"
+                      - name: :method
+                        exact_match: "{{firstIntercept.method}}"
+                    {{/multiIntercepts}}
+                  output_config:
+                    sinks:
+                    - format: JSON_BODY_AS_STRING
+                      file_per_tap:
+                        path_prefix: "{{tapFilePrefix}}"
+                    max_buffered_rx_bytes: 2097152
+                    max_buffered_tx_bytes: 2097152
+          {{/tapEnabled}}
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+  - name: local_app
+    connect_timeout: 1s
+    type: STATIC
+    load_assignment:
+      cluster_name: local_app
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: {{appPort}}

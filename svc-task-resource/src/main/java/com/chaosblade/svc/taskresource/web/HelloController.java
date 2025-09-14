@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HelloController {
     @GetMapping("/hello")
     public ApiResponse<String> hello() {
-        return ApiResponse.ok("svc-task-resource: hello world");
+        return ApiResponse.success("svc-task-resource: hello world");
     }
 }
 

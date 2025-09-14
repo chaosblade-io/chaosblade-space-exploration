@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Service Topology (XFlow) - trace1.json</title>
+  <style>
+    html, body { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    #toolbar { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid #eee; background: #fafafa; flex-wrap: wrap; }
+    #container { display: flex; height: calc(100% - 52px); }
+    #graph { flex: 1; position: relative; }
+    #sidebar { width: 350px; border-left: 1px solid #eee; background: #fafafa; overflow-y: auto; display: none; }
+    .stat { color: #333; font-size: 12px; }
+    .sep { width: 1px; height: 18px; background: #ddd; margin: 0 6px; }
+    .note { color: #666; font-size: 12px; }
+
+    /* Sidebar styles */
+    .sidebar-header { padding: 16px; border-bottom: 1px solid #ddd; background: white; }
+    .sidebar-content { padding: 16px; }
+    .request-item { margin-bottom: 12px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e1e5e9; }
+    .request-item.error { border-left: 4px solid #ff4d4f; }
+    .request-meta { font-size: 11px; color: #666; margin-top: 4px; }
+    .close-btn { float: right; cursor: pointer; color: #999; font-size: 18px; }
+    .close-btn:hover { color: #333; }
+  </style>
+  <script src="https://unpkg.com/@babel/polyfill@7.12.1/dist/polyfill.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/@antv/x6@2.18.1/dist/x6.js"></script>
+  <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+</head>
+<body>
+  <div id="toolbar">
+    <strong>Service Topology (XFlow)</strong>
+    <span class="sep"></span>
+    <label>
+      Layout
+      <select id="layoutSelect">
+        <option value="dagre">Tree (Dagre)</option>
+        <option value="elk">Tree (ELK)</option>
+      </select>
+    </label>
+    <span class="sep"></span>
+    <span class="stat" id="statServices">Services: -</span>
+    <span class="stat" id="statEdges">Edges: -</span>
+    <span class="sep"></span>
+    <span class="note">Click on edges to view detailed request information</span>
+  </div>
+  <div id="container">
+    <div id="graph"></div>
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <strong>Edge Details</strong>
+        <span class="close-btn" onclick="closeSidebar()">&times;</span>
+      </div>
+      <div class="sidebar-content" id="sidebarContent">
+        Select an edge to view request details
+      </div>
+    </div>
+  </div>
+
+  <script type="text/babel">
+    const { Graph } = window.X6
+    const { useState, useEffect, useCallback } = React
+
+    // Utilities
+    const round = (n, d=2) => Math.round(n * 10**d) / 10**d
+
+    function getHttpStatus(span) {
+      const a = span.attributes || {}
+      const s = a['http.response.status_code']
+      if (!s) return null
+      const num = parseInt(String(s), 10)
+      return Number.isFinite(num) ? num : null
+    }
+
+    function isErrorSpan(span) {
+      if (span.status && span.status.error) return true
+      const code = getHttpStatus(span)
+      if (code && code >= 400) return true
+      return false
+    }
+
+    async function loadSpans() {
+      const candidates = ['trace1.json', '/svc-task-executor/trace1.json']
+      for (const url of candidates) {
+        try {
+          const res = await fetch(url)
+          if (!res.ok) continue
+          return await res.json()
+        } catch {}
+      }
+      throw new Error('Failed to load trace1.json')
+    }
+
+    function aggregateTopology(spans) {
+      // Build id->span map
+      const idMap = new Map(spans.map(s => [s.id, s]))
+
+      // Services set
+      const services = new Set()
+
+      // Edge map: key "src\tDst" -> agg with detailed spans
+      const edges = new Map()
+
+      function aggEdge(src, dst, span) {
+        const key = src + '\t' + dst
+        if (!edges.has(key)) edges.set(key, {
+          src, dst,
+          count: 0,
+          err: 0,
+          sum: 0,
+          min: Number.POSITIVE_INFINITY,
+          max: 0,
+          spans: [] // Store all spans for this edge
+        })
+        const e = edges.get(key)
+        e.count += 1
+        const dur = typeof span.duration === 'number' ? span.duration : 0
+        e.sum += dur
+        if (dur < e.min) e.min = dur
+        if (dur > e.max) e.max = dur
+        if (isErrorSpan(span)) e.err += 1
+        e.spans.push(span) // Store the span for detailed view
+      }
+
+      for (const s of spans) {
+        if (s.service) services.add(s.service)
+      }
+
+      for (const span of spans) {
+        const pid = span.parent_id || ''
+        if (!pid) continue
+        const parent = idMap.get(pid)
+        if (!parent) continue
+        const a = parent.service || 'unknown'
+        const b = span.service || 'unknown'
+        if (a && b && a !== b) {
+          // Treat parent(service A) -> child(service B) as one call
+          aggEdge(a, b, span)
+        }
+      }
+
+      // Finalize edge metrics
+      const edgeList = []
+      for (const e of edges.values()) {
+        const avg = e.count ? e.sum / e.count : 0
+        const errRate = e.count ? (e.err / e.count) : 0
+        edgeList.push({
+          source: e.src,
+          target: e.dst,
+          count: e.count,
+          avg, min: e.min === Infinity ? 0 : e.min, max: e.max,
+          errRate,
+          spans: e.spans // Include detailed spans
+        })
+      }
+
+      return { services: Array.from(services), edges: edgeList }
+    }
+
+    function buildGraphData(topology) {
+      const { services, edges } = topology
+
+      // Create nodes for X6
+      const nodes = services.map(service => ({
+        id: service,
+        shape: 'rect',
+        x: 100,
+        y: 100,
+        width: 120,
+        height: 40,
+        label: service,
+        attrs: {
+          body: {
+            stroke: '#5B8FF9',
+            strokeWidth: 1,
+            fill: '#E6F7FF',
+            rx: 6,
+            ry: 6,
+          },
+          label: {
+            fontSize: 12,
+            fill: '#262626',
+          },
+        },
+      }))
+
+      // Create edges for X6
+      const edgeData = edges.map(edge => ({
+        id: `${edge.source}-${edge.target}`,
+        source: edge.source,
+        target: edge.target,
+        labels: [{
+          attrs: {
+            text: {
+              text: `${edge.count} calls\n${round(edge.avg)}ms avg`,
+              fontSize: 10,
+              fill: '#595959',
+            },
+          },
+        }],
+        attrs: {
+          line: {
+            stroke: edge.errRate > 0 ? '#ff4d4f' : '#A3B1BF',
+            strokeWidth: 2,
+            targetMarker: {
+              name: 'block',
+              width: 12,
+              height: 8,
+            },
+          },
+        },
+        data: edge, // Store edge data for click handler
+      }))
+
+      return { nodes, edges: edgeData }
+    }
+
+    // Sidebar functions
+    function showSidebar(edgeData) {
+      const sidebar = document.getElementById('sidebar')
+      const content = document.getElementById('sidebarContent')
+
+      sidebar.style.display = 'block'
+
+      const { source, target, count, avg, min, max, errRate, spans } = edgeData
+
+      let html = `
+        <div style="margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0;">${source} → ${target}</h4>
+          <div style="font-size: 12px; color: #666;">
+            <div>Total Calls: ${count}</div>
+            <div>Avg Latency: ${round(avg, 2)}ms</div>
+            <div>Min/Max: ${round(min, 2)}ms / ${round(max, 2)}ms</div>
+            <div>Error Rate: ${round(errRate * 100, 1)}%</div>
+          </div>
+        </div>
+        <div>
+          <h5 style="margin: 0 0 12px 0;">Request Details:</h5>
+      `
+
+      spans.forEach((span, index) => {
+        const isError = isErrorSpan(span)
+        const httpMethod = span.attributes?.['http.request.method'] || ''
+        const httpRoute = span.attributes?.['http.route'] || span.name || ''
+        const statusCode = span.attributes?.['http.response.status_code'] || ''
+
+        html += `
+          <div class="request-item ${isError ? 'error' : ''}">
+            <div style="font-weight: 500;">${httpMethod} ${httpRoute}</div>
+            <div class="request-meta">
+              Duration: ${round(span.duration || 0, 2)}ms
+              ${statusCode ? `| Status: ${statusCode}` : ''}
+              ${isError ? '| ERROR' : ''}
+            </div>
+            <div class="request-meta">
+              Span ID: ${span.id} | Trace: ${span.trace_id?.substring(0, 8)}...
+            </div>
+          </div>
+        `
+      })
+
+      html += '</div>'
+      content.innerHTML = html
+    }
+
+    function closeSidebar() {
+      document.getElementById('sidebar').style.display = 'none'
+    }
+
+    // Make closeSidebar globally available
+    window.closeSidebar = closeSidebar
+
+    // Layout function using Dagre
+    function layoutGraph(nodes, edges, layoutType = 'dagre') {
+      if (layoutType === 'dagre' && window.dagre) {
+        const g = new window.dagre.graphlib.Graph()
+        g.setGraph({ rankdir: 'TB', nodesep: 50, ranksep: 80 })
+        g.setDefaultEdgeLabel(() => ({}))
+
+        // Add nodes
+        nodes.forEach(node => {
+          g.setNode(node.id, { width: node.width, height: node.height })
+        })
+
+        // Add edges
+        edges.forEach(edge => {
+          g.setEdge(edge.source, edge.target)
+        })
+
+        // Layout
+        window.dagre.layout(g)
+
+        // Apply positions
+        nodes.forEach(node => {
+          const pos = g.node(node.id)
+          node.x = pos.x - node.width / 2
+          node.y = pos.y - node.height / 2
+        })
+      } else {
+        // Simple grid layout fallback
+        const cols = Math.ceil(Math.sqrt(nodes.length))
+        nodes.forEach((node, i) => {
+          const row = Math.floor(i / cols)
+          const col = i % cols
+          node.x = 50 + col * 200
+          node.y = 50 + row * 100
+        })
+      }
+
+      return { nodes, edges }
+    }
+
+    // Main React Component
+    function TopologyApp() {
+      const [topology, setTopology] = useState(null)
+      const [loading, setLoading] = useState(true)
+      const [error, setError] = useState(null)
+      const graphRef = useCallback(node => {
+        if (node && topology) {
+          // Clear previous graph
+          node.innerHTML = ''
+
+          // Create X6 graph
+          const graph = new Graph({
+            container: node,
+            width: node.clientWidth,
+            height: node.clientHeight,
+            background: { color: '#ffffff' },
+            grid: true,
+            panning: true,
+            mousewheel: { enabled: true, modifiers: ['ctrl'] },
+          })
+
+          const graphData = buildGraphData(topology)
+          const layoutData = layoutGraph(graphData.nodes, graphData.edges, 'dagre')
+
+          // Add nodes
+          layoutData.nodes.forEach(nodeData => {
+            graph.addNode(nodeData)
+          })
+
+          // Add edges
+          layoutData.edges.forEach(edgeData => {
+            const edge = graph.addEdge(edgeData)
+            // Add click handler
+            edge.on('cell:click', () => {
+              if (edgeData.data) {
+                showSidebar(edgeData.data)
+              }
+            })
+          })
+
+          // Fit to content
+          graph.centerContent()
+        }
+      }, [topology])
+
+      useEffect(() => {
+        loadSpans()
+          .then(spans => {
+            const topo = aggregateTopology(spans)
+            setTopology(topo)
+            setLoading(false)
+
+            // Update stats
+            document.getElementById('statServices').textContent = `Services: ${topo.services.length}`
+            document.getElementById('statEdges').textContent = `Edges: ${topo.edges.length}`
+          })
+          .catch(err => {
+            setError(err.message)
+            setLoading(false)
+          })
+      }, [])
+
+      if (loading) {
+        return React.createElement('div', { style: { padding: '20px', textAlign: 'center' } }, 'Loading...')
+      }
+
+      if (error) {
+        return React.createElement('div', {
+          style: { padding: '20px', color: '#ff4d4f' }
+        }, `Error: ${error}`)
+      }
+
+      if (!topology) {
+        return React.createElement('div', { style: { padding: '20px' } }, 'No data')
+      }
+
+      return React.createElement('div', {
+        ref: graphRef,
+        style: { width: '100%', height: '100%' }
+      })
+    }
+
+    // Initialize the app
+    function init() {
+      const container = document.getElementById('graph')
+
+      // Initial render
+      const root = ReactDOM.createRoot(container)
+      root.render(React.createElement(TopologyApp))
+    }
+
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init)
+    } else {
+      init()
+    }
+  </script>
+</body>
+</html>

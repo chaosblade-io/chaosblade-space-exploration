@@ -9,4 +9,3 @@ public class FaultSchedulerApplication {
         SpringApplication.run(FaultSchedulerApplication.class, args);
     }
 }
-

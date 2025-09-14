@@ -3,4 +3,47 @@ server:
 spring:
   application:
     name: svc-task-resource
+  datasource:
+    url: jdbc:mysql://116.63.51.45:3306/spaceexploration?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:Zmzzmz010627!}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+    open-in-view: false
+  jackson:
+    default-property-inclusion: non-null
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
 
+logging:
+  level:
+    com.chaosblade: DEBUG
+    org.springframework.web: DEBUG
+
+
+endpoints:
+  executor-base-url: http://localhost:8102
+
+
+
+llm:
+  api:
+    url: https://api.siliconflow.cn/v1/chat/completions
+    key: sk-lsbfyvywllhniumluwahhnfjahadzxgeuryhygweymdrtiqf
+    model: Qwen/QwQ-32B
+  timeout:
+    ms: 20000
+  retries: 2

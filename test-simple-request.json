@@ -1,0 +1,9 @@
+{
+  "reqDefId": 1,
+  "namespace": "test",
+  "serviceList": ["test-service"],
+  "durationSec": 60,
+  "autoTriggerRequest": false,
+  "requestDelaySeconds": 5,
+  "requestCount": 1
+}
