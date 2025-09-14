@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "proxy")
 public class ProxyProperties {
-    private String baseUrl = "http://1.94.151.57:8105";
+    private String baseUrl;
     private int connectTimeoutMs = 10_000;
     private int readTimeoutMs = 30_000;
     private int maxRetries = 3;

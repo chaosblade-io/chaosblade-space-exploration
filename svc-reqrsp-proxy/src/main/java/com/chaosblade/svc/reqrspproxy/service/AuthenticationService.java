@@ -24,7 +24,7 @@ public class AuthenticationService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);
     
-    private static final String LOGIN_URL = "http://1.94.151.57:32677/api/v1/users/login";
+    private static final String LOGIN_URL = "http://116.63.51.45:32677/api/v1/users/login";
     private static final String USERNAME = "fdse_microservice";
     private static final String PASSWORD = "111111";
     private static final String VERIFICATION_CODE = "1234";

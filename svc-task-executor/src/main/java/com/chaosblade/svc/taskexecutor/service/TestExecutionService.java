@@ -27,6 +27,8 @@ import com.chaosblade.svc.taskexecutor.entity.ApiTopologyNode;
 import com.chaosblade.svc.taskexecutor.entity.ApiTopologyEdge;
 import com.chaosblade.svc.taskexecutor.entity.System;
 import com.chaosblade.svc.taskexecutor.config.RecordingProperties;
+import com.chaosblade.svc.taskexecutor.config.ProxyProperties;
+import com.chaosblade.svc.taskexecutor.config.SchedulerProperties;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,9 +46,10 @@ public class TestExecutionService {
     private final RecordingProperties recordingProperties;
     private final KubernetesService kubernetesService;
     private final AuthenticationService authenticationService;
+    private final ProxyProperties proxyProperties;
+    private final SchedulerProperties schedulerProperties;
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String faultBaseUrl = "http://1.94.151.57:8103";
 
     public static class ExecutionResult {
         public String executionId;
@@ -118,7 +121,9 @@ public class TestExecutionService {
                                 SystemRepository systemRepository,
                                 RecordingProperties recordingProperties,
                                 KubernetesService kubernetesService,
-                                AuthenticationService authenticationService) {
+                                AuthenticationService authenticationService,
+                                ProxyProperties proxyProperties,
+                                SchedulerProperties schedulerProperties) {
         this.testCaseGenerationService = testCaseGenerationService;
         this.detectionTaskRepository = detectionTaskRepository;
         this.httpReqDefRepository = httpReqDefRepository;
@@ -129,6 +134,8 @@ public class TestExecutionService {
         this.recordingProperties = recordingProperties;
         this.kubernetesService = kubernetesService;
         this.authenticationService = authenticationService;
+        this.proxyProperties = proxyProperties;
+        this.schedulerProperties = schedulerProperties;
     }
 
     // 启动请求模式分析：选择叶子节点，组装 payload 并调用 svc-reqrsp-proxy
@@ -178,7 +185,7 @@ public class TestExecutionService {
             HttpEntity<Map<String,Object>> req = new HttpEntity<>(payload, headers);
 
             ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
-                    "http://1.94.151.57:8105/api/request-patterns/analyze",
+                    proxyProperties.getBaseUrl() + "/api/request-patterns/analyze",
                     HttpMethod.POST,
                     req,
                     new ParameterizedTypeReference<Map<String,Object>>() {}
@@ -195,7 +202,7 @@ public class TestExecutionService {
                     HttpEntity<Map<String,Object>> req = new HttpEntity<>(payload, headers);
 
                     ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
-                            "http://1.94.151.57:8105/api/request-patterns/analyze",
+                            proxyProperties.getBaseUrl() + "/api/request-patterns/analyze",
                             HttpMethod.POST,
                             req,
                             new ParameterizedTypeReference<Map<String,Object>>() {}
@@ -308,7 +315,7 @@ public class TestExecutionService {
             fh.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String,Object>> fReq = new HttpEntity<>(payload, fh);
             ResponseEntity<Map<String,Object>> fResp = restTemplate.exchange(
-                    faultBaseUrl + "/api/faults/execute",
+                    schedulerProperties.getBaseUrl() + "/api/faults/execute",
                     HttpMethod.POST,
                     fReq,
                     new ParameterizedTypeReference<Map<String,Object>>() {}
@@ -381,7 +388,7 @@ public class TestExecutionService {
         for (String bn : bladeNames) {
             try {
                 ResponseEntity<Map<String,Object>> delResp = restTemplate.exchange(
-                        faultBaseUrl + "/api/faults/" + bn,
+                        schedulerProperties.getBaseUrl() + "/api/faults/" + bn,
                         HttpMethod.DELETE,
                         HttpEntity.EMPTY,
                         new ParameterizedTypeReference<Map<String,Object>>() {}
@@ -605,7 +612,7 @@ public class TestExecutionService {
             HttpEntity<Map<String,Object>> req = new HttpEntity<>(payload, headers);
 
             ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
-                    "http://1.94.151.57:8105/api/request-patterns/analyze",
+                    proxyProperties.getBaseUrl() + "/api/request-patterns/analyze",
                     HttpMethod.POST,
                     req,
                     new ParameterizedTypeReference<Map<String,Object>>() {}
@@ -630,7 +637,7 @@ public class TestExecutionService {
                     HttpEntity<Map<String,Object>> req = new HttpEntity<>(payload, headers);
 
                     ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
-                            "http://1.94.151.57:8105/api/request-patterns/analyze",
+                            proxyProperties.getBaseUrl() + "/api/request-patterns/analyze",
                             HttpMethod.POST,
                             req,
                             new ParameterizedTypeReference<Map<String,Object>>() {}
@@ -684,7 +691,7 @@ public class TestExecutionService {
                 HttpEntity<Map<String,Object>> req = new HttpEntity<>(recPayload, headers);
 
                 ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
-                        "http://1.94.151.57:8105/api/recordings/start",
+                        proxyProperties.getBaseUrl() + "/api/recordings/start",
                         HttpMethod.POST,
                         req,
                         new ParameterizedTypeReference<Map<String,Object>>() {}
@@ -699,7 +706,7 @@ public class TestExecutionService {
                         HttpEntity<Map<String,Object>> req = new HttpEntity<>(recPayload, headers);
 
                         ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
-                                "http://1.94.151.57:8105/api/recordings/start",
+                                proxyProperties.getBaseUrl() + "/api/recordings/start",
                                 HttpMethod.POST,
                                 req,
                                 new ParameterizedTypeReference<Map<String,Object>>() {}
@@ -734,7 +741,7 @@ public class TestExecutionService {
         // 拉取录制数据（带认证）
         for (String svcName : cr.serviceList) {
             try {
-                String url = String.format("http://1.94.151.57:8105/api/direct-tap/%s/%s/entries", cr.namespace, svcName);
+                String url = String.format(proxyProperties.getBaseUrl() + "/api/direct-tap/%s/%s/entries", cr.namespace, svcName);
 
                 // 获取带认证的请求头
                 HttpHeaders headers = authenticationService.createAuthenticatedHeaders();
@@ -750,7 +757,7 @@ public class TestExecutionService {
                 if (ex.getStatusCode().value() == 401) {
                     try {
                         authenticationService.clearToken();
-                        String url = String.format("http://1.94.151.57:8105/api/direct-tap/%s/%s/entries", cr.namespace, svcName);
+                        String url = String.format(proxyProperties.getBaseUrl() + "/api/direct-tap/%s/%s/entries", cr.namespace, svcName);
 
                         HttpHeaders headers = authenticationService.createAuthenticatedHeaders();
                         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
