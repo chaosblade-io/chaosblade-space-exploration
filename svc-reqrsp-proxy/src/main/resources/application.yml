@@ -1,0 +1,6 @@
+server:
+  port: 8105
+spring:
+  application:
+    name: svc-reqrsp-proxy
+

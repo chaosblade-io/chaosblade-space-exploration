@@ -1,0 +1,13 @@
+// 按下列条件进行过滤：
+// proxy-tag(自定义 header)
+// 时间区间
+// apiId
+
+{
+  "apiId": "rpc-oteldemo-checkoutservice-placeorder",
+  "timeRange": { "start": 1756114800000, "end": 1756118400000 },
+  "proxy-tags": ["12ed1swsx"],
+  "chainMode": "END_TO_END",
+  "percentiles": [50, 95, 99]
+}
+

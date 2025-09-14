@@ -1,0 +1,664 @@
+{
+  "nodes": [
+    {
+      "nodeId": "ns-default",
+      "entity": {
+        "entityId": "ns-default",
+        "type": "NAMESPACE",
+        "displayName": "default 命名空间",
+        "name": "default",
+        "firstSeen": 1747797378408846,
+        "lastSeen": 1747797378428492
+      },
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-shipping",
+      "entity": {
+        "entityId": "svc-shipping",
+        "type": "SERVICE",
+        "displayName": "应用【shipping】",
+        "name": "shipping",
+        "appId": "opentelemetry-demo@shipping",
+        "regionId": "default",
+        "firstSeen": 1747797378423935,
+        "lastSeen": 1747797378423935
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 38.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-flagd",
+      "entity": {
+        "entityId": "svc-flagd",
+        "type": "SERVICE",
+        "displayName": "应用【flagd】",
+        "name": "flagd",
+        "appId": "opentelemetry-demo@flagd",
+        "regionId": "default",
+        "firstSeen": 1747797378425198,
+        "lastSeen": 1747797378425198
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 18.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-email",
+      "entity": {
+        "entityId": "svc-email",
+        "type": "SERVICE",
+        "displayName": "应用【email】",
+        "name": "email",
+        "appId": "opentelemetry-demo@email",
+        "regionId": "default",
+        "firstSeen": 1747797378428492,
+        "lastSeen": 1747797378428492
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 412.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-currency",
+      "entity": {
+        "entityId": "svc-currency",
+        "type": "SERVICE",
+        "displayName": "应用【currency】",
+        "name": "currency",
+        "appId": "opentelemetry-demo@currency",
+        "regionId": "default",
+        "firstSeen": 1747797378413556,
+        "lastSeen": 1747797378413556
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 972.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "svc-checkout",
+      "entity": {
+        "entityId": "svc-checkout",
+        "type": "SERVICE",
+        "displayName": "应用【checkout】",
+        "name": "checkout",
+        "appId": "opentelemetry-demo@checkout",
+        "regionId": "default",
+        "firstSeen": 1747797378408846,
+        "lastSeen": 1747797378408846
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 821.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "pod-shipping-68654fd7fb-jnxff",
+      "entity": {
+        "entityId": "pod-shipping-68654fd7fb-jnxff",
+        "type": "POD",
+        "displayName": "应用实例【10.0.0.30】",
+        "appId": "opentelemetry-demo@shipping",
+        "ip": "10.0.0.30",
+        "regionId": "default",
+        "firstSeen": 1747797378423935,
+        "lastSeen": 1747797378423935
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 38.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "pod-flagd-594d78bcbc-qmxml",
+      "entity": {
+        "entityId": "pod-flagd-594d78bcbc-qmxml",
+        "type": "POD",
+        "displayName": "应用实例【10.0.0.64】",
+        "appId": "opentelemetry-demo@flagd",
+        "ip": "10.0.0.64",
+        "regionId": "default",
+        "firstSeen": 1747797378425198,
+        "lastSeen": 1747797378428492
+      },
+      "attrs": {
+        "RED": {
+          "count": 2,
+          "error": 0,
+          "rt": 215.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "pod-currency-74b7b67479-r7nr9",
+      "entity": {
+        "entityId": "pod-currency-74b7b67479-r7nr9",
+        "type": "POD",
+        "displayName": "应用实例【10.0.0.189】",
+        "appId": "opentelemetry-demo@currency",
+        "ip": "10.0.0.189",
+        "regionId": "default",
+        "firstSeen": 1747797378413556,
+        "lastSeen": 1747797378413556
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 972.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "pod-checkout-5f9b7bb4df-q97kn",
+      "entity": {
+        "entityId": "pod-checkout-5f9b7bb4df-q97kn",
+        "type": "POD",
+        "displayName": "应用实例【10.0.0.107】",
+        "appId": "opentelemetry-demo@checkout",
+        "ip": "10.0.0.107",
+        "regionId": "default",
+        "firstSeen": 1747797378408846,
+        "lastSeen": 1747797378408846
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 821.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "host-tcse-v100-01",
+      "entity": {
+        "entityId": "host-tcse-v100-01",
+        "type": "HOST",
+        "displayName": "主机【tcse-v100-01】",
+        "name": "tcse-v100-01",
+        "regionId": "default",
+        "firstSeen": 1747797378408846,
+        "lastSeen": 1747797378428492
+      },
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "rpc-shiporder",
+      "entity": {
+        "entityId": "rpc-shiporder",
+        "type": "RPC",
+        "displayName": "接口【oteldemo.ShippingService/ShipOrder】",
+        "appId": "opentelemetry-demo@shipping",
+        "rpc": "oteldemo.ShippingService/ShipOrder",
+        "regionId": "default",
+        "firstSeen": 1747797378423935,
+        "lastSeen": 1747797378423935
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 38.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "rpc-currency-convert",
+      "entity": {
+        "entityId": "rpc-currency-convert",
+        "type": "RPC",
+        "displayName": "接口【Currency/Convert】",
+        "appId": "opentelemetry-demo@currency",
+        "rpc": "Currency/Convert",
+        "regionId": "default",
+        "firstSeen": 1747797378413556,
+        "lastSeen": 1747797378413556
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 972.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "rpc-getproduct",
+      "entity": {
+        "entityId": "rpc-getproduct",
+        "type": "RPC",
+        "displayName": "接口【oteldemo.ProductCatalogService/GetProduct】",
+        "appId": "opentelemetry-demo@checkout",
+        "rpc": "oteldemo.ProductCatalogService/GetProduct",
+        "regionId": "default",
+        "firstSeen": 1747797378408846,
+        "lastSeen": 1747797378408846
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 821.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "rpcg-shipping-grpc",
+      "entity": {
+        "entityId": "rpcg-shipping-grpc",
+        "type": "RPC_GROUP",
+        "displayName": "【gRPC】服务",
+        "appId": "opentelemetry-demo@shipping",
+        "rpcType": "grpc",
+        "regionId": "default",
+        "firstSeen": 1747797378423935,
+        "lastSeen": 1747797378423935
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 38.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "rpcg-currency-grpc",
+      "entity": {
+        "entityId": "rpcg-currency-grpc",
+        "type": "RPC_GROUP",
+        "displayName": "【gRPC】服务",
+        "appId": "opentelemetry-demo@currency",
+        "rpcType": "grpc",
+        "regionId": "default",
+        "firstSeen": 1747797378413556,
+        "lastSeen": 1747797378413556
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 972.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "nodeId": "rpcg-checkout-grpc",
+      "entity": {
+        "entityId": "rpcg-checkout-grpc",
+        "type": "RPC_GROUP",
+        "displayName": "【gRPC】服务",
+        "appId": "opentelemetry-demo@checkout",
+        "rpcType": "grpc",
+        "regionId": "default",
+        "firstSeen": 1747797378408846,
+        "lastSeen": 1747797378408846
+      },
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 821.0,
+          "status": "success"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "ns-default-svc-shipping-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-shipping",
+      "type": "CONTAINS",
+      "firstSeen": 1747797378423935,
+      "lastSeen": 1747797378423935,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "ns-default-svc-flagd-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-flagd",
+      "type": "CONTAINS",
+      "firstSeen": 1747797378425198,
+      "lastSeen": 1747797378425198,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "ns-default-svc-email-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-email",
+      "type": "CONTAINS",
+      "firstSeen": 1747797378428492,
+      "lastSeen": 1747797378428492,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "ns-default-svc-currency-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-currency",
+      "type": "CONTAINS",
+      "firstSeen": 1747797378413556,
+      "lastSeen": 1747797378413556,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "ns-default-svc-checkout-CONTAINS",
+      "from": "ns-default",
+      "to": "svc-checkout",
+      "type": "CONTAINS",
+      "firstSeen": 1747797378408846,
+      "lastSeen": 1747797378408846,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-shipping-pod-shipping-68654fd7fb-jnxff-INSTANTIATED_BY",
+      "from": "svc-shipping",
+      "to": "pod-shipping-68654fd7fb-jnxff",
+      "type": "INSTANTIATED_BY",
+      "firstSeen": 1747797378423935,
+      "lastSeen": 1747797378423935,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 38.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-flagd-pod-flagd-594d78bcbc-qmxml-INSTANTIATED_BY",
+      "from": "svc-flagd",
+      "to": "pod-flagd-594d78bcbc-qmxml",
+      "type": "INSTANTIATED_BY",
+      "firstSeen": 1747797378425198,
+      "lastSeen": 1747797378428492,
+      "attrs": {
+        "RED": {
+          "count": 2,
+          "error": 0,
+          "rt": 215.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-currency-pod-currency-74b7b67479-r7nr9-INSTANTIATED_BY",
+      "from": "svc-currency",
+      "to": "pod-currency-74b7b67479-r7nr9",
+      "type": "INSTANTIATED_BY",
+      "firstSeen": 1747797378413556,
+      "lastSeen": 1747797378413556,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 972.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-checkout-pod-checkout-5f9b7bb4df-q97kn-INSTANTIATED_BY",
+      "from": "svc-checkout",
+      "to": "pod-checkout-5f9b7bb4df-q97kn",
+      "type": "INSTANTIATED_BY",
+      "firstSeen": 1747797378408846,
+      "lastSeen": 1747797378408846,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 821.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "pod-shipping-68654fd7fb-jnxff-host-tcse-v100-01-RUNS_ON",
+      "from": "pod-shipping-68654fd7fb-jnxff",
+      "to": "host-tcse-v100-01",
+      "type": "RUNS_ON",
+      "firstSeen": 1747797378423935,
+      "lastSeen": 1747797378423935,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "pod-flagd-594d78bcbc-qmxml-host-tcse-v100-01-RUNS_ON",
+      "from": "pod-flagd-594d78bcbc-qmxml",
+      "to": "host-tcse-v100-01",
+      "type": "RUNS_ON",
+      "firstSeen": 1747797378425198,
+      "lastSeen": 1747797378428492,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "pod-currency-74b7b67479-r7nr9-host-tcse-v100-01-RUNS_ON",
+      "from": "pod-currency-74b7b67479-r7nr9",
+      "to": "host-tcse-v100-01",
+      "type": "RUNS_ON",
+      "firstSeen": 1747797378413556,
+      "lastSeen": 1747797378413556,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "pod-checkout-5f9b7bb4df-q97kn-host-tcse-v100-01-RUNS_ON",
+      "from": "pod-checkout-5f9b7bb4df-q97kn",
+      "to": "host-tcse-v100-01",
+      "type": "RUNS_ON",
+      "firstSeen": 1747797378408846,
+      "lastSeen": 1747797378408846,
+      "attrs": {
+        "RED": {
+          "count": 0,
+          "error": 0,
+          "rt": 0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-shipping-rpc-shiporder-INVOKES",
+      "from": "svc-shipping",
+      "to": "rpc-shiporder",
+      "type": "INVOKES",
+      "firstSeen": 1747797378423935,
+      "lastSeen": 1747797378423935,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 38.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-currency-rpc-currency-convert-INVOKES",
+      "from": "svc-currency",
+      "to": "rpc-currency-convert",
+      "type": "INVOKES",
+      "firstSeen": 1747797378413556,
+      "lastSeen": 1747797378413556,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 972.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "svc-checkout-rpc-getproduct-INVOKES",
+      "from": "svc-checkout",
+      "to": "rpc-getproduct",
+      "type": "INVOKES",
+      "firstSeen": 1747797378408846,
+      "lastSeen": 1747797378408846,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 821.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "rpcg-shipping-grpc-rpc-shiporder-CONTAINS",
+      "from": "rpcg-shipping-grpc",
+      "to": "rpc-shiporder",
+      "type": "CONTAINS",
+      "firstSeen": 1747797378423935,
+      "lastSeen": 1747797378423935,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 38.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "rpcg-currency-grpc-rpc-currency-convert-CONTAINS",
+      "from": "rpcg-currency-grpc",
+      "to": "rpc-currency-convert",
+      "type": "CONTAINS",
+      "firstSeen": 1747797378413556,
+      "lastSeen": 1747797378413556,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 972.0,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "edgeId": "rpcg-checkout-grpc-rpc-getproduct-CONTAINS",
+      "from": "rpcg-checkout-grpc",
+      "to": "rpc-getproduct",
+      "type": "CONTAINS",
+      "firstSeen": 1747797378408846,
+      "lastSeen": 1747797378408846,
+      "attrs": {
+        "RED": {
+          "count": 1,
+          "error": 0,
+          "rt": 821.0,
+          "status": "success"
+        }
+      }
+    }
+  ]
+}

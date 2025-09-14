@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: svc-topo-config
+  namespace: chaosblade
+data:
+  # Jaeger 配置
+  jaeger-host: "localhost"
+  jaeger-port: "16686"
+  # 入口服务名称
+  entry-service: "ts-preserve-service"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-topo-deployment
+  namespace: chaosblade
+  labels:
+    app: svc-topo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: svc-topo
+  template:
+    metadata:
+      labels:
+        app: svc-topo
+    spec:
+      containers:
+      - name: svc-topo
+        image: ghcr.io/stleox/chaosblade/svc-topo:1.0.0
+        ports:
+        - containerPort: 8106
+        env:
+        - name: JaegerHost
+          valueFrom:
+            configMapKeyRef:
+              name: svc-topo-config
+              key: jaeger-host
+        - name: JaegerPort
+          valueFrom:
+            configMapKeyRef:
+              name: svc-topo-config
+              key: jaeger-port
+        - name: EntryService
+          valueFrom:
+            configMapKeyRef:
+              name: svc-topo-config
+              key: entry-service
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8106
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8106
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      imagePullSecrets:
+      - name: ghcr-stleox
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-topo-service
+  namespace: chaosblade
+  labels:
+    app: svc-topo
+spec:
+  selector:
+    app: svc-topo
+  ports:
+    - protocol: TCP
+      port: 8106
+      targetPort: 8106
+  type: ClusterIP

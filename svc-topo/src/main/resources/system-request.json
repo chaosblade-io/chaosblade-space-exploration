@@ -1,0 +1,17 @@
+[
+  {
+    "operationId": "POST /api/v1/preserveservice/preserve",
+    "rootService": "ts-preserve-service",
+    "rootOperation": "POST /api/v1/preserveservice/preserve",
+    "contentType": "application/json",
+    "headersTemplate": "{\"Authorization\": \"Bearer ${token}\"}",
+    "authType": "TOKEN",
+    "authTemplate": "{\"header\": \"Authorization\", \"scheme\": \"Bearer\", \"token_variable\": \"token\"}",
+    "pathParams": "[]",
+    "queryParams": "[]",
+    "bodyTemplate": "{\"to\": \"${terminalStation}\", \"date\": \"2025-08-28\", \"from\": \"${startingStation}\", \"tripId\": \"D1345\", \"foodName\": \"Bone Soup\", \"foodType\": 1, \"isWithin\": false, \"seatType\": \"2\", \"accountId\": \"${accountId}\", \"assurance\": \"0\", \"foodPrice\": 2.5, \"storeName\": \"\", \"contactsId\": \"${contactsId}\", \"handleDate\": \"2025-08-28\", \"stationName\": \"\", \"consigneeName\": \"11\", \"consigneePhone\": \"22\", \"consigneeWeight\": 33}",
+    "variables": "[{\"desc\": \"Bearer Token\", \"name\": \"token\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}, {\"desc\": \"账号ID\", \"name\": \"accountId\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}, {\"desc\": \"联系人ID\", \"name\": \"contactsId\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}, {\"desc\": \"起始站\", \"name\": \"startingStation\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}, {\"desc\": \"终点站\", \"name\": \"terminalStation\", \"type\": \"string\", \"source\": \"user\", \"default\": null, \"required\": true}]",
+    "timeoutMs": 15000,
+    "retryConfig": "{\"enabled\": false}"
+  }
+]

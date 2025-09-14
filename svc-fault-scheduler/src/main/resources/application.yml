@@ -1,0 +1,6 @@
+server:
+  port: 8103
+spring:
+  application:
+    name: svc-fault-scheduler
+

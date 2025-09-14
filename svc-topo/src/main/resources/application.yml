@@ -1,0 +1,81 @@
+server:
+    port: 8106
+    servlet:
+        context-path: /
+
+spring:
+    application:
+        name: chaosblade-topo
+
+    servlet:
+        multipart:
+            max-file-size: 50MB
+            max-request-size: 50MB
+            enabled: true
+
+    thymeleaf:
+        cache: false
+        mode: HTML
+        encoding: UTF-8
+        prefix: classpath:/templates/
+        suffix: .html
+
+    jackson:
+        serialization:
+            write-dates-as-timestamps: false
+        deserialization:
+            accept-single-value-as-array: true
+
+# Actuator 配置
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info
+            base-path: /actuator
+    endpoint:
+        health:
+            show-details: always
+            enabled: true
+    server:
+        port: 8106
+
+logging:
+    level:
+        org.springframework.web: INFO
+    pattern:
+        console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# 应用特定配置
+topo:
+    visualizer:
+        upload:
+            temp-dir: /tmp/topo-uploads
+            allowed-extensions: json
+        graph:
+            max-nodes: 10000
+            max-edges: 50000
+        mock: false # 是否启用 trace-mock 数据
+
+# 拓扑配置
+topology:
+    # 自动刷新
+    auto-refresh:
+        enabled: true # 是否启用自动刷新
+        interval-seconds: 15             # 刷新间隔（秒）
+        time-range-seconds: 15           # 查询时间范围（秒）
+    # 数据源
+    jaeger:
+        host: localhost # Jaeger 主机地址
+        port: 16685 # Jaeger gRPC 端口
+        http-port: 16686 # Jaeger HTTP API 端口
+        query-method: http # Jaeger 查询方式：grpc 或 http
+    # 被测系统
+    sut:
+        system-name: train-ticket # 被测系统名称
+        service-name: ts-preserve-service # 入口服务名称
+        # operation-name: all # 入口操作名称
+
+# 拓扑缓存配置
+    cache:
+        max-size: 100                   # 缓存最大条目数

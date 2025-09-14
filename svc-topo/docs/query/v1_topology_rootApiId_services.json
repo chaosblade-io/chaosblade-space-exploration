@@ -1,0 +1,67 @@
+// 作用：
+// 获取服务拓扑，节点为 Service，关系为 DEPENDS_ON。
+//
+// 请求：
+// GET /v1/topology/{rootApiId}/services
+// 根API标识符 rootApiId，来自于上一步 /v1/topology/{systemId}/apis 的 items.id，
+//
+// 说明：
+// 1.需要先运行一个拓补排序算法，计算出节点的深度 layer。这里只考虑 ServiceNode 之间的 DEPENDS_ON 关系，例如 svc1 DEPENDS_ON svc2、svc1 DEPENDS_ON svc3，那么 svc1 的 layer = 1，svc2 的 layer = 2、svc3 的 layer = 2。
+//
+// 响应：
+{
+    "success": true,
+    "data": {
+        "topology": {
+            "id": 1,  // 服务拓扑ID
+            "systemId": 2,  // 系统ID
+            "apiId": 1,  // 根API标识符
+            "discoveredAt": "2025-08-28 15:23:19",  // 发现时间，记录请求到来的时间
+            "notes": "{ \"totalEdges\": 26, \"totalServices\": 19}",  // 数量
+            "createdAt": "2025-08-28 15:23:19"    // 创建时间，记录响应创建的时间
+        },
+        "nodes": [
+            {
+                "id": 20,  // 节点 ID，从 1 开始递增
+                "topologyId": 1,   // 服务拓扑ID
+                "nodeKey": "ts-preserve-service",  // 服务名
+                "name": "ts-preserve-service", // 服务名
+                "layer": 1,  // 拓补排序深度
+                "protocol": "HTTP"  // 服务采用协议，先写死 HTTP
+            },
+            {
+                "id": 21,// 节点 ID
+                "topologyId": 1,   // 服务拓扑ID
+                "nodeKey": "ts-security-service",
+                "name": "ts-security-service",
+                "layer": 2,
+                "protocol": "HTTP"
+            }
+            // 更多
+        ],
+        "edges": [
+            {
+                "id": 27,  // 边 ID，从 1 开始递增
+                "topologyId": 1,   // 服务拓扑ID
+                "fromNodeId": 20,
+                "toNodeId": 21,
+            },
+            {
+                "id": 28,
+                "topologyId": 1,
+                "fromNodeId": 21,
+                "toNodeId": 22,
+            },
+            {
+                "id": 29,
+                "topologyId": 1,
+                "fromNodeId": 21,
+                "toNodeId": 23,
+            }
+            // 更多
+        ]
+    }
+}
+
+
+// "metadata": "{\"url\": \"http://ts-order-other-service:12032/api/v1/orderOtherService/orderOther/security/Thu%20Aug%2028%2009:33:11%20CST%202025/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f\", \"port\": \"12032\", \"method\": \"GET\", \"source\": \"ts-security-service\", \"target\": \"ts-order-other-service\", \"allPorts\": [\"12032\"], \"callCount\": 1, \"allMethods\": [\"GET\"], \"exampleUrls\": [\"http://ts-order-other-service:12032/api/v1/orderOtherService/orderOther/security/Thu%20Aug%2028%2009:33:11%20CST%202025/4d2a46c7-71cb-4cf1-b5bb-b68406d9da6f\"]}"

@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "systemKey": "train-ticket",
+    "systemAlias": ["train_ticket", "tt"],
+    "name": "订票系统",
+    "description": "火车票订票系统（被测系统）",
+    "owner": "admin",
+    "defaultEnvironment": "prod",
+    "rootService":"ts-preserve-service",
+    "rootOperation":"POST /api/v1/preserveservice/preserve"
+  }
+]

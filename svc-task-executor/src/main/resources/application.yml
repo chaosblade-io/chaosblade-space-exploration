@@ -1,0 +1,6 @@
+server:
+  port: 8102
+spring:
+  application:
+    name: svc-task-executor
+

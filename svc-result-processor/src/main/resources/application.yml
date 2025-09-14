@@ -1,0 +1,6 @@
+server:
+  port: 8104
+spring:
+  application:
+    name: svc-result-processor
+

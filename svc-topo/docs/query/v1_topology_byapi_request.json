@@ -1,0 +1,9 @@
+// 作用：因为我们的 Topology 是一个 DAG 结构，所以根据 apiId 能确定到某个节点。返回该节点的唯一上游节点，和所有下游节点，以及相关的边。
+{
+    "namespace": "default", // k8s 名字空间
+    "apiId": "rpc-oteldemo-checkoutservice-placeorder", // api 选择器，在 appid 中进行匹配
+    "timeRange": { // 必填，时间区间（闭开口径 [start, end)）
+        "start": 1756114800000, // epochMillis
+        "end": 1756118400000
+    }
+}

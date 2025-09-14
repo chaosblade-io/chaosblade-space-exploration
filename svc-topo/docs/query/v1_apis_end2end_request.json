@@ -1,0 +1,10 @@
+// 作用：获取指定名字空间、指定时间范围内的 api 列表，以规定格式返回。
+{
+  "namespace": "default",                   // k8s 名字空间
+  "appSelector": {                          // 服务选择器，在 appid 中进行匹配
+    "services": ["checkout"]
+  },
+  "timeRange": { "start": 1756114800000, "end": 1756118400000 },   // 时间范围内的 api 列表，时间单位毫秒
+  "sort": { "by": "name", "order": "ASC" }  // name | firstSeen | lastSeen；默认 name ASC 方式
+}
+

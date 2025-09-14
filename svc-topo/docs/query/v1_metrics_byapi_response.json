@@ -1,0 +1,18 @@
+// 返回根 api 的性能数据：错误率、吞吐量、p50/p95/p99
+
+{
+  "statistics": {
+    "chain": {
+      "timeRange": { "start": 1756114800000, "end": 1756118400000 },
+      "apiId": "rpc-oteldemo-checkoutservice-placeorder",
+      "chainMode": "END_TO_END",
+      "percentiles": [50, 95, 99],
+      "percentileMethod": "TDIGEST",
+      "totalCount": 12450,
+      "errorCount": 20,
+      "errorRate": 0.001606,
+      "throughputRps": 5.76,
+      "latency": { "p50": 78, "p95": 190, "p99": 370 }
+    }
+  },
+}
