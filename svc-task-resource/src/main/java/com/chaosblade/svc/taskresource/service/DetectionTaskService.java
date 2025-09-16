@@ -529,9 +529,13 @@ public class DetectionTaskService {
 
             for (var it : dto.testCases) {
                 // 计算 meetsSlo
-                Boolean p95Ok = null, p99Ok = null, errOk = null;
-                // p50 无阈值
-                if (it.p50 != null) it.p50.meetsSlo = null;
+                Boolean p50Ok = null, p95Ok = null, p99Ok = null, errOk = null;
+                // p50：复用 sloP95 作为评估阈值（若存在），否则不判定
+                if (it.p50 != null && it.p50.value instanceof Integer && sloP95 != null) {
+                    p50Ok = ((Integer) it.p50.value) <= sloP95; it.p50.meetsSlo = p50Ok;
+                } else if (it.p50 != null) {
+                    it.p50.meetsSlo = null;
+                }
                 if (it.p95 != null && it.p95.value instanceof Integer && sloP95 != null) {
                     p95Ok = ((Integer) it.p95.value) <= sloP95; it.p95.meetsSlo = p95Ok;
                 }
