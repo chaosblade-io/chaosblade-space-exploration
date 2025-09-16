@@ -48,5 +48,5 @@ llm:
     key: sk-lsbfyvywllhniumluwahhnfjahadzxgeuryhygweymdrtiqf
     model: Qwen/QwQ-32B
   timeout:
-    ms: 20000
-  retries: 2
+    ms: 500000
+  retries: 3

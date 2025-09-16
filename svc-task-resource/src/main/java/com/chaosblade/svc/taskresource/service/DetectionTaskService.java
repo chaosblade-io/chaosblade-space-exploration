@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -51,6 +52,8 @@ public class DetectionTaskService {
     @Autowired private com.chaosblade.svc.taskresource.repository.TestResultRepository testResultRepository;
     @Autowired private com.chaosblade.svc.taskresource.repository.TaskExecutionLogRepository taskExecutionLogRepository;
     @Autowired private com.chaosblade.svc.taskresource.repository.TaskConclusionRepository taskConclusionRepository;
+    @Autowired private com.chaosblade.svc.taskresource.config.LlmProperties llmProperties;
+
 
     /**
      * 获取检测任务列表
@@ -322,9 +325,10 @@ public class DetectionTaskService {
 
     /**
      * 获取任务执行详情（增强版）- 旧签名（保留一段时间以兼容）
+     * 注意：此方法可能需要写入LLM总结，因此不能设置为只读事务
      */
     @Deprecated
-    @Transactional(readOnly = true)
+    @Transactional
     public ExecutionDetailsDto getExecutionDetails(Long taskId, Long executionId) {
         logger.warn("[DEPRECATED] getExecutionDetails called with taskId={}, executionId={}", taskId, executionId);
         return getExecutionDetailsByExecutionId(executionId);
@@ -332,8 +336,9 @@ public class DetectionTaskService {
 
     /**
      * 获取任务执行详情（根据 executionId）
+     * 注意：此方法可能需要写入LLM总结，因此不能设置为只读事务
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public ExecutionDetailsDto getExecutionDetailsByExecutionId(Long executionId) {
         logger.debug("Getting execution details by executionId={}", executionId);
         TaskExecution exec = taskExecutionRepository.findById(executionId)
@@ -419,16 +424,23 @@ public class DetectionTaskService {
                 it.targetCount = tc.getTargetCount();
                 it.faultsJson = tc.getFaultsJson();
                 it.createdAt = tc.getCreatedAt();
-                logger.debug("[ExecDetails] caseId={}, matchedMetrics={}, p50={}, p95={}, p99={}, errRate={}", tc.getId(), (tr!=null), (tr!=null?tr.getP50():null), (tr!=null?tr.getP95():null), (tr!=null?tr.getP99():null), (tr!=null?tr.getErrRate():null));
-
                 it.executionId = tc.getExecutionId();
 
+                // 构造指标对象
+                ExecutionDetailsDto.TestCaseItem.MetricResult mP50 = new ExecutionDetailsDto.TestCaseItem.MetricResult();
+                ExecutionDetailsDto.TestCaseItem.MetricResult mP95 = new ExecutionDetailsDto.TestCaseItem.MetricResult();
+                ExecutionDetailsDto.TestCaseItem.MetricResult mP99 = new ExecutionDetailsDto.TestCaseItem.MetricResult();
+                ExecutionDetailsDto.TestCaseItem.MetricResult mErr = new ExecutionDetailsDto.TestCaseItem.MetricResult();
                 if (tr != null) {
-                    it.p50 = tr.getP50();
-                    it.p95 = tr.getP95();
-                    it.p99 = tr.getP99();
-                    it.errRate = tr.getErrRate();
+                    mP50.value = tr.getP50();
+                    mP95.value = tr.getP95();
+                    mP99.value = tr.getP99();
+                    mErr.value = tr.getErrRate();
                 }
+                it.p50 = mP50; it.p95 = mP95; it.p99 = mP99; it.errRate = mErr;
+
+                logger.debug("[ExecDetails] caseId={}, matchedMetrics={}, p50={}, p95={}, p99={}, errRate={}", tc.getId(), (tr!=null), (tr!=null?tr.getP50():null), (tr!=null?tr.getP95():null), (tr!=null?tr.getP99():null), (tr!=null?tr.getErrRate():null));
+
                 items.add(it);
             }
         }
@@ -438,7 +450,7 @@ public class DetectionTaskService {
             int total = (items==null?0:items.size());
             if (items != null) {
                 for (var tci : items) {
-                    if (tci.p50 != null || tci.p95 != null || tci.p99 != null || tci.errRate != null) cntWith++;
+                    if ((tci.p50!=null && tci.p50.value!=null) || (tci.p95!=null && tci.p95.value!=null) || (tci.p99!=null && tci.p99.value!=null) || (tci.errRate!=null && tci.errRate.value!=null)) cntWith++;
                 }
             }
             logger.info("[ExecDetails] testCases.size={}, withMetrics={}, withoutMetrics={}", total, cntWith, (total - cntWith));
@@ -491,6 +503,223 @@ public class DetectionTaskService {
         }
         dto.faultInjections = fi;
         logger.info("[ExecDetails] svc2types.size={}, faultInjections.size={}, services={}", svc2types.size(), fi.size(), svc2types.keySet());
+        // SLO 合规判定与 LLM 总结（仅在 DONE 状态执行）
+        if ("DONE".equalsIgnoreCase(exec.getStatus())) {
+            // 1) 收集任务级 SLO 阈值（选择更严格的阈值：取最小非空值）
+            var sloPage = taskSloRepository.findByConditions(null, null, null, task.getId(), null,
+                    org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE));
+            Integer sloP95 = null, sloP99 = null, sloErr = null;
+            for (var slo : sloPage.getContent()) {
+                if (slo.getP95() != null) sloP95 = (sloP95 == null) ? slo.getP95() : Math.min(sloP95, slo.getP95());
+                if (slo.getP99() != null) sloP99 = (sloP99 == null) ? slo.getP99() : Math.min(sloP99, slo.getP99());
+                if (slo.getErrRate() != null) sloErr = (sloErr == null) ? slo.getErrRate() : Math.min(sloErr, slo.getErrRate());
+            }
+            logger.info("[ExecDetails] SLO thresholds: p95={}, p99={}, errRate%={}", sloP95, sloP99, sloErr);
+
+            // 2) 为每个用例写入 meetsSlo，并统计成功/失败
+            int total = (dto.testCases == null ? 0 : dto.testCases.size());
+            int succ = 0, fail = 0;
+            java.util.Map<String, Integer> failTypeCnt = new java.util.HashMap<>();
+            java.util.Map<String, Integer> failSvcCnt = new java.util.HashMap<>();
+            double maxDeviation = -1.0;
+            ExecutionDetailsDto.TestCaseItem worst = null;
+            String worstDesc = null; String worstSloViol = null;
+
+            com.fasterxml.jackson.databind.ObjectMapper omFail = new com.fasterxml.jackson.databind.ObjectMapper();
+
+            for (var it : dto.testCases) {
+                // 计算 meetsSlo
+                Boolean p95Ok = null, p99Ok = null, errOk = null;
+                // p50 无阈值
+                if (it.p50 != null) it.p50.meetsSlo = null;
+                if (it.p95 != null && it.p95.value instanceof Integer && sloP95 != null) {
+                    p95Ok = ((Integer) it.p95.value) <= sloP95; it.p95.meetsSlo = p95Ok;
+                }
+                if (it.p99 != null && it.p99.value instanceof Integer && sloP99 != null) {
+                    p99Ok = ((Integer) it.p99.value) <= sloP99; it.p99.meetsSlo = p99Ok;
+                }
+                if (it.errRate != null && it.errRate.value != null && sloErr != null) {
+                    java.math.BigDecimal val = (java.math.BigDecimal) it.errRate.value;
+                    java.math.BigDecimal percent = (val.compareTo(java.math.BigDecimal.ONE) <= 0)
+                            ? val.multiply(new java.math.BigDecimal("100")) : val; // 统一转为百分比
+                    java.math.BigDecimal sloB = new java.math.BigDecimal(String.valueOf(sloErr));
+                    errOk = percent.compareTo(sloB) <= 0; it.errRate.meetsSlo = errOk;
+                }
+                boolean hasAnyThreshold = (sloP95 != null) || (sloP99 != null) || (sloErr != null);
+                boolean meetsAll = true;
+                if (sloP95 != null) {
+                    if (it.p95 == null || it.p95.value == null) meetsAll = false; else meetsAll &= Boolean.TRUE.equals(p95Ok);
+                }
+                if (sloP99 != null) {
+                    if (it.p99 == null || it.p99.value == null) meetsAll = false; else meetsAll &= Boolean.TRUE.equals(p99Ok);
+                }
+                if (sloErr != null) {
+                    if (it.errRate == null || it.errRate.value == null) meetsAll = false; else meetsAll &= Boolean.TRUE.equals(errOk);
+                }
+                // 若无任何阈值，默认视为成功
+                if (!hasAnyThreshold) meetsAll = true;
+
+                if (meetsAll) succ++; else {
+                    fail++;
+                    // 统计失败类型与受影响服务
+                    try {
+                        if (it.faultsJson != null && !it.faultsJson.isBlank()) {
+                            java.util.List<?> arr = omFail.readValue(it.faultsJson, java.util.List.class);
+                            java.util.List<String> svcNames = new java.util.ArrayList<>();
+                            java.util.List<String> typeNames = new java.util.ArrayList<>();
+                            for (Object o : arr) if (o instanceof java.util.Map) {
+                                var m = (java.util.Map<?,?>) o;
+                                Object svcObj = m.get("serviceName");
+                                if (svcObj != null) {
+                                    String svc = String.valueOf(svcObj);
+                                    failSvcCnt.put(svc, failSvcCnt.getOrDefault(svc, 0) + 1);
+                                    svcNames.add(svc);
+                                }
+                                String ftype = "unknown";
+                                Object fd = m.get("faultDefinition");
+                                if (fd instanceof java.util.Map) {
+                                    Object spec = ((java.util.Map<?,?>) fd).get("spec");
+                                    if (spec instanceof java.util.Map) {
+                                        Object exps = ((java.util.Map<?,?>) spec).get("experiments");
+                                        if (exps instanceof java.util.List && !((java.util.List<?>) exps).isEmpty()) {
+                                            Object first = ((java.util.List<?>) exps).get(0);
+                                            if (first instanceof java.util.Map) {
+                                                Object action = ((java.util.Map<?,?>) first).get("action");
+                                                if (action != null) ftype = String.valueOf(action);
+                                            }
+                                        }
+                                    }
+                                }
+                                typeNames.add(ftype);
+                                failTypeCnt.put(ftype, failTypeCnt.getOrDefault(ftype, 0) + 1);
+                            }
+                            // 偏离度
+                            double dev = 0.0;
+                            if (sloP95 != null && it.p95 != null && it.p95.value instanceof Integer) dev += Math.max(0, ((Integer) it.p95.value) - sloP95);
+                            if (sloP99 != null && it.p99 != null && it.p99.value instanceof Integer) dev += Math.max(0, ((Integer) it.p99.value) - sloP99);
+                            if (sloErr != null && it.errRate != null && it.errRate.value != null) {
+                                java.math.BigDecimal val = (java.math.BigDecimal) it.errRate.value;
+                                java.math.BigDecimal percent = (val.compareTo(java.math.BigDecimal.ONE) <= 0)
+                                        ? val.multiply(new java.math.BigDecimal("100")) : val;
+                                dev += Math.max(0.0, percent.doubleValue() - sloErr.doubleValue());
+                            }
+                            if (dev > maxDeviation) {
+                                maxDeviation = dev; worst = it;
+                                // 生成简短描述
+                                String joins = String.join(",", svcNames);
+                                String types = String.join(",", typeNames);
+                                worstDesc = (svcNames.isEmpty() ? "baseline" : (joins + " [" + types + "]"));
+                                java.util.List<String> viol = new java.util.ArrayList<>();
+                                if (sloP95 != null && it.p95 != null && it.p95.value instanceof Integer && ((Integer) it.p95.value) > sloP95) viol.add("p95>");
+                                if (sloP99 != null && it.p99 != null && it.p99.value instanceof Integer && ((Integer) it.p99.value) > sloP99) viol.add("p99>");
+                                if (sloErr != null && it.errRate != null && it.errRate.value != null) {
+                                    java.math.BigDecimal val = (java.math.BigDecimal) it.errRate.value;
+                                    java.math.BigDecimal percent = (val.compareTo(java.math.BigDecimal.ONE) <= 0)
+                                            ? val.multiply(new java.math.BigDecimal("100")) : val;
+                                    if (percent.compareTo(new java.math.BigDecimal(String.valueOf(sloErr))) > 0) viol.add("errRate>");
+                                }
+                                worstSloViol = String.join("/", viol);
+                            }
+                        }
+                    } catch (Exception exx) {
+                        logger.warn("[ExecDetails] parse faultsJson failed: caseId={}, err={}", it.id, exx.toString());
+                    }
+                }
+            }
+            double succRate = (total == 0) ? 0.0 : (succ * 100.0 / total);
+
+            // 3) 主要失败类型与最受影响服务
+            String mainFailType = null; int typeMax = 0;
+            for (var e : failTypeCnt.entrySet()) {
+                if (e.getValue() > typeMax) { typeMax = e.getValue(); mainFailType = e.getKey(); }
+            }
+            String worstService = null; int svcMax = 0;
+            for (var e : failSvcCnt.entrySet()) {
+                if (e.getValue() > svcMax) { svcMax = e.getValue(); worstService = e.getKey(); }
+            }
+
+            // 4) LLM 总结：若 task_conclusion 已存在则直接返回；否则调 LLM 生成并落库
+            try {
+                dto.llmSummary = taskConclusionRepository.findByExecutionId(executionId)
+                        .map(com.chaosblade.svc.taskresource.entity.TaskConclusion::getModelContent)
+                        .orElse(null);
+                if (dto.llmSummary == null) {
+                    // 拓扑数据
+                    var topoOpt = apiTopologyRepository.findBySystemIdAndApiId(task.getSystemId(), task.getApiId());
+                    java.util.List<ApiTopologyNode> nodes = java.util.Collections.emptyList();
+                    java.util.List<ApiTopologyEdge> edges = java.util.Collections.emptyList();
+                    if (topoOpt.isPresent()) {
+                        nodes = apiTopologyNodeRepository.findByTopologyId(topoOpt.get().getId());
+                        edges = apiTopologyEdgeRepository.findByTopologyId(topoOpt.get().getId());
+                    }
+                    // 典型失败信息
+                    Long worstId = (worst==null? null : worst.id);
+                    String worstChange = (worst==null? null : ("p95="+worst.p95.value+",p99="+worst.p99.value+",errRate="+worst.errRate.value));
+                    String worstViol = (worst==null? null : worstSloViol);
+
+                    // 组织提示词（限制输出<=300字）
+                    String prompt = "请基于以下数据，按固定模板，输出<=300字中文总结：\\n" +
+                            "统计: 总用例="+total+", 成功="+succ+", 失败="+fail+", 成功率="+String.format(java.util.Locale.ROOT, "%.1f", succRate)+"%。\\n" +
+                            "主要失败类型="+String.valueOf(mainFailType)+"；最受影响服务="+String.valueOf(worstService)+"。\\n" +
+                            "典型失败: 用例#"+String.valueOf(worstId)+"，描述="+String.valueOf(worstDesc)+"，指标="+String.valueOf(worstChange)+"，违规="+String.valueOf(worstViol)+"。\\n" +
+                            "拓扑节点数="+nodes.size()+"，边数="+edges.size()+"。\\n" +
+                            "模板：本次测试共执行{总数}个用例，成功{成功数}个，失败{失败数}个，弹性得分{成功率}%。主要失败原因为{主要故障类型}，受影响最严重的服务为{核心受影响服务}。典型失败案例#{用例ID}中，{具体故障描述}导致{关键指标变化}，{SLO违规情况}。根因分析为{故障传播机制}，暴露了{系统弱点}。建议{核心改进措施}。\\n" +
+                            "注意：仅返回最终总结文本，不超过300字。";
+
+                    // 调用 LLM
+                    var rt = new org.springframework.web.client.RestTemplate();
+                    var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+                    factory.setConnectTimeout(llmProperties.getTimeout().getMs());
+                    factory.setReadTimeout(llmProperties.getTimeout().getMs());
+                    rt.setRequestFactory(factory);
+
+                    java.util.Map<String, Object> body = new java.util.HashMap<>();
+                    body.put("model", llmProperties.getApi().getModel());
+                    java.util.List<java.util.Map<String,Object>> msgs = new java.util.ArrayList<>();
+                    java.util.Map<String,Object> m = new java.util.HashMap<>();
+                    m.put("role", "user");
+                    m.put("content", prompt);
+                    m.put("max_tokens", 131072);
+                    msgs.add(m);
+                    body.put("messages", msgs);
+
+                    org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                    headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+                    headers.set("Authorization", "Bearer " + llmProperties.getApi().getKey());
+
+                    String llmResp = null; String summary = null; Exception lastEx = null;
+                    for (int i = 0; i < Math.max(1, llmProperties.getRetries()); i++) {
+                        try {
+                            var req = new org.springframework.http.HttpEntity<>(body, headers);
+                            var resp = rt.postForEntity(llmProperties.getApi().getUrl(), req, String.class);
+                            llmResp = resp.getBody();
+                            // 解析 content
+                            if (llmResp != null) {
+                                com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(llmResp);
+                                // OpenAI兼容：choices[0].message.content
+                                var choices = root.path("choices");
+                                if (choices.isArray() && choices.size() > 0) {
+                                    var content = choices.get(0).path("message").path("content");
+                                    if (content.isTextual()) summary = content.asText();
+                                }
+                            }
+                            if (summary != null && !summary.isBlank()) break;
+                        } catch (Exception ex2) { lastEx = ex2; }
+                    }
+                    if (summary == null || summary.isBlank()) {
+                        logger.warn("[ExecDetails] LLM summary generation failed, resp={}, ex={}", llmResp, (lastEx==null?null:lastEx.toString()));
+                    } else {
+                        // 保存LLM总结到数据库
+                        saveTaskConclusion(executionId, summary);
+                        dto.llmSummary = summary;
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("[ExecDetails] LLM summary skipped due to error: {}", e.toString());
+            }
+        } else {
+            dto.llmSummary = null;
+        }
 
 
         ExecutionDetailsDto.RealtimeStatus r = new ExecutionDetailsDto.RealtimeStatus();
@@ -503,7 +732,7 @@ public class DetectionTaskService {
         r.testingServices = ("INJECTING_AND_REPLAYING".equalsIgnoreCase(exec.getStatus())) ? Math.max(0, r.totalServices - r.completedServices) : 0;
         dto.realtime = r;
 
-        
+
         try {
             dto.modelConclusion = taskConclusionRepository.findByExecutionId(executionId)
                     .map(com.chaosblade.svc.taskresource.entity.TaskConclusion::getModelContent)
@@ -554,5 +783,25 @@ public class DetectionTaskService {
         return PageResponse.of(items, p.getTotalElements(), page, size);
     }
 
+    /**
+     * 保存任务结论
+     */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void saveTaskConclusion(Long executionId, String summary) {
+        logger.debug("Saving task conclusion for executionId: {}", executionId);
+
+        // 检查是否已存在，避免重复保存
+        if (taskConclusionRepository.findByExecutionId(executionId).isPresent()) {
+            logger.debug("Task conclusion already exists for executionId: {}", executionId);
+            return;
+        }
+
+        TaskConclusion conclusion = new TaskConclusion();
+        conclusion.setExecutionId(executionId);
+        conclusion.setModelContent(summary);
+
+        taskConclusionRepository.save(conclusion);
+        logger.info("Task conclusion saved successfully for executionId: {}", executionId);
+    }
 
 }

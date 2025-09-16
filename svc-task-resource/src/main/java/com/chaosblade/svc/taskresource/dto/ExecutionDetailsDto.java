@@ -40,10 +40,15 @@ public class ExecutionDetailsDto {
         public String faultsJson;
         public LocalDateTime createdAt;
         public Long executionId;
-        public Integer p50;
-        public Integer p95;
-        public Integer p99;
-        public java.math.BigDecimal errRate;
+        public MetricResult p50; // p50 无SLO阈值，仅返回值
+        public MetricResult p95;
+        public MetricResult p99;
+        public MetricResult errRate;
+
+        public static class MetricResult {
+            public Boolean meetsSlo; // 是否满足SLO要求；p50恒为true或null（无阈值）
+            public Object value;     // 指标值（Integer for p50/p95/p99, BigDecimal for errRate）
+        }
     }
 
     // 故障注入摘要：关键呈现“对哪些服务注入了何种故障”
@@ -59,5 +64,7 @@ public class ExecutionDetailsDto {
     public List<FaultInjectionSummary> faultInjections;
     // 大模型总结内容（来自 task_conclusion.model_content）
     public String modelConclusion;
+    // 新增：LLM摘要（若DONE且生成或已缓存）
+    public String llmSummary;
 }
 
