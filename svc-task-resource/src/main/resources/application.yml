@@ -33,11 +33,14 @@ logging:
     com.chaosblade: DEBUG
     org.springframework.web: DEBUG
 
+# External topology service endpoints
+external:
+  topology:
+    base-url: http://116.63.51.45:8106
+    timeout-ms: 15000
 
 endpoints:
   executor-base-url: http://localhost:8102
-
-
 
 llm:
   api:
