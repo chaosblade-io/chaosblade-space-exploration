@@ -6,6 +6,7 @@ import com.chaosblade.svc.taskresource.entity.ApiTopology;
 import com.chaosblade.svc.taskresource.entity.System;
 import com.chaosblade.svc.taskresource.service.ApiTopologyService;
 import com.chaosblade.svc.taskresource.service.SystemService;
+import com.chaosblade.svc.taskresource.service.ExternalTopologySyncService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,10 @@ public class SystemController {
     
     @Autowired
     private ApiTopologyService apiTopologyService;
-    
+
+    @Autowired
+    private ExternalTopologySyncService externalTopologySyncService;
+
     /**
      * 获取系统列表
      * GET /api/systems
@@ -41,6 +45,14 @@ public class SystemController {
             @RequestParam(value = "size", defaultValue = "20") @Min(1) int size) {
 
         logger.info("GET /api/systems - name: {}, owner: {}, page: {}, size: {}", name, owner, page, size);
+
+        // [[Before returning list, sync external topology data (systems/apis/topology) for missing records
+        try {
+            externalTopologySyncService.syncBeforeList();
+        } catch (Exception e) {
+            // do not fail listing on sync errors
+            logger.warn("External topology sync failed: {}", e.getMessage());
+        }
 
         PageResponse<System> systems = systemService.getAllSystems(name, owner, page, size);
         return ApiResponse.success(systems);
