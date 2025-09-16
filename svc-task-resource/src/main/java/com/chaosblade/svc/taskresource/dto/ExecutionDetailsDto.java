@@ -64,7 +64,8 @@ public class ExecutionDetailsDto {
     public List<FaultInjectionSummary> faultInjections;
     // 大模型总结内容（来自 task_conclusion.model_content）
     public String modelConclusion;
-    // 新增：LLM摘要（若DONE且生成或已缓存）
+    // 新增：LLM摘要（若DONE且生成或已缓存），对外不返回
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public String llmSummary;
 }
 

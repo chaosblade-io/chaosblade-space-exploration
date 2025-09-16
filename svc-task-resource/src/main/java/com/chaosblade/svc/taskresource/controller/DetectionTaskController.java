@@ -283,6 +283,24 @@ public class DetectionTaskController {
             @PathVariable Long executionId) {
         logger.info("GET /api/task-executions/{}", executionId);
         var details = detectionTaskService.getExecutionDetailsByExecutionId(executionId);
+        // 按需裁剪返回：
+        // 1) 不返回 llmSummary
+        // 2) 过滤掉指定 CaseType 的测试用例（当前为 BASELINE，后续如需改为 SINGLE/DUAL 可调整）
+        try {
+            if (details != null) {
+                details.llmSummary = null; // 不返回 llmSummary
+                if (details.testCases != null) {
+                    java.util.List<com.chaosblade.svc.taskresource.dto.ExecutionDetailsDto.TestCaseItem> filtered = new java.util.ArrayList<>();
+                    for (var t : details.testCases) {
+                        if (t == null) continue;
+                        // 过滤规则：去掉 CaseType == BASELINE 的用例
+                        if (t.caseType != null && t.caseType.equalsIgnoreCase("BASELINE")) continue;
+                        filtered.add(t);
+                    }
+                    details.testCases = filtered;
+                }
+            }
+        } catch (Exception ignore) { /* no-op */ }
         return ApiResponse.success(details);
     }
 
