@@ -111,3 +111,9 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+# Local env files and private configs
+**/.env
+!**/.env.example
+**/application-local.yml

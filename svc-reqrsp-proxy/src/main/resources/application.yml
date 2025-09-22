@@ -67,4 +67,15 @@ logging:
     com.chaosblade.svc.reqrspproxy: INFO
     io.fabric8.kubernetes: INFO
     org.springframework.data.redis: INFO
-
+  file:
+    name: app.log  # 输出到当前目录的app.log文件
+    # 或者指定完整路径
+    # name: /var/log/app.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB    # 单个文件最大大小
+      max-history: 30        # 保留30个历史文件
+      total-size-cap: 1GB    # 总大小限制

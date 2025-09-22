@@ -13,7 +13,7 @@ public class EndpointsProperties {
     /**
      * svc-task-executor 的基础地址
      */
-    private String executorBaseUrl = "http://localhost:8102";
+    private String executorBaseUrl = "http://1.94.151.57:8102";
 
     public String getExecutorBaseUrl() {
         return executorBaseUrl;

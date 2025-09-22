@@ -40,7 +40,7 @@ external:
     timeout-ms: 15000
 
 endpoints:
-  executor-base-url: http://localhost:8102
+  executor-base-url: http://1.94.151.57:8102
 
 llm:
   api:

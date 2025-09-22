@@ -668,7 +668,7 @@ public class DetectionTaskService {
                             "典型失败: 用例#"+String.valueOf(worstId)+"，描述="+String.valueOf(worstDesc)+"，指标="+String.valueOf(worstChange)+"，违规="+String.valueOf(worstViol)+"。\\n" +
                             "拓扑节点数="+nodes.size()+"，边数="+edges.size()+"。\\n" +
                             "模板：本次测试共执行{总数}个用例，成功{成功数}个，失败{失败数}个，弹性得分{成功率}%。主要失败原因为{主要故障类型}，受影响最严重的服务为{核心受影响服务}。典型失败案例#{用例ID}中，{具体故障描述}导致{关键指标变化}，{SLO违规情况}。根因分析为{故障传播机制}，暴露了{系统弱点}。建议{核心改进措施}。\\n" +
-                            "注意：仅返回最终总结文本，不超过300字。";
+                            "注意：内容越详细越好，不超过1500字，以md的格式返回";
 
                     // 调用 LLM
                     var rt = new org.springframework.web.client.RestTemplate();

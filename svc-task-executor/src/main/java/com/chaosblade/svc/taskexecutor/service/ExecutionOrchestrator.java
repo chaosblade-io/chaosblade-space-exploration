@@ -469,9 +469,9 @@ public class ExecutionOrchestrator {
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                     "[Stage6] Completed: status="+te.getStatus()+", finishedAt="+te.getFinishedAt());
             // 异步触发大模型总结
-            try { summaryService.summarizeAsync(executionId); } catch (Exception ignore) {
-                log.warn("[Summary] Failed to trigger summarize: {}", ignore.getMessage());
-            }
+            // try { summaryService.summarizeAsync(executionId); } catch (Exception ignore) {
+            //     log.warn("[Summary] Failed to trigger summarize: {}", ignore.getMessage());
+            // }
 
         } catch (BusinessException be) {
             te.setStatus("FAILED");
