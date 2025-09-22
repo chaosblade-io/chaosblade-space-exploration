@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace | default "chaosblade" }}
+  labels:
+    name: {{ .Values.namespace | default "chaosblade" }}
+    app.kubernetes.io/name: {{ include "chaosblade-space-exploration.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

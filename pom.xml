@@ -25,6 +25,9 @@
         <!-- Maven plugin versions -->
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <spring-boot-maven-plugin.version>3.5.5</spring-boot-maven-plugin.version>
+        
+        <!-- Third-party library versions -->
+        <fabric8.kubernetes.client.version>6.13.4</fabric8.kubernetes.client.version>
     </properties>
 
     <modules>
@@ -36,6 +39,7 @@
         <module>svc-result-processor</module>
         <module>svc-reqrsp-proxy</module>
         <module>svc-topo</module>
+        <module>svc-unified</module>
     </modules>
 
     <dependencyManagement>
@@ -69,6 +73,15 @@
                 <artifactId>common-test</artifactId>
                 <version>${project.version}</version>
                 <scope>test</scope>
+            </dependency>
+            
+            <!-- Fabric8 Kubernetes Client BOM -->
+            <dependency>
+                <groupId>io.fabric8</groupId>
+                <artifactId>kubernetes-client-bom</artifactId>
+                <version>${fabric8.kubernetes.client.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

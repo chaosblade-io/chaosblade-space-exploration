@@ -1,0 +1,336 @@
+# Default values for chaosblade-space-exploration
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Override values
+nameOverride: ""
+fullnameOverride: ""
+
+
+# Unified image configuration (for single image deployment)
+unified:
+  enabled: true  # Set to true to use unified image instead of individual service images
+  image:
+    registry: ghcr.io
+    repository: chaosblade-io/chaosblade-space-exploration-unified
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  ports:
+    task-resource: 8101
+    task-executor: 8102
+    fault-scheduler: 8103
+    result-processor: 8104
+    reqrsp-proxy: 8105
+    topo: 8106
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "xx"
+  annotations: {}
+  hosts:
+    - host: chaosblade.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource configuration
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Replica count for each service
+replicaCount: 1
+
+# Service accounts and RBAC
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+rbac:
+  create: true
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 2000
+
+# Container security context
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Database configuration
+database:
+  type: mysql
+  host: "localhost"
+  port: 3306
+  name: spaceexploration
+  username: root
+  password: "password123"
+  url: "jdbc:mysql://localhost:3306/spaceexploration?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+  # Use existing secret
+  existingSecret: false
+  # Secret keys
+  secretKeys:
+    username: username
+    password: password
+
+# Redis configuration
+redis:
+  host: "localhost"
+  port: 6379
+  database: 0
+  password: "redis123"
+  # Use existing secret
+  existingSecret: false
+  # Secret keys
+  secretKeys:
+    password: password
+  # Redis deployment configuration
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Kubernetes API configuration
+kubernetes:
+  apiUrl: "localhost:6443"
+  token: "dummy-token"
+  verifySsl: false
+  connectionTimeout: 10000
+  requestTimeout: 30000
+  # Use existing secret
+  existingSecret: false
+  # Secret keys
+  secretKeys:
+    token: token
+
+# External services configuration
+external:
+  topology:
+    baseUrl: "localhost:8106"
+    timeoutMs: 15000
+
+# LLM API configuration
+llm:
+  api:
+    url: "localhost"
+    key: "dummy-key"
+    model: "xxx"
+  timeout:
+    ms: 500000
+  retries: 3
+  # Use existing secret
+  existingSecret: false
+  # Secret keys
+  secretKeys:
+    key: key
+
+# Recording configuration
+recording:
+  envoy:
+    image: envoyproxy/envoy:v1.28.3
+    port: 15006
+    adminPort: 9901
+    tapDir: /var/log/envoy/taps
+    maxBufferedBytes: 2097152
+  defaultDurationSec: 600
+  autoCollectIntervalSec: 30
+
+# Jaeger configuration
+jaeger:
+  host: localhost
+  port: 16686
+
+# Application configuration
+app:
+  faults:
+    defaultTtlSeconds: 0
+    eventsLimit: 50
+    namePrefix: "blade-"
+
+# Management and monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      showDetails: when-authorized
+
+# Logging configuration
+logging:
+  level:
+    com.chaosblade: INFO
+    org.springframework.web: INFO
+    io.fabric8.kubernetes: INFO
+    org.springframework.data.redis: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Persistence configuration
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 8Gi
+
+# Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Network policy
+networkPolicy:
+  enabled: false
+
+# Service monitor for Prometheus
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+
+# Service-specific configurations
+services:
+  task-resource:
+    enabled: true
+    image:
+      repository: chaosblade-io/chaosblade-space-exploration
+      tag: "1.0.0-SNAPSHOT"
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    env:
+      - name: SPRING_PROFILES_ACTIVE
+        value: "k8s"
+
+  task-executor:
+    enabled: true
+    image:
+      repository: chaosblade-io/chaosblade-space-exploration
+      tag: "1.0.0-SNAPSHOT"
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    env:
+      - name: SPRING_PROFILES_ACTIVE
+        value: "k8s"
+
+  fault-scheduler:
+    enabled: true
+    image:
+      repository: chaosblade-io/chaosblade-space-exploration
+      tag: "1.0.0-SNAPSHOT"
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    env:
+      - name: SPRING_PROFILES_ACTIVE
+        value: "k8s"
+
+  result-processor:
+    enabled: true
+    image:
+      repository: chaosblade-io/chaosblade-space-exploration
+      tag: "1.0.0-SNAPSHOT"
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    env:
+      - name: SPRING_PROFILES_ACTIVE
+        value: "k8s"
+
+  reqrsp-proxy:
+    enabled: true
+    image:
+      repository: chaosblade-io/chaosblade-space-exploration
+      tag: "1.0.0-SNAPSHOT"
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    env:
+      - name: SPRING_PROFILES_ACTIVE
+        value: "k8s"
+
+  topo:
+    enabled: true
+    image:
+      repository: chaosblade-io/chaosblade-space-exploration
+      tag: "1.0.0-SNAPSHOT"
+    resources:
+      limits:
+        cpu: 1024m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    env:
+      - name: SPRING_PROFILES_ACTIVE
+        value: "k8s"

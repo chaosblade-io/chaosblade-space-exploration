@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chaosblade-space-exploration.fullname" . }}-config
+  namespace: {{ .Values.namespace | default "chaosblade" }}
+  labels:
+    {{- include "chaosblade-space-exploration.labels" . | nindent 4 }}
+data:
+  DB_URL: {{ .Values.database.url | default "" }}
+  DB_HOST: {{ .Values.database.host | default "" }}
+  DB_PORT: {{ .Values.database.port | default "3306" | quote }}
+  DB_NAME: {{ .Values.database.name | default "spaceexploration" }}
+  SPRING_DATA_REDIS_HOST: {{ .Values.redis.host | default "" }}
+  SPRING_DATA_REDIS_PORT: {{ .Values.redis.port | default "6379" | quote }}
+  SPRING_DATA_REDIS_DATABASE: {{ .Values.redis.database | default "0" | quote }}
+  KUBERNETES_API_URL: {{ .Values.kubernetes.apiUrl | default "" }}
+  KUBERNETES_VERIFY_SSL: {{ .Values.kubernetes.verifySsl | default "false" | quote }}
+  KUBERNETES_CONNECTION_TIMEOUT: {{ .Values.kubernetes.connectionTimeout | default "10000" | quote }}
+  KUBERNETES_REQUEST_TIMEOUT: {{ .Values.kubernetes.requestTimeout | default "30000" | quote }}
+  EXTERNAL_TOPOLOGY_BASE_URL: {{ .Values.external.topology.baseUrl | default "" }}
+  EXTERNAL_TOPOLOGY_TIMEOUT_MS: {{ .Values.external.topology.timeoutMs | default "15000" | quote }}
+  LLM_API_URL: {{ .Values.llm.api.url | default "" }}
+  LLM_API_MODEL: {{ .Values.llm.api.model | default "" }}
+  LLM_TIMEOUT_MS: {{ .Values.llm.timeout.ms | default "300000" | quote }}
+  LLM_RETRIES: {{ .Values.llm.retries | default "3" | quote }}
+  RECORDING_ENVOY_IMAGE: {{ .Values.recording.envoy.image | default "envoyproxy/envoy:v1.28.3" }}
+  RECORDING_ENVOY_PORT: {{ .Values.recording.envoy.port | default "15006" | quote }}
+  RECORDING_ENVOY_ADMIN_PORT: {{ .Values.recording.envoy.adminPort | default "9901" | quote }}
+  RECORDING_ENVOY_TAP_DIR: {{ .Values.recording.envoy.tapDir | default "/var/log/envoy/taps" }}
+  RECORDING_ENVOY_MAX_BUFFERED_BYTES: {{ .Values.recording.envoy.maxBufferedBytes | default "2097152" | quote }}
+  RECORDING_DEFAULT_DURATION_SEC: {{ .Values.recording.defaultDurationSec | default "600" | quote }}
+  RECORDING_AUTO_COLLECT_INTERVAL_SEC: {{ .Values.recording.autoCollectIntervalSec | default "30" | quote }}
+  JAEGER_HOST: {{ .Values.jaeger.host | default "localhost" }}
+  JAEGER_PORT: {{ .Values.jaeger.port | default "16686" | quote }}
+  APP_FAULTS_DEFAULT_TTL_SECONDS: {{ .Values.app.faults.defaultTtlSeconds | default "0" | quote }}
+  APP_FAULTS_EVENTS_LIMIT: {{ .Values.app.faults.eventsLimit | default "50" | quote }}
+  APP_FAULTS_NAME_PREFIX: {{ .Values.app.faults.namePrefix | default "blade-" }}
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: {{ .Values.management.endpoints.web.exposure.include | default "health,info,metrics" }}
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: {{ .Values.management.endpoint.health.showDetails | default "when-authorized" }}

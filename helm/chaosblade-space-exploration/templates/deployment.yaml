@@ -1,0 +1,337 @@
+{{- if .Values.unified.enabled }}
+{{- range $serviceName, $serviceConfig := .Values.services }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chaosblade-space-exploration.fullname" $ }}-{{ $serviceName }}
+  namespace: {{ $.Values.namespace | default "chaosblade" }}
+  labels:
+    {{- include "chaosblade-space-exploration.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceName }}
+spec:
+  replicas: {{ $serviceConfig.replicas | default $.Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "chaosblade-space-exploration.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $serviceName }}
+  template:
+    metadata:
+      labels:
+        {{- include "chaosblade-space-exploration.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $serviceName }}
+    spec:
+      serviceAccountName: {{ include "chaosblade-space-exploration.serviceAccountName" $ }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ $serviceName }}
+        securityContext:
+          {{- toYaml $.Values.securityContext | nindent 10 }}
+        image: "{{ $.Values.unified.image.registry }}{{ if $.Values.unified.image.registry }}/{{ end }}{{ $.Values.unified.image.repository }}:{{ $.Values.unified.image.tag }}"
+        imagePullPolicy: {{ $.Values.unified.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ index $.Values.service.ports $serviceName }}
+          protocol: TCP
+        env:
+        - name: SERVICE_NAME
+          value: {{ $serviceName }}
+        - name: SERVER_PORT
+          value: {{ index $.Values.service.ports $serviceName | quote }}
+        - name: SPRING_PROFILES_ACTIVE
+          value: "k8s"
+        # Database configuration
+        {{- if $.Values.database.existingSecret }}
+        {{- if $.Values.database.secretKeys.username }}
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.database.existingSecret }}
+              key: {{ $.Values.database.secretKeys.username }}
+        {{- end }}
+        {{- if $.Values.database.secretKeys.password }}
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.database.existingSecret }}
+              key: {{ $.Values.database.secretKeys.password }}
+        {{- end }}
+        {{- else }}
+        # 从 ConfigMap 中读取数据库配置
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: DB_URL
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: DB_NAME
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-database
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-database
+              key: password
+        {{- end }}
+        # Redis configuration
+        {{- if $.Values.redis.existingSecret }}
+        {{- if $.Values.redis.secretKeys.password }}
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.redis.existingSecret }}
+              key: {{ $.Values.redis.secretKeys.password }}
+        {{- end }}
+        {{- else }}
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-redis
+              key: password
+        {{- end }}
+        # 从 ConfigMap 中读取 Redis 配置
+        - name: SPRING_DATA_REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: SPRING_DATA_REDIS_HOST
+        - name: SPRING_DATA_REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: SPRING_DATA_REDIS_PORT
+        - name: SPRING_DATA_REDIS_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: SPRING_DATA_REDIS_DATABASE
+        # Kubernetes configuration
+        {{- if $.Values.kubernetes.existingSecret }}
+        {{- if $.Values.kubernetes.secretKeys.token }}
+        - name: KUBERNETES_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.kubernetes.existingSecret }}
+              key: {{ $.Values.kubernetes.secretKeys.token }}
+        {{- end }}
+        {{- else }}
+        - name: KUBERNETES_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-kubernetes
+              key: token
+        {{- end }}
+        # 从 ConfigMap 中读取 Kubernetes 配置
+        - name: KUBERNETES_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: KUBERNETES_API_URL
+        - name: KUBERNETES_VERIFY_SSL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: KUBERNETES_VERIFY_SSL
+        - name: KUBERNETES_CONNECTION_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: KUBERNETES_CONNECTION_TIMEOUT
+        - name: KUBERNETES_REQUEST_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: KUBERNETES_REQUEST_TIMEOUT
+        # External services - 从 ConfigMap 中读取
+        - name: EXTERNAL_TOPOLOGY_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: EXTERNAL_TOPOLOGY_BASE_URL
+        - name: EXTERNAL_TOPOLOGY_TIMEOUT_MS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: EXTERNAL_TOPOLOGY_TIMEOUT_MS
+        # LLM configuration
+        {{- if $.Values.llm.existingSecret }}
+        {{- if $.Values.llm.secretKeys.key }}
+        - name: LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.llm.existingSecret }}
+              key: {{ $.Values.llm.secretKeys.key }}
+        {{- end }}
+        {{- else }}
+        - name: LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-llm
+              key: key
+        {{- end }}
+        # 从 ConfigMap 中读取 LLM 配置
+        - name: LLM_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: LLM_API_URL
+        - name: LLM_API_MODEL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: LLM_API_MODEL
+        - name: LLM_TIMEOUT_MS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: LLM_TIMEOUT_MS
+        - name: LLM_RETRIES
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: LLM_RETRIES
+        # Recording configuration - 从 ConfigMap 中读取
+        - name: RECORDING_ENVOY_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: RECORDING_ENVOY_IMAGE
+        - name: RECORDING_ENVOY_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: RECORDING_ENVOY_PORT
+        - name: RECORDING_ENVOY_ADMIN_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: RECORDING_ENVOY_ADMIN_PORT
+        - name: RECORDING_ENVOY_TAP_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: RECORDING_ENVOY_TAP_DIR
+        - name: RECORDING_ENVOY_MAX_BUFFERED_BYTES
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: RECORDING_ENVOY_MAX_BUFFERED_BYTES
+        - name: RECORDING_DEFAULT_DURATION_SEC
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: RECORDING_DEFAULT_DURATION_SEC
+        - name: RECORDING_AUTO_COLLECT_INTERVAL_SEC
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: RECORDING_AUTO_COLLECT_INTERVAL_SEC
+        # Jaeger configuration - 从 ConfigMap 中读取
+        - name: JAEGER_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: JAEGER_HOST
+        - name: JAEGER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: JAEGER_PORT
+        # Application configuration - 从 ConfigMap 中读取
+        - name: APP_FAULTS_DEFAULT_TTL_SECONDS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: APP_FAULTS_DEFAULT_TTL_SECONDS
+        - name: APP_FAULTS_EVENTS_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: APP_FAULTS_EVENTS_LIMIT
+        - name: APP_FAULTS_NAME_PREFIX
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: APP_FAULTS_NAME_PREFIX
+        # Management endpoints - 从 ConfigMap 中读取
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+        - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+              key: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+        # Proxy configuration
+        - name: PROXY_BASE_URL
+          value: {{ printf "http://%s-reqrsp-proxy:%d" (include "chaosblade-space-exploration.fullname" $) (index $.Values.service.ports "reqrsp-proxy") | quote }}
+        # Custom environment variables
+        {{- range $env := $serviceConfig.env }}
+        - name: {{ $env.name }}
+          value: {{ $env.value | quote }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          {{- toYaml ($serviceConfig.resources | default $.Values.resources) | nindent 10 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "chaosblade-space-exploration.fullname" $ }}-config
+      {{- with $.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

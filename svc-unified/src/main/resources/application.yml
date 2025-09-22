@@ -1,0 +1,122 @@
+# 统一应用配置文件
+# 支持通过环境变量覆盖配置
+
+spring:
+  application:
+    name: chaosblade-unified
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+  
+  # 数据库配置
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/spaceexploration?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # Redis配置
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      database: ${SPRING_DATA_REDIS_DATABASE:0}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+# 服务端口配置（根据启动的服务动态设置）
+server:
+  port: ${SERVER_PORT:8080}
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# 日志配置
+logging:
+  level:
+    com.chaosblade: ${LOG_LEVEL_CHAOSBLADE:INFO}
+    org.springframework.web: ${LOG_LEVEL_SPRING_WEB:INFO}
+    io.fabric8.kubernetes: ${LOG_LEVEL_K8S:INFO}
+    org.springframework.data.redis: ${LOG_LEVEL_REDIS:INFO}
+    root: ${LOG_LEVEL_ROOT:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Kubernetes配置
+kubernetes:
+  api:
+    url: ${KUBERNETES_API_URL:}
+    token: ${KUBERNETES_TOKEN:}
+    verify-ssl: ${KUBERNETES_VERIFY_SSL:false}
+    connection-timeout: ${KUBERNETES_CONNECTION_TIMEOUT:10000}
+    request-timeout: ${KUBERNETES_REQUEST_TIMEOUT:30000}
+
+# 代理服务配置
+proxy:
+  base-url: ${PROXY_BASE_URL:http://localhost:8105}
+
+# 外部服务配置
+external:
+  topology:
+    base-url: ${TOPOLOGY_BASE_URL:}
+    timeout-ms: ${TOPOLOGY_TIMEOUT_MS:15000}
+
+# LLM API配置
+llm:
+  api:
+    url: ${LLM_API_URL:}
+    key: ${LLM_API_KEY:}
+    model: ${LLM_API_MODEL:}
+  timeout:
+    ms: ${LLM_TIMEOUT_MS:500000}
+  retries: ${LLM_RETRIES:3}
+
+# 录制配置
+recording:
+  envoy:
+    image: ${ENVOY_IMAGE:envoyproxy/envoy:v1.28.3}
+    port: ${ENVOY_PORT:15006}
+    admin-port: ${ENVOY_ADMIN_PORT:9901}
+    tap-dir: ${ENVOY_TAP_DIR:/var/log/envoy/taps}
+    max-buffered-bytes: ${ENVOY_MAX_BUFFERED_BYTES:2097152}
+  default-duration-sec: ${RECORDING_DEFAULT_DURATION_SEC:600}
+  auto-collect-interval-sec: ${RECORDING_AUTO_COLLECT_INTERVAL_SEC:30}
+
+# Jaeger配置
+jaeger:
+  host: ${JAEGER_HOST:localhost}
+  port: ${JAEGER_PORT:16686}
+
+# 应用配置
+app:
+  faults:
+    default-ttl-seconds: ${FAULTS_DEFAULT_TTL_SECONDS:0}
+    events-limit: ${FAULTS_EVENTS_LIMIT:50}
+    name-prefix: ${FAULTS_NAME_PREFIX:blade-}

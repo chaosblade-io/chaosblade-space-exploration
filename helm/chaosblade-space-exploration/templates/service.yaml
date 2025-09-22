@@ -1,0 +1,23 @@
+{{- range $serviceName, $serviceConfig := .Values.services }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "chaosblade-space-exploration.fullname" $ }}-{{ $serviceName }}
+  namespace: {{ $.Values.namespace | default "chaosblade" }}
+  labels:
+    {{- include "chaosblade-space-exploration.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceName }}
+spec:
+  type: {{ $.Values.service.type }}
+  ports:
+  - port: {{ index $.Values.service.ports $serviceName }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "chaosblade-space-exploration.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceName }}
+{{- end }}
+{{- end }}

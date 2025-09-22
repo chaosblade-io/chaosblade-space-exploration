@@ -311,7 +311,39 @@ spec:
 ```
 - 拓扑服务（已有示例）：见 svc-topo/k8s/k8s.yaml
 
-#### 3) Docker 容器化（通用 Dockerfile 模板）
+#### 3) Helm Chart 部署（推荐生产环境）
+使用 Helm Chart 可以一键部署整个微服务架构，包括依赖的 MySQL 和 Redis。
+
+```bash
+# 1. 添加 Helm 依赖
+cd helm/chaosblade-space-exploration
+helm dependency update
+
+# 2. 基本安装（使用内置 MySQL 和 Redis）
+helm install chaosblade-space-exploration . -n chaosblade --create-namespace
+
+# 3. 生产环境安装（使用外部数据库）
+helm install chaosblade-space-exploration . \
+  -f values-production.yaml \
+  -n chaosblade \
+  --create-namespace
+
+# 4. 检查部署状态
+helm status chaosblade-space-exploration -n chaosblade
+kubectl get pods -n chaosblade
+```
+
+主要特性：
+- 自动创建所有必要的 Kubernetes 资源（Deployment、Service、ConfigMap、Secret、RBAC）
+- 支持内置或外部 MySQL/Redis
+- 完整的 RBAC 权限配置
+- 支持 Ingress 和负载均衡
+- 健康检查和监控集成
+- 支持水平扩缩容
+
+详细配置说明请参考：[Helm Chart 文档](helm/README.md)
+
+#### 4) Docker 容器化（通用 Dockerfile 模板）
 ```dockerfile
 # syntax=docker/dockerfile:1
 FROM eclipse-temurin:21-jre AS run
