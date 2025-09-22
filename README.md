@@ -81,6 +81,72 @@ Expected response format:
 }
 ```
 
+
+## 环境变量与配置分离（.env 集成）
+
+为避免配置硬编码与敏感信息泄露，项目采用“环境变量 + 配置分离”方案：
+- application.yml 中的敏感值统一以占位符形式引用：如 `${DB_URL:jdbc:mysql://localhost:3306/...}`
+- 每个服务目录内提供 `.env.example` 模板（无敏感信息），本地复制为 `.env` 并填入真实值（`.env` 已加入 .gitignore，不会提交）
+- 启动前在当前服务目录 `set -a; source .env; set +a # 自动为 .env 中的变量加 export`，Spring Boot 即可从进程环境读取变量并替换占位符
+
+### 文件与版本控制
+- 已提交的模板文件（示例，无敏感信息）：
+  - `svc-task-resource/.env.example`
+  - `svc-task-executor/.env.example`
+  - `svc-fault-scheduler/.env.example`
+  - `svc-reqrsp-proxy/.env.example`
+- 本地私有文件（含真实敏感值，已忽略）：
+  - `svc-task-resource/.env`
+  - `svc-task-executor/.env`
+  - `svc-fault-scheduler/.env`
+  - `svc-reqrsp-proxy/.env`
+- .gitignore 已确保：
+  - 任意目录下的 `.env` 被忽略；`.env.example` 会被提交
+
+### 快速上手（每个服务目录执行）
+```bash
+# 以 svc-task-executor 为例
+cd svc-task-executor
+cp -n .env.example .env   # 首次使用时复制模板
+vi .env                   # 按需填写真实值
+source .env               # 加载为当前 shell 的环境变量
+
+# 启动服务
+mvn spring-boot:run
+# 或使用打包产物
+# java -jar target/svc-task-executor-*.jar
+```
+
+### 各服务环境变量清单（按需填写）
+- svc-task-resource
+  - DB_URL, DB_USERNAME, DB_PASSWORD
+  - EXTERNAL_TOPOLOGY_BASE_URL（外部拓扑服务），EXECUTOR_BASE_URL（task-executor 服务地址）
+  - LLM_API_URL, LLM_API_KEY, LLM_API_MODEL
+- svc-task-executor
+  - K8S_API_URL, K8S_TOKEN, K8S_VERIFY_SSL
+  - DB_URL, DB_USERNAME, DB_PASSWORD
+  - PROXY_BASE_URL（指向 svc-reqrsp-proxy），SCHEDULER_BASE_URL（指向 svc-fault-scheduler）
+  - RECORDING_TOKEN（如需）、LLM_API_URL, LLM_API_KEY, LLM_API_MODEL
+- svc-fault-scheduler
+  - REDIS_HOST, REDIS_PORT, REDIS_DB
+  - K8S_API_URL, K8S_TOKEN, K8S_VERIFY_SSL
+- svc-reqrsp-proxy
+  - DB_URL, DB_USERNAME, DB_PASSWORD
+  - REDIS_HOST, REDIS_PORT, REDIS_DB
+  - K8S_API_URL, K8S_TOKEN, K8S_VERIFY_SSL
+
+> 说明：application.yml 中均已使用占位符（带合理本地默认值），若未提供环境变量，将使用默认值。
+
+### 验证占位符是否生效
+1. 在目标服务目录执行 `source .env`
+2. 启动服务并访问健康检查/简单接口（如 `/hello`）
+3. 查看启动日志或功能是否能正确访问外部依赖（MySQL/Redis/K8s 等）
+
+### 注意事项
+- 不要将真实敏感值写入 application.yml；仅在 `.env` 或 CI/CD 的环境变量/Secret 中配置
+- `.env` 仅对当前 shell 会话有效（通过 `source`），更换终端需再次加载
+- 生产环境推荐使用 Secret 管理（K8s Secret、云端密管或 Vault），通过环境变量注入容器
+
 ## Development
 
 ### Project Structure

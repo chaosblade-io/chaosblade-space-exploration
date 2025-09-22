@@ -4,9 +4,9 @@ spring:
   application:
     name: svc-task-resource
   datasource:
-    url: jdbc:mysql://116.63.51.45:3306/spaceexploration?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: ${DB_URL:jdbc:mysql://localhost:3306/spaceexploration?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:Zmzzmz010627!}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -36,17 +36,17 @@ logging:
 # External topology service endpoints
 external:
   topology:
-    base-url: http://116.63.51.45:8106
+    base-url: ${EXTERNAL_TOPOLOGY_BASE_URL:http://localhost:8106}
     timeout-ms: 15000
 
 endpoints:
-  executor-base-url: http://1.94.151.57:8102
+  executor-base-url: ${EXECUTOR_BASE_URL:http://localhost:8102}
 
 llm:
   api:
-    url: https://api.siliconflow.cn/v1/chat/completions
-    key: sk-lsbfyvywllhniumluwahhnfjahadzxgeuryhygweymdrtiqf
-    model: Qwen/QwQ-32B
+    url: ${LLM_API_URL:https://api.siliconflow.cn/v1/chat/completions}
+    key: ${LLM_API_KEY:}
+    model: ${LLM_API_MODEL:Qwen/QwQ-32B}
   timeout:
     ms: 500000
   retries: 3

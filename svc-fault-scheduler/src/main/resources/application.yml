@@ -8,9 +8,9 @@ spring:
   # Redis Configuration
   data:
     redis:
-      host: 116.63.51.45
-      port: 6379
-      database: 0
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DB:0}
       timeout: 5000ms
       lettuce:
         pool:
@@ -21,9 +21,9 @@ spring:
 
 # Kubernetes Configuration
 kubernetes:
-  api-url: https://122.112.193.220:6443
-  token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImctR3o3S2JGU2RQWUN6bzZac2tvOVcxb0lNWHkzOGdnR29jTWZtRjB3aWcifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzczNDE2NzExLCJpYXQiOjE3NDE4ODA3MTEsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0Iiwic2VydmljZWFjY291bnQiOnsibmFtZSI6ImFjY291bnQtY2x1c3Rlci1tYW5hZ2VyLWRwcmd6IiwidWlkIjoiZjcwYjJhODEtMjNmNy00Y2YyLWJhNjMtNjk1NDBhN2I2Yzk0In19LCJuYmYiOjE3NDE4ODA3MTEsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkZWZhdWx0OmFjY291bnQtY2x1c3Rlci1tYW5hZ2VyLWRwcmd6In0.gqryPjgClH5K6EecX6Gx8J6tLnkuPgZanqFsZGoDQxPJp4AzuTjKYtp5xWsw-2dU7G54f_qL7sLraXhmu2mCS-Sbyzo9CpGifZBpZmouA0v4wk28-HMMPkxJnM_UV3kH1PGrcSVd8L_OgJ4Oq1d-yqY7cGdqB-DgOf-G7JQB9IfcjKw6no5NVE4j8i_DGhNIJ5IsXu6Qyo10SvP7rTzC9ke71ma3ujqxvov1V0INsmog5eVwgynlNRoz389YoUM3-iGCYE-R23VwmAkXCDZCBXuR6d3zH0iNionCjLQStWBEhqRZK8DFQ78r9eSZ5Y5gt3mDmZxqoG_EWFRaIGvp3w
-  verify-ssl: false
+  api-url: ${K8S_API_URL:https://127.0.0.1:6443}
+  token: ${K8S_TOKEN:}
+  verify-ssl: ${K8S_VERIFY_SSL:false}
   connection-timeout: 10000
   request-timeout: 30000
 
