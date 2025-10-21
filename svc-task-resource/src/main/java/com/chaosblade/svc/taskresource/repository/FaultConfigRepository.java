@@ -11,12 +11,13 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface FaultConfigRepository extends JpaRepository<FaultConfig, Long> {
 
-    @Query("SELECT f FROM FaultConfig f WHERE (:nodeId IS NULL OR f.nodeId = :nodeId) " +
-            "AND (:type IS NULL OR f.type = :type) " +
-            "AND (:taskId IS NULL OR f.taskId = :taskId)")
-    Page<FaultConfig> findByConditions(@Param("nodeId") Long nodeId,
-                                       @Param("type") String type,
-                                       @Param("taskId") Long taskId,
-                                       Pageable pageable);
+  @Query(
+      "SELECT f FROM FaultConfig f WHERE (:nodeId IS NULL OR f.nodeId = :nodeId) "
+          + "AND (:type IS NULL OR f.type = :type) "
+          + "AND (:taskId IS NULL OR f.taskId = :taskId)")
+  Page<FaultConfig> findByConditions(
+      @Param("nodeId") Long nodeId,
+      @Param("type") String type,
+      @Param("taskId") Long taskId,
+      Pageable pageable);
 }
-

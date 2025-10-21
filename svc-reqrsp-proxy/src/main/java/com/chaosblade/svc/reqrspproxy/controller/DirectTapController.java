@@ -5,124 +5,111 @@ import com.chaosblade.svc.reqrspproxy.dto.RecordedEntry;
 import com.chaosblade.svc.reqrspproxy.entity.RecordingState;
 import com.chaosblade.svc.reqrspproxy.service.DirectTapReader;
 import com.chaosblade.svc.reqrspproxy.service.RecordingStateService;
-
 import jakarta.validation.constraints.Min;
-
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-/**
- * 直接从 Pod 文件系统读取 Tap 数据的控制器
- * 用于调试和临时访问 tap 数据
- */
+/** 直接从 Pod 文件系统读取 Tap 数据的控制器 用于调试和临时访问 tap 数据 */
 @RestController
 @RequestMapping("/api/direct-tap")
 public class DirectTapController {
-    
-    private static final Logger logger = LoggerFactory.getLogger(DirectTapController.class);
-    
-    @Autowired
-    private DirectTapReader directTapReader;
 
-    @Autowired
-    private RecordingStateService stateService;
-    
-    /**
-     * 直接从 Pod 读取 tap 数据
-     * GET /api/direct-tap/{namespace}/{serviceName}/entries
-     */
-    @GetMapping("/{namespace}/{serviceName}/entries")
-    public ApiResponse<List<RecordedEntry>> getEntriesDirectly(
-            @PathVariable String namespace,
-            @PathVariable String serviceName,
-            @RequestParam(value = "offset", defaultValue = "0") @Min(0) int offset,
-            @RequestParam(value = "limit", defaultValue = "50") @Min(1) int limit) {
-        
-        logger.info("GET /api/direct-tap/{}/{}/entries - offset: {}, limit: {}", 
-                   namespace, serviceName, offset, limit);
-        
-        try {
-            List<RecordedEntry> entries = directTapReader.readTapDataDirectly(
-                namespace, serviceName, offset, limit);
-            
-            logger.info("Successfully read {} entries from {}/{}", 
-                       entries.size(), namespace, serviceName);
-            return ApiResponse.success(entries);
-            
-        } catch (Exception e) {
-            logger.error("Failed to read tap data directly from {}/{}: {}", 
-                        namespace, serviceName, e.getMessage(), e);
-            return ApiResponse.error("500", "Failed to read tap data: " + e.getMessage());
-        }
+  private static final Logger logger = LoggerFactory.getLogger(DirectTapController.class);
+
+  @Autowired private DirectTapReader directTapReader;
+
+  @Autowired private RecordingStateService stateService;
+
+  /** 直接从 Pod 读取 tap 数据 GET /api/direct-tap/{namespace}/{serviceName}/entries */
+  @GetMapping("/{namespace}/{serviceName}/entries")
+  public ApiResponse<List<RecordedEntry>> getEntriesDirectly(
+      @PathVariable String namespace,
+      @PathVariable String serviceName,
+      @RequestParam(value = "offset", defaultValue = "0") @Min(0) int offset,
+      @RequestParam(value = "limit", defaultValue = "50") @Min(1) int limit) {
+
+    logger.info(
+        "GET /api/direct-tap/{}/{}/entries - offset: {}, limit: {}",
+        namespace,
+        serviceName,
+        offset,
+        limit);
+
+    try {
+      List<RecordedEntry> entries =
+          directTapReader.readTapDataDirectly(namespace, serviceName, offset, limit);
+
+      logger.info(
+          "Successfully read {} entries from {}/{}", entries.size(), namespace, serviceName);
+      return ApiResponse.success(entries);
+
+    } catch (Exception e) {
+      logger.error(
+          "Failed to read tap data directly from {}/{}: {}",
+          namespace,
+          serviceName,
+          e.getMessage(),
+          e);
+      return ApiResponse.error("500", "Failed to read tap data: " + e.getMessage());
     }
-    
-    /**
-     * 获取指定服务的 Pod 列表和 tap 文件统计
-     * GET /api/direct-tap/{namespace}/{serviceName}/info
-     */
-    @GetMapping("/{namespace}/{serviceName}/info")
-    public ApiResponse<Object> getTapInfo(
-            @PathVariable String namespace,
-            @PathVariable String serviceName) {
+  }
 
-        logger.info("GET /api/direct-tap/{}/{}/info", namespace, serviceName);
+  /** 获取指定服务的 Pod 列表和 tap 文件统计 GET /api/direct-tap/{namespace}/{serviceName}/info */
+  @GetMapping("/{namespace}/{serviceName}/info")
+  public ApiResponse<Object> getTapInfo(
+      @PathVariable String namespace, @PathVariable String serviceName) {
 
-        try {
-            Object info = directTapReader.getTapInfo(namespace, serviceName);
-            return ApiResponse.success(info);
+    logger.info("GET /api/direct-tap/{}/{}/info", namespace, serviceName);
 
-        } catch (Exception e) {
-            logger.error("Failed to get tap info for {}/{}: {}",
-                        namespace, serviceName, e.getMessage(), e);
-            return ApiResponse.error("500", "Failed to get tap info: " + e.getMessage());
-        }
+    try {
+      Object info = directTapReader.getTapInfo(namespace, serviceName);
+      return ApiResponse.success(info);
+
+    } catch (Exception e) {
+      logger.error(
+          "Failed to get tap info for {}/{}: {}", namespace, serviceName, e.getMessage(), e);
+      return ApiResponse.error("500", "Failed to get tap info: " + e.getMessage());
     }
+  }
 
-    /**
-     * 获取所有运行中的录制 ID
-     * GET /api/direct-tap/recordings/active
-     */
-    @GetMapping("/recordings/active")
-    public ApiResponse<List<String>> getActiveRecordings() {
+  /** 获取所有运行中的录制 ID GET /api/direct-tap/recordings/active */
+  @GetMapping("/recordings/active")
+  public ApiResponse<List<String>> getActiveRecordings() {
 
-        logger.info("GET /api/direct-tap/recordings/active");
+    logger.info("GET /api/direct-tap/recordings/active");
 
-        try {
-            List<String> activeRecordings = stateService.getAllActiveRecordings();
+    try {
+      List<String> activeRecordings = stateService.getAllActiveRecordings();
 
-            logger.info("Found {} active recordings", activeRecordings.size());
+      logger.info("Found {} active recordings", activeRecordings.size());
 
-            return ApiResponse.success(activeRecordings);
+      return ApiResponse.success(activeRecordings);
 
-        } catch (Exception e) {
-            logger.error("Failed to get active recordings: {}", e.getMessage(), e);
-            return ApiResponse.error("500", "Failed to get active recordings: " + e.getMessage());
-        }
+    } catch (Exception e) {
+      logger.error("Failed to get active recordings: {}", e.getMessage(), e);
+      return ApiResponse.error("500", "Failed to get active recordings: " + e.getMessage());
     }
+  }
 
-    /**
-     * 获取所有运行中的录制详细信息
-     * GET /api/direct-tap/recordings/active/details
-     */
-    @GetMapping("/recordings/active/details")
-    public ApiResponse<List<RecordingState>> getActiveRecordingDetails() {
+  /** 获取所有运行中的录制详细信息 GET /api/direct-tap/recordings/active/details */
+  @GetMapping("/recordings/active/details")
+  public ApiResponse<List<RecordingState>> getActiveRecordingDetails() {
 
-        logger.info("GET /api/direct-tap/recordings/active/details");
+    logger.info("GET /api/direct-tap/recordings/active/details");
 
-        try {
-            List<RecordingState> activeRecordings = stateService.getAllActiveRecordingStates();
+    try {
+      List<RecordingState> activeRecordings = stateService.getAllActiveRecordingStates();
 
-            logger.info("Found {} active recordings with details", activeRecordings.size());
+      logger.info("Found {} active recordings with details", activeRecordings.size());
 
-            return ApiResponse.success(activeRecordings);
+      return ApiResponse.success(activeRecordings);
 
-        } catch (Exception e) {
-            logger.error("Failed to get active recording details: {}", e.getMessage(), e);
-            return ApiResponse.error("500", "Failed to get active recording details: " + e.getMessage());
-        }
+    } catch (Exception e) {
+      logger.error("Failed to get active recording details: {}", e.getMessage(), e);
+      return ApiResponse.error("500", "Failed to get active recording details: " + e.getMessage());
     }
+  }
 }

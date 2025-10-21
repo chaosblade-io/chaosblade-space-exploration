@@ -18,52 +18,63 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class TaskSloService {
 
-    private static final Logger logger = LoggerFactory.getLogger(TaskSloService.class);
+  private static final Logger logger = LoggerFactory.getLogger(TaskSloService.class);
 
-    @Autowired
-    private TaskSloRepository repository;
+  @Autowired private TaskSloRepository repository;
 
-    @Transactional(readOnly = true)
-    public PageResponse<TaskSlo> pageQuery(Integer p95, Integer p99, Integer errRate, Long taskId, Long nodeId,
-                                           int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "id"));
-        Page<TaskSlo> p = repository.findByConditions(p95, p99, errRate, taskId, nodeId, pageable);
-        return PageResponse.of(p.getContent(), p.getTotalElements(), page, size);
+  @Transactional(readOnly = true)
+  public PageResponse<TaskSlo> pageQuery(
+      Integer p95, Integer p99, Integer errRate, Long taskId, Long nodeId, int page, int size) {
+    Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "id"));
+    Page<TaskSlo> p = repository.findByConditions(p95, p99, errRate, taskId, nodeId, pageable);
+    return PageResponse.of(p.getContent(), p.getTotalElements(), page, size);
+  }
+
+  @Transactional(readOnly = true)
+  public TaskSlo getById(Long id) {
+    return repository
+        .findById(id)
+        .orElseThrow(() -> new BusinessException("TASK_SLO_NOT_FOUND", "任务SLO不存在: " + id));
+  }
+
+  public TaskSlo create(TaskSlo slo) {
+    // 基本限制：至少有一个限制项
+    if (slo.getP95() == null && slo.getP99() == null && slo.getErrRate() == null) {
+      throw new BusinessException("TASK_SLO_INVALID", "至少设置一个限制项: p95/p99/errRate");
     }
+    TaskSlo saved = repository.save(slo);
+    logger.info(
+        "TaskSlo created id={}, p95={}, p99={}, errRate={}, taskId={}, nodeId={}",
+        saved.getId(),
+        saved.getP95(),
+        saved.getP99(),
+        saved.getErrRate(),
+        saved.getTaskId(),
+        saved.getNodeId());
+    return saved;
+  }
 
-    @Transactional(readOnly = true)
-    public TaskSlo getById(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new BusinessException("TASK_SLO_NOT_FOUND", "任务SLO不存在: " + id));
+  public TaskSlo update(Long id, TaskSlo slo) {
+    TaskSlo existing = getById(id);
+    slo.setId(existing.getId());
+    if (slo.getP95() == null && slo.getP99() == null && slo.getErrRate() == null) {
+      throw new BusinessException("TASK_SLO_INVALID", "至少设置一个限制项: p95/p99/errRate");
     }
+    TaskSlo saved = repository.save(slo);
+    logger.info(
+        "TaskSlo updated id={}, p95={}, p99={}, errRate={}, taskId={}, nodeId={}",
+        saved.getId(),
+        saved.getP95(),
+        saved.getP99(),
+        saved.getErrRate(),
+        saved.getTaskId(),
+        saved.getNodeId());
+    return saved;
+  }
 
-    public TaskSlo create(TaskSlo slo) {
-        // 基本限制：至少有一个限制项
-        if (slo.getP95() == null && slo.getP99() == null && slo.getErrRate() == null) {
-            throw new BusinessException("TASK_SLO_INVALID", "至少设置一个限制项: p95/p99/errRate");
-        }
-        TaskSlo saved = repository.save(slo);
-        logger.info("TaskSlo created id={}, p95={}, p99={}, errRate={}, taskId={}, nodeId={}",
-                saved.getId(), saved.getP95(), saved.getP99(), saved.getErrRate(), saved.getTaskId(), saved.getNodeId());
-        return saved;
-    }
-
-    public TaskSlo update(Long id, TaskSlo slo) {
-        TaskSlo existing = getById(id);
-        slo.setId(existing.getId());
-        if (slo.getP95() == null && slo.getP99() == null && slo.getErrRate() == null) {
-            throw new BusinessException("TASK_SLO_INVALID", "至少设置一个限制项: p95/p99/errRate");
-        }
-        TaskSlo saved = repository.save(slo);
-        logger.info("TaskSlo updated id={}, p95={}, p99={}, errRate={}, taskId={}, nodeId={}",
-                saved.getId(), saved.getP95(), saved.getP99(), saved.getErrRate(), saved.getTaskId(), saved.getNodeId());
-        return saved;
-    }
-
-    public void delete(Long id) {
-        TaskSlo existing = getById(id);
-        repository.delete(existing);
-        logger.info("TaskSlo deleted id={}", id);
-    }
+  public void delete(Long id) {
+    TaskSlo existing = getById(id);
+    repository.delete(existing);
+    logger.info("TaskSlo deleted id={}", id);
+  }
 }
-

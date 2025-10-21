@@ -3,205 +3,213 @@ package com.chaosblade.svc.reqrspproxy.entity;
 import com.chaosblade.svc.reqrspproxy.dto.InterceptionRule;
 import com.chaosblade.svc.reqrspproxy.dto.RecordingRule;
 import com.fasterxml.jackson.annotation.JsonFormat;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 录制状态实体
- */
+/** 录制状态实体 */
 public class RecordingState {
-    
-    public enum RecordingStatus {
-        STARTING,
-        RECORDING,
-        STOPPING,
-        STOPPED,
-        ERROR
-    }
-    
-    private String recordingId;
-    private String namespace;
-    private String serviceName;
-    private Integer appPortOriginal;
-    private Integer envoyPort;
-    private List<RecordingRule> rules;
-    private List<InterceptionRule> interceptionRules = new ArrayList<>();
-    private RecordingStatus status;
-    private Integer durationSec;
-    
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
-    private LocalDateTime startedAt;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
-    private LocalDateTime stoppedAt;
+  public enum RecordingStatus {
+    STARTING,
+    RECORDING,
+    STOPPING,
+    STOPPED,
+    ERROR
+  }
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
-    private LocalDateTime expiresAt;
-    
-    private String errorMessage;
-    private String configMapName;
-    private String deploymentName;
-    
-    public RecordingState() {}
-    
-    public RecordingState(String recordingId, String namespace, String serviceName) {
-        this.recordingId = recordingId;
-        this.namespace = namespace;
-        this.serviceName = serviceName;
-        this.status = RecordingStatus.STARTING;
-        this.startedAt = LocalDateTime.now();
-    }
-    
-    public String getRecordingId() {
-        return recordingId;
-    }
-    
-    public void setRecordingId(String recordingId) {
-        this.recordingId = recordingId;
-    }
-    
-    public String getNamespace() {
-        return namespace;
-    }
-    
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
-    }
-    
-    public String getServiceName() {
-        return serviceName;
-    }
-    
-    public void setServiceName(String serviceName) {
-        this.serviceName = serviceName;
-    }
-    
-    public Integer getAppPortOriginal() {
-        return appPortOriginal;
-    }
-    
-    public void setAppPortOriginal(Integer appPortOriginal) {
-        this.appPortOriginal = appPortOriginal;
-    }
-    
-    public Integer getEnvoyPort() {
-        return envoyPort;
-    }
-    
-    public void setEnvoyPort(Integer envoyPort) {
-        this.envoyPort = envoyPort;
-    }
-    
-    public List<RecordingRule> getRules() {
-        return rules;
-    }
-    
-    public void setRules(List<RecordingRule> rules) {
-        this.rules = rules;
-    }
+  private String recordingId;
+  private String namespace;
+  private String serviceName;
+  private Integer appPortOriginal;
+  private Integer envoyPort;
+  private List<RecordingRule> rules;
+  private List<InterceptionRule> interceptionRules = new ArrayList<>();
+  private RecordingStatus status;
+  private Integer durationSec;
 
-    public List<InterceptionRule> getInterceptionRules() {
-        return interceptionRules;
-    }
+  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+  private LocalDateTime startedAt;
 
-    public void setInterceptionRules(List<InterceptionRule> interceptionRules) {
-        this.interceptionRules = interceptionRules != null ? interceptionRules : new ArrayList<>();
-    }
+  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+  private LocalDateTime stoppedAt;
 
-    public RecordingStatus getStatus() {
-        return status;
-    }
+  @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+  private LocalDateTime expiresAt;
 
-    public void setStatus(RecordingStatus status) {
-        this.status = status;
-    }
-    
-    public Integer getDurationSec() {
-        return durationSec;
-    }
-    
-    public void setDurationSec(Integer durationSec) {
-        this.durationSec = durationSec;
-    }
-    
-    public LocalDateTime getStartedAt() {
-        return startedAt;
-    }
+  private String errorMessage;
+  private String configMapName;
+  private String deploymentName;
 
-    public void setStartedAt(LocalDateTime startedAt) {
-        this.startedAt = startedAt;
-    }
+  public RecordingState() {}
 
-    public LocalDateTime getStoppedAt() {
-        return stoppedAt;
-    }
+  public RecordingState(String recordingId, String namespace, String serviceName) {
+    this.recordingId = recordingId;
+    this.namespace = namespace;
+    this.serviceName = serviceName;
+    this.status = RecordingStatus.STARTING;
+    this.startedAt = LocalDateTime.now();
+  }
 
-    public void setStoppedAt(LocalDateTime stoppedAt) {
-        this.stoppedAt = stoppedAt;
-    }
+  public String getRecordingId() {
+    return recordingId;
+  }
 
-    public LocalDateTime getExpiresAt() {
-        return expiresAt;
-    }
+  public void setRecordingId(String recordingId) {
+    this.recordingId = recordingId;
+  }
 
-    public void setExpiresAt(LocalDateTime expiresAt) {
-        this.expiresAt = expiresAt;
-    }
+  public String getNamespace() {
+    return namespace;
+  }
 
-    // 保持向后兼容性的方法
-    public LocalDateTime getStartAt() {
-        return startedAt;
-    }
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
+  }
 
-    public void setStartAt(LocalDateTime startAt) {
-        this.startedAt = startAt;
-    }
+  public String getServiceName() {
+    return serviceName;
+  }
 
-    public LocalDateTime getEndAt() {
-        return stoppedAt;
-    }
+  public void setServiceName(String serviceName) {
+    this.serviceName = serviceName;
+  }
 
-    public void setEndAt(LocalDateTime endAt) {
-        this.stoppedAt = endAt;
-    }
-    
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-    
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
-    }
-    
-    public String getConfigMapName() {
-        return configMapName;
-    }
-    
-    public void setConfigMapName(String configMapName) {
-        this.configMapName = configMapName;
-    }
-    
-    public String getDeploymentName() {
-        return deploymentName;
-    }
-    
-    public void setDeploymentName(String deploymentName) {
-        this.deploymentName = deploymentName;
-    }
-    
-    @Override
-    public String toString() {
-        return "RecordingState{" +
-                "recordingId='" + recordingId + '\'' +
-                ", namespace='" + namespace + '\'' +
-                ", serviceName='" + serviceName + '\'' +
-                ", appPortOriginal=" + appPortOriginal +
-                ", envoyPort=" + envoyPort +
-                ", status=" + status +
-                ", startedAt=" + startedAt +
-                ", stoppedAt=" + stoppedAt +
-                '}';
-    }
+  public Integer getAppPortOriginal() {
+    return appPortOriginal;
+  }
+
+  public void setAppPortOriginal(Integer appPortOriginal) {
+    this.appPortOriginal = appPortOriginal;
+  }
+
+  public Integer getEnvoyPort() {
+    return envoyPort;
+  }
+
+  public void setEnvoyPort(Integer envoyPort) {
+    this.envoyPort = envoyPort;
+  }
+
+  public List<RecordingRule> getRules() {
+    return rules;
+  }
+
+  public void setRules(List<RecordingRule> rules) {
+    this.rules = rules;
+  }
+
+  public List<InterceptionRule> getInterceptionRules() {
+    return interceptionRules;
+  }
+
+  public void setInterceptionRules(List<InterceptionRule> interceptionRules) {
+    this.interceptionRules = interceptionRules != null ? interceptionRules : new ArrayList<>();
+  }
+
+  public RecordingStatus getStatus() {
+    return status;
+  }
+
+  public void setStatus(RecordingStatus status) {
+    this.status = status;
+  }
+
+  public Integer getDurationSec() {
+    return durationSec;
+  }
+
+  public void setDurationSec(Integer durationSec) {
+    this.durationSec = durationSec;
+  }
+
+  public LocalDateTime getStartedAt() {
+    return startedAt;
+  }
+
+  public void setStartedAt(LocalDateTime startedAt) {
+    this.startedAt = startedAt;
+  }
+
+  public LocalDateTime getStoppedAt() {
+    return stoppedAt;
+  }
+
+  public void setStoppedAt(LocalDateTime stoppedAt) {
+    this.stoppedAt = stoppedAt;
+  }
+
+  public LocalDateTime getExpiresAt() {
+    return expiresAt;
+  }
+
+  public void setExpiresAt(LocalDateTime expiresAt) {
+    this.expiresAt = expiresAt;
+  }
+
+  // 保持向后兼容性的方法
+  public LocalDateTime getStartAt() {
+    return startedAt;
+  }
+
+  public void setStartAt(LocalDateTime startAt) {
+    this.startedAt = startAt;
+  }
+
+  public LocalDateTime getEndAt() {
+    return stoppedAt;
+  }
+
+  public void setEndAt(LocalDateTime endAt) {
+    this.stoppedAt = endAt;
+  }
+
+  public String getErrorMessage() {
+    return errorMessage;
+  }
+
+  public void setErrorMessage(String errorMessage) {
+    this.errorMessage = errorMessage;
+  }
+
+  public String getConfigMapName() {
+    return configMapName;
+  }
+
+  public void setConfigMapName(String configMapName) {
+    this.configMapName = configMapName;
+  }
+
+  public String getDeploymentName() {
+    return deploymentName;
+  }
+
+  public void setDeploymentName(String deploymentName) {
+    this.deploymentName = deploymentName;
+  }
+
+  @Override
+  public String toString() {
+    return "RecordingState{"
+        + "recordingId='"
+        + recordingId
+        + '\''
+        + ", namespace='"
+        + namespace
+        + '\''
+        + ", serviceName='"
+        + serviceName
+        + '\''
+        + ", appPortOriginal="
+        + appPortOriginal
+        + ", envoyPort="
+        + envoyPort
+        + ", status="
+        + status
+        + ", startedAt="
+        + startedAt
+        + ", stoppedAt="
+        + stoppedAt
+        + '}';
+  }
 }

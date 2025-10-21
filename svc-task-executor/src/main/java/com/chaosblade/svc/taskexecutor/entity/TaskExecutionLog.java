@@ -6,70 +6,113 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "task_execution_log")
 public class TaskExecutionLog {
-    @Id
-    private Long id;
+  @Id private Long id;
 
-    @Column(name = "execution_id", nullable = false)
-    private Long executionId;
+  @Column(name = "execution_id", nullable = false)
+  private Long executionId;
 
-    @Column(name = "ts", nullable = false)
-    private LocalDateTime ts;
+  @Column(name = "ts", nullable = false)
+  private LocalDateTime ts;
 
-    @Column(name = "level", nullable = false)
-    private Integer level; // 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR
+  @Column(name = "level", nullable = false)
+  private Integer level; // 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR
 
-    @Column(name = "message", columnDefinition = "TEXT", nullable = false)
-    private String message;
+  @Column(name = "message", columnDefinition = "TEXT", nullable = false)
+  private String message;
 
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
-    private LocalDateTime createdAt;
+  @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+  private LocalDateTime createdAt;
 
-    public enum LogLevel {
-        DEBUG(0), INFO(1), WARN(2), ERROR(3);
-        
-        private final int value;
-        LogLevel(int value) { this.value = value; }
-        public int getValue() { return value; }
-        
-        public static LogLevel fromValue(int value) {
-            for (LogLevel level : values()) {
-                if (level.value == value) return level;
-            }
-            return INFO;
-        }
+  public enum LogLevel {
+    DEBUG(0),
+    INFO(1),
+    WARN(2),
+    ERROR(3);
+
+    private final int value;
+
+    LogLevel(int value) {
+      this.value = value;
     }
 
-    // Constructors
-    public TaskExecutionLog() {}
-
-    public TaskExecutionLog(Long executionId, LogLevel level, String message) {
-        this.id = com.chaosblade.svc.taskexecutor.util.Ids.newId();
-        this.executionId = executionId;
-        this.level = level.getValue();
-        this.message = message;
-        this.ts = LocalDateTime.now();
+    public int getValue() {
+      return value;
     }
 
-    // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public static LogLevel fromValue(int value) {
+      for (LogLevel level : values()) {
+        if (level.value == value) return level;
+      }
+      return INFO;
+    }
+  }
 
-    public Long getExecutionId() { return executionId; }
-    public void setExecutionId(Long executionId) { this.executionId = executionId; }
+  // Constructors
+  public TaskExecutionLog() {}
 
-    public LocalDateTime getTs() { return ts; }
-    public void setTs(LocalDateTime ts) { this.ts = ts; }
+  public TaskExecutionLog(Long executionId, LogLevel level, String message) {
+    this.id = com.chaosblade.svc.taskexecutor.util.Ids.newId();
+    this.executionId = executionId;
+    this.level = level.getValue();
+    this.message = message;
+    this.ts = LocalDateTime.now();
+  }
 
-    public Integer getLevel() { return level; }
-    public void setLevel(Integer level) { this.level = level; }
+  // Getters and Setters
+  public Long getId() {
+    return id;
+  }
 
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+  public Long getExecutionId() {
+    return executionId;
+  }
 
-    // Helper methods
-    public LogLevel getLogLevel() { return LogLevel.fromValue(level); }
-    public void setLogLevel(LogLevel logLevel) { this.level = logLevel.getValue(); }
+  public void setExecutionId(Long executionId) {
+    this.executionId = executionId;
+  }
+
+  public LocalDateTime getTs() {
+    return ts;
+  }
+
+  public void setTs(LocalDateTime ts) {
+    this.ts = ts;
+  }
+
+  public Integer getLevel() {
+    return level;
+  }
+
+  public void setLevel(Integer level) {
+    this.level = level;
+  }
+
+  public String getMessage() {
+    return message;
+  }
+
+  public void setMessage(String message) {
+    this.message = message;
+  }
+
+  public LocalDateTime getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(LocalDateTime createdAt) {
+    this.createdAt = createdAt;
+  }
+
+  // Helper methods
+  public LogLevel getLogLevel() {
+    return LogLevel.fromValue(level);
+  }
+
+  public void setLogLevel(LogLevel logLevel) {
+    this.level = logLevel.getValue();
+  }
 }

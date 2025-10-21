@@ -8,7 +8,7 @@ trim_trailing_whitespace = true
 
 [*.{java,xml,yml,yaml,properties}]
 indent_style = space
-indent_size = 4
+indent_size = 2
 
 [*.{json,js,ts}]
 indent_style = space

@@ -7,9 +7,8 @@ import reactor.core.publisher.Mono;
 
 @RestController
 public class HelloController {
-    @GetMapping("/hello")
-    public Mono<ApiResponse<String>> hello() {
-        return Mono.just(ApiResponse.ok("svc-reqrsp-proxy: hello world"));
-    }
+  @GetMapping("/hello")
+  public Mono<ApiResponse<String>> hello() {
+    return Mono.just(ApiResponse.ok("svc-reqrsp-proxy: hello world"));
+  }
 }
-

@@ -1,97 +1,93 @@
 package com.chaosblade.svc.topo.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chaosblade.svc.topo.model.topology.TopologyGraph;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * 拓扑可视化控制器
  *
- * 提供拓扑图可视化相关的API：
- * 1. 图形统计信息
- * 2. 导出功能
+ * <p>提供拓扑图可视化相关的API： 1. 图形统计信息 2. 导出功能
  */
 @RestController
 @RequestMapping("/api/visualization")
 @CrossOrigin(origins = "*")
 public class TopoVisualizationController {
 
-    private static final Logger logger = LoggerFactory.getLogger(TopoVisualizationController.class);
+  private static final Logger logger = LoggerFactory.getLogger(TopoVisualizationController.class);
 
-    @Autowired
-    private ObjectMapper objectMapper;
+  @Autowired private ObjectMapper objectMapper;
 
-    /**
-     * 获取图形统计信息
-     */
-    @PostMapping("/statistics")
-    public ResponseEntity<Map<String, Object>> getTopologyStatistics(@RequestBody TopologyGraph topology) {
-        logger.info("获取拓扑图统计信息");
+  /** 获取图形统计信息 */
+  @PostMapping("/statistics")
+  public ResponseEntity<Map<String, Object>> getTopologyStatistics(
+      @RequestBody TopologyGraph topology) {
+    logger.info("获取拓扑图统计信息");
 
-        try {
-            TopologyGraph.GraphStatistics stats = topology.getStatistics();
+    try {
+      TopologyGraph.GraphStatistics stats = topology.getStatistics();
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("nodeCount", stats.getNodeCount());
-            response.put("edgeCount", stats.getEdgeCount());
-            response.put("nodeTypeCount", stats.getNodeTypeCount());
-            response.put("edgeTypeCount", stats.getEdgeTypeCount());
+      Map<String, Object> response = new HashMap<>();
+      response.put("success", true);
+      response.put("nodeCount", stats.getNodeCount());
+      response.put("edgeCount", stats.getEdgeCount());
+      response.put("nodeTypeCount", stats.getNodeTypeCount());
+      response.put("edgeTypeCount", stats.getEdgeTypeCount());
 
-            // 计算层级分布
-            Map<String, Integer> levelDistribution = new HashMap<>();
-            topology.getNodes().forEach(node -> {
-                String level = "Level " + (node.getEntityType() != null ? node.getEntityType().getLevel() : 0);
+      // 计算层级分布
+      Map<String, Integer> levelDistribution = new HashMap<>();
+      topology
+          .getNodes()
+          .forEach(
+              node -> {
+                String level =
+                    "Level " + (node.getEntityType() != null ? node.getEntityType().getLevel() : 0);
                 levelDistribution.put(level, levelDistribution.getOrDefault(level, 0) + 1);
-            });
-            response.put("levelDistribution", levelDistribution);
+              });
+      response.put("levelDistribution", levelDistribution);
 
-            return ResponseEntity.ok(response);
+      return ResponseEntity.ok(response);
 
-        } catch (Exception e) {
-            logger.error("获取拓扑图统计信息失败: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
-        }
+    } catch (Exception e) {
+      logger.error("获取拓扑图统计信息失败: {}", e.getMessage(), e);
+      return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
     }
+  }
 
-    /**
-     * 导出拓扑图数据
-     */
-    @PostMapping("/export/json")
-    public ResponseEntity<Map<String, Object>> exportTopologyAsJson(@RequestBody TopologyGraph topology) {
-        logger.info("导出拓扑图为JSON格式");
+  /** 导出拓扑图数据 */
+  @PostMapping("/export/json")
+  public ResponseEntity<Map<String, Object>> exportTopologyAsJson(
+      @RequestBody TopologyGraph topology) {
+    logger.info("导出拓扑图为JSON格式");
 
-        try {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("format", "json");
-            response.put("topology", topology);
-            response.put("exportedAt", System.currentTimeMillis());
+    try {
+      Map<String, Object> response = new HashMap<>();
+      response.put("success", true);
+      response.put("format", "json");
+      response.put("topology", topology);
+      response.put("exportedAt", System.currentTimeMillis());
 
-            return ResponseEntity.ok(response);
+      return ResponseEntity.ok(response);
 
-        } catch (Exception e) {
-            logger.error("导出拓扑数据失败: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
-        }
+    } catch (Exception e) {
+      logger.error("导出拓扑数据失败: {}", e.getMessage(), e);
+      return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
     }
+  }
 
-    /**
-     * 创建错误响应
-     */
-    private Map<String, Object> createErrorResponse(String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("error", message);
-        response.put("timestamp", System.currentTimeMillis());
+  /** 创建错误响应 */
+  private Map<String, Object> createErrorResponse(String message) {
+    Map<String, Object> response = new HashMap<>();
+    response.put("success", false);
+    response.put("error", message);
+    response.put("timestamp", System.currentTimeMillis());
 
-        return response;
-    }
+    return response;
+  }
 }
