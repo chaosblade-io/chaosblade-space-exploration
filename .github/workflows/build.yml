@@ -45,6 +45,9 @@ jobs:
       #      - name: Run tests
       #        run: mvn test
 
+      - name: Check License Header
+        uses: korandoru/hawkeye@v6
+
       - name: Package JAR
         run: |
           cd svc-topo
