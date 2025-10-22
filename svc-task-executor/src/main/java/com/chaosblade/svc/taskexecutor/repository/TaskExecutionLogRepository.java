@@ -27,10 +27,11 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TaskExecutionLogRepository extends JpaRepository<TaskExecutionLog, Long> {
 
-    @Query("SELECT l FROM TaskExecutionLog l WHERE l.executionId = :executionId " +
-           "AND (:minLevel IS NULL OR l.level >= :minLevel) ORDER BY l.ts ASC")
-    Page<TaskExecutionLog> findByExecutionIdOrderByTsAsc(@Param("executionId") Long executionId,
-                                                         @Param("minLevel") Integer minLevel,
-                                                         Pageable pageable);
+  @Query(
+      "SELECT l FROM TaskExecutionLog l WHERE l.executionId = :executionId "
+          + "AND (:minLevel IS NULL OR l.level >= :minLevel) ORDER BY l.ts ASC")
+  Page<TaskExecutionLog> findByExecutionIdOrderByTsAsc(
+      @Param("executionId") Long executionId,
+      @Param("minLevel") Integer minLevel,
+      Pageable pageable);
 }
-

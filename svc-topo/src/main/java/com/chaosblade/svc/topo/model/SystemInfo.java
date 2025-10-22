@@ -16,128 +16,142 @@
 
 package com.chaosblade.svc.topo.model;
 
-import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SystemInfo {
 
-    @JsonProperty("id")
-    private Long id;
+  @JsonProperty("id")
+  private Long id;
 
-    @JsonProperty("systemKey")
-    private String key;
+  @JsonProperty("systemKey")
+  private String key;
 
-    @JsonProperty("systemAlias")
-    private List<String> alias;
+  @JsonProperty("systemAlias")
+  private List<String> alias;
 
-    @JsonProperty("name")
-    private String name;
+  @JsonProperty("name")
+  private String name;
 
-    @JsonProperty("description")
-    private String description;
+  @JsonProperty("description")
+  private String description;
 
-    @JsonProperty("owner")
-    private String owner;
+  @JsonProperty("owner")
+  private String owner;
 
-    @JsonProperty("defaultEnvironment")
-    private String defaultEnvironment;
+  @JsonProperty("defaultEnvironment")
+  private String defaultEnvironment;
 
-    @JsonProperty("rootService")
-    private String rootService;
+  @JsonProperty("rootService")
+  private String rootService;
 
-    @JsonProperty("rootOperation")
-    private String rootOperation;
+  @JsonProperty("rootOperation")
+  private String rootOperation;
 
-    // Getters and Setters
+  // Getters and Setters
 
-    public Long getId() {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public String getKey() {
-        return key;
-    }
+  public String getKey() {
+    return key;
+  }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
+  public void setKey(String key) {
+    this.key = key;
+  }
 
-    public List<String> getAlias() {
-        return alias;
-    }
+  public List<String> getAlias() {
+    return alias;
+  }
 
-    public void setAlias(List<String> alias) {
-        this.alias = alias;
-    }
+  public void setAlias(List<String> alias) {
+    this.alias = alias;
+  }
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+  public void setName(String name) {
+    this.name = name;
+  }
 
-    public String getDescription() {
-        return description;
-    }
+  public String getDescription() {
+    return description;
+  }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+  public void setDescription(String description) {
+    this.description = description;
+  }
 
-    public String getOwner() {
-        return owner;
-    }
+  public String getOwner() {
+    return owner;
+  }
 
-    public void setOwner(String owner) {
-        this.owner = owner;
-    }
+  public void setOwner(String owner) {
+    this.owner = owner;
+  }
 
-    public String getDefaultEnvironment() {
-        return defaultEnvironment;
-    }
+  public String getDefaultEnvironment() {
+    return defaultEnvironment;
+  }
 
-    public void setDefaultEnvironment(String defaultEnvironment) {
-        this.defaultEnvironment = defaultEnvironment;
-    }
+  public void setDefaultEnvironment(String defaultEnvironment) {
+    this.defaultEnvironment = defaultEnvironment;
+  }
 
-    public String getRootService() {
-        return rootService;
-    }
+  public String getRootService() {
+    return rootService;
+  }
 
-    public void setRootService(String rootService) {
-        this.rootService = rootService;
-    }
+  public void setRootService(String rootService) {
+    this.rootService = rootService;
+  }
 
-    public String getRootOperation() {
-        return rootOperation;
-    }
+  public String getRootOperation() {
+    return rootOperation;
+  }
 
-    public void setRootOperation(String rootOperation) {
-        this.rootOperation = rootOperation;
-    }
+  public void setRootOperation(String rootOperation) {
+    this.rootOperation = rootOperation;
+  }
 
-    @Override
-    public String toString() {
-        return "SystemInfo{" +
-                "id=" + id +
-                ", key='" + key + '\'' +
-                ", alias=" + alias +
-                ", name='" + name + '\'' +
-                ", description='" + description + '\'' +
-                ", owner='" + owner + '\'' +
-                ", defaultEnvironment='" + defaultEnvironment + '\'' +
-                ", rootService='" + rootService + '\'' +
-                ", rootOperation='" + rootOperation + '\'' +
-                '}';
-    }
+  @Override
+  public String toString() {
+    return "SystemInfo{"
+        + "id="
+        + id
+        + ", key='"
+        + key
+        + '\''
+        + ", alias="
+        + alias
+        + ", name='"
+        + name
+        + '\''
+        + ", description='"
+        + description
+        + '\''
+        + ", owner='"
+        + owner
+        + '\''
+        + ", defaultEnvironment='"
+        + defaultEnvironment
+        + '\''
+        + ", rootService='"
+        + rootService
+        + '\''
+        + ", rootOperation='"
+        + rootOperation
+        + '\''
+        + '}';
+  }
 }

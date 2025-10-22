@@ -24,54 +24,61 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/test-executions")
 public class TestExecutionController {
 
-    private final TestExecutionService testExecutionService;
+  private final TestExecutionService testExecutionService;
 
-    public TestExecutionController(TestExecutionService testExecutionService) {
-        this.testExecutionService = testExecutionService;
-    }
+  public TestExecutionController(TestExecutionService testExecutionService) {
+    this.testExecutionService = testExecutionService;
+  }
 
-    // 启动一次测试执行：随机选择一个非基线用例 -> 注入故障 -> 发起HTTP请求
-    @PostMapping("/start")
-    public ApiResponse<TestExecutionService.ExecutionResult> start(@RequestParam("taskId") Long taskId) {
-        var result = testExecutionService.startExecution(taskId);
-        return ApiResponse.ok(result);
-    }
+  // 启动一次测试执行：随机选择一个非基线用例 -> 注入故障 -> 发起HTTP请求
+  @PostMapping("/start")
+  public ApiResponse<TestExecutionService.ExecutionResult> start(
+      @RequestParam("taskId") Long taskId) {
+    var result = testExecutionService.startExecution(taskId);
+    return ApiResponse.ok(result);
+  }
 
-    // 查询执行结果（内存存储）
-    @GetMapping("/{executionId}/results")
-    public ApiResponse<TestExecutionService.ExecutionResult> get(@PathVariable("executionId") String executionId) {
-        var result = testExecutionService.getExecution(executionId);
-        return ApiResponse.ok(result);
-    }
-    @PostMapping("/analyze-patterns")
-    public ApiResponse<TestExecutionService.PatternAnalysisResult> analyzePatterns(@RequestParam("taskId") Long taskId) {
-        return ApiResponse.ok(testExecutionService.startPatternAnalysis(taskId));
-    }
+  // 查询执行结果（内存存储）
+  @GetMapping("/{executionId}/results")
+  public ApiResponse<TestExecutionService.ExecutionResult> get(
+      @PathVariable("executionId") String executionId) {
+    var result = testExecutionService.getExecution(executionId);
+    return ApiResponse.ok(result);
+  }
 
-    @GetMapping("/pattern-analysis/{executionId}/results")
-    public ApiResponse<TestExecutionService.PatternAnalysisResult> getPatternAnalysis(@PathVariable("executionId") String executionId) {
-        return ApiResponse.ok(testExecutionService.getPatternAnalysis(executionId));
-    }
+  @PostMapping("/analyze-patterns")
+  public ApiResponse<TestExecutionService.PatternAnalysisResult> analyzePatterns(
+      @RequestParam("taskId") Long taskId) {
+    return ApiResponse.ok(testExecutionService.startPatternAnalysis(taskId));
+  }
 
-    @PostMapping("/start-with-recording")
-    public ApiResponse<TestExecutionService.CombinedExecutionResult> startWithRecording(@RequestParam("taskId") Long taskId) {
-        return ApiResponse.ok(testExecutionService.startWithRecording(taskId));
-    }
+  @GetMapping("/pattern-analysis/{executionId}/results")
+  public ApiResponse<TestExecutionService.PatternAnalysisResult> getPatternAnalysis(
+      @PathVariable("executionId") String executionId) {
+    return ApiResponse.ok(testExecutionService.getPatternAnalysis(executionId));
+  }
 
-    @GetMapping("/combined/{executionId}/results")
-    public ApiResponse<TestExecutionService.CombinedExecutionResult> getCombined(@PathVariable("executionId") String executionId) {
-        return ApiResponse.ok(testExecutionService.getCombined(executionId));
-    }
+  @PostMapping("/start-with-recording")
+  public ApiResponse<TestExecutionService.CombinedExecutionResult> startWithRecording(
+      @RequestParam("taskId") Long taskId) {
+    return ApiResponse.ok(testExecutionService.startWithRecording(taskId));
+  }
 
-    @PostMapping("/batch-execute")
-    public ApiResponse<TestExecutionService.BatchExecutionResult> batchExecute(@RequestParam("taskId") Long taskId) {
-        return ApiResponse.ok(testExecutionService.startBatchExecution(taskId));
-    }
+  @GetMapping("/combined/{executionId}/results")
+  public ApiResponse<TestExecutionService.CombinedExecutionResult> getCombined(
+      @PathVariable("executionId") String executionId) {
+    return ApiResponse.ok(testExecutionService.getCombined(executionId));
+  }
 
-    @GetMapping("/batch-executions/{batchId}")
-    public ApiResponse<TestExecutionService.BatchExecutionResult> getBatch(@PathVariable("batchId") String batchId) {
-        return ApiResponse.ok(testExecutionService.getBatchExecution(batchId));
-    }
+  @PostMapping("/batch-execute")
+  public ApiResponse<TestExecutionService.BatchExecutionResult> batchExecute(
+      @RequestParam("taskId") Long taskId) {
+    return ApiResponse.ok(testExecutionService.startBatchExecution(taskId));
+  }
 
+  @GetMapping("/batch-executions/{batchId}")
+  public ApiResponse<TestExecutionService.BatchExecutionResult> getBatch(
+      @PathVariable("batchId") String batchId) {
+    return ApiResponse.ok(testExecutionService.getBatchExecution(batchId));
+  }
 }
-

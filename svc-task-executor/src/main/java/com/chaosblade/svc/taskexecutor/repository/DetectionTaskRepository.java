@@ -21,6 +21,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface DetectionTaskRepository extends JpaRepository<DetectionTask, Long> {
-}
-
+public interface DetectionTaskRepository extends JpaRepository<DetectionTask, Long> {}

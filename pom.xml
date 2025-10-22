@@ -20,118 +20,143 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+  <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.chaosblade</groupId>
-    <artifactId>space-exploration</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
+  <groupId>com.chaosblade</groupId>
+  <artifactId>space-exploration</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
 
-    <name>ChaosBlade Space Exploration</name>
-    <description>Spring Boot microservices project for chaos engineering space exploration</description>
+  <name>ChaosBlade Space Exploration</name>
+  <description>Spring Boot microservices project for chaos engineering space exploration</description>
 
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Spring Boot and Cloud versions -->
-        <spring-boot.version>3.5.5</spring-boot.version>
-        <spring-cloud.version>2024.0.0</spring-cloud.version>
+    <!-- Spring Boot and Cloud versions -->
+    <spring-boot.version>3.5.5</spring-boot.version>
+    <spring-cloud.version>2024.0.0</spring-cloud.version>
 
-        <!-- Maven plugin versions -->
-        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
-        <spring-boot-maven-plugin.version>3.5.5</spring-boot-maven-plugin.version>
-        
-        <!-- Third-party library versions -->
-        <fabric8.kubernetes.client.version>6.13.4</fabric8.kubernetes.client.version>
-    </properties>
+    <!-- Maven plugin versions -->
+    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+    <spring-boot-maven-plugin.version>3.5.5</spring-boot-maven-plugin.version>
 
-    <modules>
-        <module>common/common-core</module>
-        <module>common/common-test</module>
-        <module>svc-task-resource</module>
-        <module>svc-task-executor</module>
-        <module>svc-fault-scheduler</module>
-        <module>svc-result-processor</module>
-        <module>svc-reqrsp-proxy</module>
-        <module>svc-topo</module>
-        <module>svc-unified</module>
-    </modules>
+    <!-- Third-party library versions -->
+    <fabric8.kubernetes.client.version>6.13.4</fabric8.kubernetes.client.version>
+    <spotless.version>3.0.0</spotless.version>
+  </properties>
 
-    <dependencyManagement>
-        <dependencies>
-            <!-- Spring Boot BOM -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring-boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+  <modules>
+    <module>common/common-core</module>
+    <module>common/common-test</module>
+    <module>svc-task-resource</module>
+    <module>svc-task-executor</module>
+    <module>svc-fault-scheduler</module>
+    <module>svc-result-processor</module>
+    <module>svc-reqrsp-proxy</module>
+    <module>svc-topo</module>
+    <module>svc-unified</module>
+  </modules>
 
-            <!-- Spring Cloud BOM -->
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+  <dependencyManagement>
+    <dependencies>
+      <!-- Spring Boot BOM -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
 
-            <!-- Common modules -->
-            <dependency>
-                <groupId>com.chaosblade</groupId>
-                <artifactId>common-core</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.chaosblade</groupId>
-                <artifactId>common-test</artifactId>
-                <version>${project.version}</version>
-                <scope>test</scope>
-            </dependency>
-            
-            <!-- Fabric8 Kubernetes Client BOM -->
-            <dependency>
-                <groupId>io.fabric8</groupId>
-                <artifactId>kubernetes-client-bom</artifactId>
-                <version>${fabric8.kubernetes.client.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+      <!-- Spring Cloud BOM -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
 
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${maven-compiler-plugin.version}</version>
-                    <configuration>
-                        <source>${maven.compiler.source}</source>
-                        <target>${maven.compiler.target}</target>
-                        <encoding>UTF-8</encoding>
-                        <parameters>true</parameters>
-                    </configuration>
-                </plugin>
+      <!-- Common modules -->
+      <dependency>
+        <groupId>com.chaosblade</groupId>
+        <artifactId>common-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chaosblade</groupId>
+        <artifactId>common-test</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
 
-                <plugin>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-maven-plugin</artifactId>
-                    <version>${spring-boot-maven-plugin.version}</version>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>repackage</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
+      <!-- Fabric8 Kubernetes Client BOM -->
+      <dependency>
+        <groupId>io.fabric8</groupId>
+        <artifactId>kubernetes-client-bom</artifactId>
+        <version>${fabric8.kubernetes.client.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+          <configuration>
+            <source>${maven.compiler.source}</source>
+            <target>${maven.compiler.target}</target>
+            <encoding>UTF-8</encoding>
+            <parameters>true</parameters>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${spring-boot-maven-plugin.version}</version>
+          <executions>
+            <execution>
+              <goals>
+                <goal>repackage</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <includes>
+              <include>src/main/java/**/*.java</include>
+              <include>src/test/java/**/*.java</include>
+            </includes>
+            <googleJavaFormat>
+              <version>1.30.0</version>
+              <style>GOOGLE</style>
+              <reflowLongStrings>true</reflowLongStrings>
+            </googleJavaFormat>
+            <removeUnusedImports/>
+            <formatAnnotations/>
+            <importOrder/>
+          </java>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>

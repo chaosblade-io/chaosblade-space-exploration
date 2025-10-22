@@ -31,47 +31,52 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 public class FaultConfigController {
 
-    private static final Logger logger = LoggerFactory.getLogger(FaultConfigController.class);
+  private static final Logger logger = LoggerFactory.getLogger(FaultConfigController.class);
 
-    @Autowired
-    private FaultConfigService service;
+  @Autowired private FaultConfigService service;
 
-    // 使用不与旧控制器冲突的路径前缀
-    @GetMapping("/task-fault-configs")
-    public ApiResponse<PageResponse<FaultConfig>> list(
-            @RequestParam(value = "nodeId", required = false) Long nodeId,
-            @RequestParam(value = "type", required = false) String type,
-            @RequestParam(value = "taskId", required = false) Long taskId,
-            @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
-            @RequestParam(value = "size", defaultValue = "20") @Min(1) int size) {
-        logger.info("GET /api/task-fault-configs - nodeId: {}, type: {}, taskId: {}, page: {}, size: {}",
-                nodeId, type, taskId, page, size);
-        return ApiResponse.success(service.pageQuery(nodeId, type, taskId, page, size));
-    }
+  // 使用不与旧控制器冲突的路径前缀
+  @GetMapping("/task-fault-configs")
+  public ApiResponse<PageResponse<FaultConfig>> list(
+      @RequestParam(value = "nodeId", required = false) Long nodeId,
+      @RequestParam(value = "type", required = false) String type,
+      @RequestParam(value = "taskId", required = false) Long taskId,
+      @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
+      @RequestParam(value = "size", defaultValue = "20") @Min(1) int size) {
+    logger.info(
+        "GET /api/task-fault-configs - nodeId: {}, type: {}, taskId: {}, page: {}, size: {}",
+        nodeId,
+        type,
+        taskId,
+        page,
+        size);
+    return ApiResponse.success(service.pageQuery(nodeId, type, taskId, page, size));
+  }
 
-    @GetMapping("/task-fault-configs/{id}")
-    public ApiResponse<FaultConfig> get(@PathVariable Long id) {
-        logger.info("GET /api/task-fault-configs/{}", id);
-        return ApiResponse.success(service.getById(id));
-    }
+  @GetMapping("/task-fault-configs/{id}")
+  public ApiResponse<FaultConfig> get(@PathVariable Long id) {
+    logger.info("GET /api/task-fault-configs/{}", id);
+    return ApiResponse.success(service.getById(id));
+  }
 
-    @PostMapping("/task-fault-configs")
-    public ApiResponse<FaultConfig> create(@Valid @RequestBody FaultConfig cfg) {
-        logger.info("POST /api/task-fault-configs - nodeId: {}, taskId: {}", cfg.getNodeId(), cfg.getTaskId());
-        return ApiResponse.success(service.create(cfg));
-    }
+  @PostMapping("/task-fault-configs")
+  public ApiResponse<FaultConfig> create(@Valid @RequestBody FaultConfig cfg) {
+    logger.info(
+        "POST /api/task-fault-configs - nodeId: {}, taskId: {}", cfg.getNodeId(), cfg.getTaskId());
+    return ApiResponse.success(service.create(cfg));
+  }
 
-    @PutMapping("/task-fault-configs/{id}")
-    public ApiResponse<FaultConfig> update(@PathVariable Long id, @Valid @RequestBody FaultConfig cfg) {
-        logger.info("PUT /api/task-fault-configs/{}", id);
-        return ApiResponse.success(service.update(id, cfg));
-    }
+  @PutMapping("/task-fault-configs/{id}")
+  public ApiResponse<FaultConfig> update(
+      @PathVariable Long id, @Valid @RequestBody FaultConfig cfg) {
+    logger.info("PUT /api/task-fault-configs/{}", id);
+    return ApiResponse.success(service.update(id, cfg));
+  }
 
-    @DeleteMapping("/task-fault-configs/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        logger.info("DELETE /api/task-fault-configs/{}", id);
-        service.delete(id);
-        return ApiResponse.success();
-    }
+  @DeleteMapping("/task-fault-configs/{id}")
+  public ApiResponse<Void> delete(@PathVariable Long id) {
+    logger.info("DELETE /api/task-fault-configs/{}", id);
+    service.delete(id);
+    return ApiResponse.success();
+  }
 }
-

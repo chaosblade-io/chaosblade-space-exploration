@@ -17,7 +17,6 @@
 package com.chaosblade.svc.taskresource.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -28,267 +27,265 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
-/**
- * API实体类
- */
+/** API实体类 */
 @Entity
 @Table(name = "apis")
 public class Api {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
-    @Column(name = "system_id", nullable = false)
-    private Long systemId;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "operation_id", nullable = false, length = 128)
-    private String operationId;
+  @Column(name = "system_id", nullable = false)
+  private Long systemId;
 
-    @Column(name = "method", nullable = false)
-    private String method;
+  @Column(name = "operation_id", nullable = false, length = 128)
+  private String operationId;
 
-    @Column(name = "path", nullable = false, length = 512)
-    private String path;
+  @Column(name = "method", nullable = false)
+  private String method;
 
-    @Column(name = "summary", length = 512)
-    private String summary;
+  @Column(name = "path", nullable = false, length = 512)
+  private String path;
 
-    @Column(name = "tags", columnDefinition = "JSON")
-    private String tags;
+  @Column(name = "summary", length = 512)
+  private String summary;
 
-    @Column(name = "version", length = 64)
-    private String version;
+  @Column(name = "tags", columnDefinition = "JSON")
+  private String tags;
 
-    @Column(name = "base_url", length = 512)
-    private String baseUrl;
+  @Column(name = "version", length = 64)
+  private String version;
 
-    @Column(name = "content_type", nullable = false, length = 64)
-    private String contentType = "application/json";
+  @Column(name = "base_url", length = 512)
+  private String baseUrl;
 
-    @Column(name = "headers_template", columnDefinition = "JSON")
-    private String headersTemplate;
+  @Column(name = "content_type", nullable = false, length = 64)
+  private String contentType = "application/json";
 
-    @Column(name = "auth_type", nullable = false)
-    private String authType = "NONE";
+  @Column(name = "headers_template", columnDefinition = "JSON")
+  private String headersTemplate;
 
-    @Column(name = "auth_template", columnDefinition = "JSON")
-    private String authTemplate;
+  @Column(name = "auth_type", nullable = false)
+  private String authType = "NONE";
 
-    @Column(name = "path_params", columnDefinition = "JSON")
-    private String pathParams;
+  @Column(name = "auth_template", columnDefinition = "JSON")
+  private String authTemplate;
 
-    @Column(name = "query_params", columnDefinition = "JSON")
-    private String queryParams;
+  @Column(name = "path_params", columnDefinition = "JSON")
+  private String pathParams;
 
-    @Column(name = "body_template", columnDefinition = "JSON")
-    private String bodyTemplate;
+  @Column(name = "query_params", columnDefinition = "JSON")
+  private String queryParams;
 
-    @Column(name = "variables", columnDefinition = "JSON")
-    private String variables;
+  @Column(name = "body_template", columnDefinition = "JSON")
+  private String bodyTemplate;
 
-    @Column(name = "timeout_ms", nullable = false)
-    private Integer timeoutMs = 15000;
+  @Column(name = "variables", columnDefinition = "JSON")
+  private String variables;
 
-    @Column(name = "retry_config", columnDefinition = "JSON")
-    private String retryConfig;
-    
-    @Column(name = "created_at")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime createdAt;
-    
-    @Column(name = "updated_at")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime updatedAt;
-    
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-    
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-    
-    // Constructors
-    public Api() {}
-    
-    public Api(Long systemId, String operationId, String path, String method, String summary) {
-        this.systemId = systemId;
-        this.operationId = operationId;
-        this.path = path;
-        this.method = method;
-        this.summary = summary;
-    }
-    
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
-    
-    public void setId(Long id) {
-        this.id = id;
-    }
-    
-    public Long getSystemId() {
-        return systemId;
-    }
-    
-    public void setSystemId(Long systemId) {
-        this.systemId = systemId;
-    }
-    
-    public String getOperationId() {
-        return operationId;
-    }
-    
-    public void setOperationId(String operationId) {
-        this.operationId = operationId;
-    }
-    
-    public String getPath() {
-        return path;
-    }
-    
-    public void setPath(String path) {
-        this.path = path;
-    }
-    
-    public String getMethod() {
-        return method;
-    }
-    
-    public void setMethod(String method) {
-        this.method = method;
-    }
-    
-    public String getSummary() {
-        return summary;
-    }
+  @Column(name = "timeout_ms", nullable = false)
+  private Integer timeoutMs = 15000;
 
-    public void setSummary(String summary) {
-        this.summary = summary;
-    }
+  @Column(name = "retry_config", columnDefinition = "JSON")
+  private String retryConfig;
 
-    public String getTags() {
-        return tags;
-    }
+  @Column(name = "created_at")
+  @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+  private LocalDateTime createdAt;
 
-    public void setTags(String tags) {
-        this.tags = tags;
-    }
+  @Column(name = "updated_at")
+  @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+  private LocalDateTime updatedAt;
 
-    public String getVersion() {
-        return version;
-    }
+  @PrePersist
+  protected void onCreate() {
+    createdAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now();
+  }
 
-    public void setVersion(String version) {
-        this.version = version;
-    }
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = LocalDateTime.now();
+  }
 
-    public String getBaseUrl() {
-        return baseUrl;
-    }
+  // Constructors
+  public Api() {}
 
-    public void setBaseUrl(String baseUrl) {
-        this.baseUrl = baseUrl;
-    }
+  public Api(Long systemId, String operationId, String path, String method, String summary) {
+    this.systemId = systemId;
+    this.operationId = operationId;
+    this.path = path;
+    this.method = method;
+    this.summary = summary;
+  }
 
-    public String getContentType() {
-        return contentType;
-    }
+  // Getters and Setters
+  public Long getId() {
+    return id;
+  }
 
-    public void setContentType(String contentType) {
-        this.contentType = contentType;
-    }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public String getHeadersTemplate() {
-        return headersTemplate;
-    }
+  public Long getSystemId() {
+    return systemId;
+  }
 
-    public void setHeadersTemplate(String headersTemplate) {
-        this.headersTemplate = headersTemplate;
-    }
+  public void setSystemId(Long systemId) {
+    this.systemId = systemId;
+  }
 
-    public String getAuthType() {
-        return authType;
-    }
+  public String getOperationId() {
+    return operationId;
+  }
 
-    public void setAuthType(String authType) {
-        this.authType = authType;
-    }
+  public void setOperationId(String operationId) {
+    this.operationId = operationId;
+  }
 
-    public String getAuthTemplate() {
-        return authTemplate;
-    }
+  public String getPath() {
+    return path;
+  }
 
-    public void setAuthTemplate(String authTemplate) {
-        this.authTemplate = authTemplate;
-    }
+  public void setPath(String path) {
+    this.path = path;
+  }
 
-    public String getPathParams() {
-        return pathParams;
-    }
+  public String getMethod() {
+    return method;
+  }
 
-    public void setPathParams(String pathParams) {
-        this.pathParams = pathParams;
-    }
+  public void setMethod(String method) {
+    this.method = method;
+  }
 
-    public String getQueryParams() {
-        return queryParams;
-    }
+  public String getSummary() {
+    return summary;
+  }
 
-    public void setQueryParams(String queryParams) {
-        this.queryParams = queryParams;
-    }
+  public void setSummary(String summary) {
+    this.summary = summary;
+  }
 
-    public String getBodyTemplate() {
-        return bodyTemplate;
-    }
+  public String getTags() {
+    return tags;
+  }
 
-    public void setBodyTemplate(String bodyTemplate) {
-        this.bodyTemplate = bodyTemplate;
-    }
+  public void setTags(String tags) {
+    this.tags = tags;
+  }
 
-    public String getVariables() {
-        return variables;
-    }
+  public String getVersion() {
+    return version;
+  }
 
-    public void setVariables(String variables) {
-        this.variables = variables;
-    }
+  public void setVersion(String version) {
+    this.version = version;
+  }
 
-    public Integer getTimeoutMs() {
-        return timeoutMs;
-    }
+  public String getBaseUrl() {
+    return baseUrl;
+  }
 
-    public void setTimeoutMs(Integer timeoutMs) {
-        this.timeoutMs = timeoutMs;
-    }
+  public void setBaseUrl(String baseUrl) {
+    this.baseUrl = baseUrl;
+  }
 
-    public String getRetryConfig() {
-        return retryConfig;
-    }
+  public String getContentType() {
+    return contentType;
+  }
 
-    public void setRetryConfig(String retryConfig) {
-        this.retryConfig = retryConfig;
-    }
+  public void setContentType(String contentType) {
+    this.contentType = contentType;
+  }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-    
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-    
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-    
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+  public String getHeadersTemplate() {
+    return headersTemplate;
+  }
+
+  public void setHeadersTemplate(String headersTemplate) {
+    this.headersTemplate = headersTemplate;
+  }
+
+  public String getAuthType() {
+    return authType;
+  }
+
+  public void setAuthType(String authType) {
+    this.authType = authType;
+  }
+
+  public String getAuthTemplate() {
+    return authTemplate;
+  }
+
+  public void setAuthTemplate(String authTemplate) {
+    this.authTemplate = authTemplate;
+  }
+
+  public String getPathParams() {
+    return pathParams;
+  }
+
+  public void setPathParams(String pathParams) {
+    this.pathParams = pathParams;
+  }
+
+  public String getQueryParams() {
+    return queryParams;
+  }
+
+  public void setQueryParams(String queryParams) {
+    this.queryParams = queryParams;
+  }
+
+  public String getBodyTemplate() {
+    return bodyTemplate;
+  }
+
+  public void setBodyTemplate(String bodyTemplate) {
+    this.bodyTemplate = bodyTemplate;
+  }
+
+  public String getVariables() {
+    return variables;
+  }
+
+  public void setVariables(String variables) {
+    this.variables = variables;
+  }
+
+  public Integer getTimeoutMs() {
+    return timeoutMs;
+  }
+
+  public void setTimeoutMs(Integer timeoutMs) {
+    this.timeoutMs = timeoutMs;
+  }
+
+  public String getRetryConfig() {
+    return retryConfig;
+  }
+
+  public void setRetryConfig(String retryConfig) {
+    this.retryConfig = retryConfig;
+  }
+
+  public LocalDateTime getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(LocalDateTime createdAt) {
+    this.createdAt = createdAt;
+  }
+
+  public LocalDateTime getUpdatedAt() {
+    return updatedAt;
+  }
+
+  public void setUpdatedAt(LocalDateTime updatedAt) {
+    this.updatedAt = updatedAt;
+  }
 }

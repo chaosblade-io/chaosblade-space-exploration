@@ -31,54 +31,58 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 public class HttpReqDefController {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpReqDefController.class);
+  private static final Logger logger = LoggerFactory.getLogger(HttpReqDefController.class);
 
-    @Autowired
-    private HttpReqDefService service;
+  @Autowired private HttpReqDefService service;
 
-    @GetMapping("/http-req-defs")
-    public ApiResponse<PageResponse<HttpReqDef>> pageQuery(
-            @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "method", required = false) HttpReqDef.HttpMethod method,
-            @RequestParam(value = "apiId", required = false) Long apiId,
-            @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
-            @RequestParam(value = "size", defaultValue = "20") @Min(1) int size) {
-        logger.info("GET /api/http-req-defs - name: {}, method: {}, apiId: {}, page: {}, size: {}",
-                name, method, apiId, page, size);
-        return ApiResponse.success(service.pageQuery(name, method, apiId, page, size));
-    }
+  @GetMapping("/http-req-defs")
+  public ApiResponse<PageResponse<HttpReqDef>> pageQuery(
+      @RequestParam(value = "name", required = false) String name,
+      @RequestParam(value = "method", required = false) HttpReqDef.HttpMethod method,
+      @RequestParam(value = "apiId", required = false) Long apiId,
+      @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
+      @RequestParam(value = "size", defaultValue = "20") @Min(1) int size) {
+    logger.info(
+        "GET /api/http-req-defs - name: {}, method: {}, apiId: {}, page: {}, size: {}",
+        name,
+        method,
+        apiId,
+        page,
+        size);
+    return ApiResponse.success(service.pageQuery(name, method, apiId, page, size));
+  }
 
-    @GetMapping("/http-req-defs/{id}")
-    public ApiResponse<HttpReqDef> getById(@PathVariable Long id) {
-        logger.info("GET /api/http-req-defs/{}", id);
-        return ApiResponse.success(service.getById(id));
-    }
+  @GetMapping("/http-req-defs/{id}")
+  public ApiResponse<HttpReqDef> getById(@PathVariable Long id) {
+    logger.info("GET /api/http-req-defs/{}", id);
+    return ApiResponse.success(service.getById(id));
+  }
 
-    @GetMapping("/http-req-defs/code/{code}")
-    public ApiResponse<HttpReqDef> getByCode(@PathVariable String code) {
-        logger.info("GET /api/http-req-defs/code/{}", code);
-        return service.getByCode(code)
-                .map(ApiResponse::success)
-                .orElseGet(() -> ApiResponse.error("HTTP_REQ_DEF_NOT_FOUND", "请求定义不存在: " + code));
-    }
+  @GetMapping("/http-req-defs/code/{code}")
+  public ApiResponse<HttpReqDef> getByCode(@PathVariable String code) {
+    logger.info("GET /api/http-req-defs/code/{}", code);
+    return service
+        .getByCode(code)
+        .map(ApiResponse::success)
+        .orElseGet(() -> ApiResponse.error("HTTP_REQ_DEF_NOT_FOUND", "请求定义不存在: " + code));
+  }
 
-    @PostMapping("/http-req-defs")
-    public ApiResponse<HttpReqDef> create(@Valid @RequestBody HttpReqDef def) {
-        logger.info("POST /api/http-req-defs - code: {}", def.getCode());
-        return ApiResponse.success(service.create(def));
-    }
+  @PostMapping("/http-req-defs")
+  public ApiResponse<HttpReqDef> create(@Valid @RequestBody HttpReqDef def) {
+    logger.info("POST /api/http-req-defs - code: {}", def.getCode());
+    return ApiResponse.success(service.create(def));
+  }
 
-    @PutMapping("/http-req-defs/{id}")
-    public ApiResponse<HttpReqDef> update(@PathVariable Long id, @Valid @RequestBody HttpReqDef def) {
-        logger.info("PUT /api/http-req-defs/{}", id);
-        return ApiResponse.success(service.update(id, def));
-    }
+  @PutMapping("/http-req-defs/{id}")
+  public ApiResponse<HttpReqDef> update(@PathVariable Long id, @Valid @RequestBody HttpReqDef def) {
+    logger.info("PUT /api/http-req-defs/{}", id);
+    return ApiResponse.success(service.update(id, def));
+  }
 
-    @DeleteMapping("/http-req-defs/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        logger.info("DELETE /api/http-req-defs/{}", id);
-        service.delete(id);
-        return ApiResponse.success();
-    }
+  @DeleteMapping("/http-req-defs/{id}")
+  public ApiResponse<Void> delete(@PathVariable Long id) {
+    logger.info("DELETE /api/http-req-defs/{}", id);
+    service.delete(id);
+    return ApiResponse.success();
+  }
 }
-

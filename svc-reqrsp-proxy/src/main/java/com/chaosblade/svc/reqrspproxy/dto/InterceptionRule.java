@@ -21,60 +21,58 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
-/**
- * 拦截规则 - 定义要拦截的路径、方法和模拟响应
- */
+/** 拦截规则 - 定义要拦截的路径、方法和模拟响应 */
 public class InterceptionRule {
-    
-    @NotBlank(message = "路径不能为空")
-    private String path;
-    
-    @NotBlank(message = "HTTP方法不能为空")
-    @Pattern(regexp = "GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS", message = "HTTP方法必须是有效值")
-    private String method;
-    
-    @NotNull(message = "模拟响应配置不能为空")
-    @Valid
-    private MockResponse mockResponse;
-    
-    public InterceptionRule() {}
-    
-    public InterceptionRule(String path, String method, MockResponse mockResponse) {
-        this.path = path;
-        this.method = method;
-        this.mockResponse = mockResponse;
-    }
-    
-    public String getPath() {
-        return path;
-    }
-    
-    public void setPath(String path) {
-        this.path = path;
-    }
-    
-    public String getMethod() {
-        return method;
-    }
-    
-    public void setMethod(String method) {
-        this.method = method;
-    }
-    
-    public MockResponse getMockResponse() {
-        return mockResponse;
-    }
-    
-    public void setMockResponse(MockResponse mockResponse) {
-        this.mockResponse = mockResponse;
-    }
-    
-    @Override
-    public String toString() {
-        return "InterceptionRule{" +
-                "path='" + path + '\'' +
-                ", method='" + method + '\'' +
-                ", mockResponse=" + mockResponse +
-                '}';
-    }
+
+  @NotBlank(message = "路径不能为空") private String path;
+
+  @NotBlank(message = "HTTP方法不能为空") @Pattern(regexp = "GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS", message = "HTTP方法必须是有效值") private String method;
+
+  @NotNull(message = "模拟响应配置不能为空") @Valid private MockResponse mockResponse;
+
+  public InterceptionRule() {}
+
+  public InterceptionRule(String path, String method, MockResponse mockResponse) {
+    this.path = path;
+    this.method = method;
+    this.mockResponse = mockResponse;
+  }
+
+  public String getPath() {
+    return path;
+  }
+
+  public void setPath(String path) {
+    this.path = path;
+  }
+
+  public String getMethod() {
+    return method;
+  }
+
+  public void setMethod(String method) {
+    this.method = method;
+  }
+
+  public MockResponse getMockResponse() {
+    return mockResponse;
+  }
+
+  public void setMockResponse(MockResponse mockResponse) {
+    this.mockResponse = mockResponse;
+  }
+
+  @Override
+  public String toString() {
+    return "InterceptionRule{"
+        + "path='"
+        + path
+        + '\''
+        + ", method='"
+        + method
+        + '\''
+        + ", mockResponse="
+        + mockResponse
+        + '}';
+  }
 }

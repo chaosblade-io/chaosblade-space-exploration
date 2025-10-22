@@ -22,9 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class HelloController {
-    @GetMapping("/hello")
-    public ApiResponse<String> hello() {
-        return ApiResponse.success("svc-task-resource: hello world");
-    }
+  @GetMapping("/hello")
+  public ApiResponse<String> hello() {
+    return ApiResponse.success("svc-task-resource: hello world");
+  }
 }
-

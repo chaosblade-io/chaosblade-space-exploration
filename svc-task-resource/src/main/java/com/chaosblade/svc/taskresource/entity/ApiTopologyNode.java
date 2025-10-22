@@ -25,101 +25,100 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/**
- * API拓扑节点实体类
- */
+/** API拓扑节点实体类 */
 @Entity
 @Table(name = "api_topology_nodes")
 public class ApiTopologyNode {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @Column(name = "topology_id", nullable = false)
-    private Long topologyId;
 
-    @Column(name = "node_key", nullable = false, length = 128)
-    private String nodeKey;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "name", nullable = false, length = 255)
-    private String name;
+  @Column(name = "topology_id", nullable = false)
+  private Long topologyId;
 
-    @Column(name = "layer", nullable = false)
-    private Integer layer = 1;
+  @Column(name = "node_key", nullable = false, length = 128)
+  private String nodeKey;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "protocol", nullable = false)
-    private Protocol protocol = Protocol.HTTP;
+  @Column(name = "name", nullable = false, length = 255)
+  private String name;
 
-    @Column(name = "metadata", columnDefinition = "JSON")
-    private String metadata;
-    
-    // Constructors
-    public ApiTopologyNode() {}
+  @Column(name = "layer", nullable = false)
+  private Integer layer = 1;
 
-    public ApiTopologyNode(Long topologyId, String nodeKey, String name, Integer layer, Protocol protocol) {
-        this.topologyId = topologyId;
-        this.nodeKey = nodeKey;
-        this.name = name;
-        this.layer = layer;
-        this.protocol = protocol;
-    }
-    
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
-    
-    public void setId(Long id) {
-        this.id = id;
-    }
-    
-    public Long getTopologyId() {
-        return topologyId;
-    }
-    
-    public void setTopologyId(Long topologyId) {
-        this.topologyId = topologyId;
-    }
+  @Enumerated(EnumType.STRING)
+  @Column(name = "protocol", nullable = false)
+  private Protocol protocol = Protocol.HTTP;
 
-    public String getNodeKey() {
-        return nodeKey;
-    }
+  @Column(name = "metadata", columnDefinition = "JSON")
+  private String metadata;
 
-    public void setNodeKey(String nodeKey) {
-        this.nodeKey = nodeKey;
-    }
+  // Constructors
+  public ApiTopologyNode() {}
 
-    public String getName() {
-        return name;
-    }
+  public ApiTopologyNode(
+      Long topologyId, String nodeKey, String name, Integer layer, Protocol protocol) {
+    this.topologyId = topologyId;
+    this.nodeKey = nodeKey;
+    this.name = name;
+    this.layer = layer;
+    this.protocol = protocol;
+  }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+  // Getters and Setters
+  public Long getId() {
+    return id;
+  }
 
-    public Integer getLayer() {
-        return layer;
-    }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public void setLayer(Integer layer) {
-        this.layer = layer;
-    }
+  public Long getTopologyId() {
+    return topologyId;
+  }
 
-    public Protocol getProtocol() {
-        return protocol;
-    }
+  public void setTopologyId(Long topologyId) {
+    this.topologyId = topologyId;
+  }
 
-    public void setProtocol(Protocol protocol) {
-        this.protocol = protocol;
-    }
+  public String getNodeKey() {
+    return nodeKey;
+  }
 
-    public String getMetadata() {
-        return metadata;
-    }
+  public void setNodeKey(String nodeKey) {
+    this.nodeKey = nodeKey;
+  }
 
-    public void setMetadata(String metadata) {
-        this.metadata = metadata;
-    }
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public Integer getLayer() {
+    return layer;
+  }
+
+  public void setLayer(Integer layer) {
+    this.layer = layer;
+  }
+
+  public Protocol getProtocol() {
+    return protocol;
+  }
+
+  public void setProtocol(Protocol protocol) {
+    this.protocol = protocol;
+  }
+
+  public String getMetadata() {
+    return metadata;
+  }
+
+  public void setMetadata(String metadata) {
+    this.metadata = metadata;
+  }
 }

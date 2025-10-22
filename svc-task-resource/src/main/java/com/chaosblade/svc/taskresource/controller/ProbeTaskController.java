@@ -27,18 +27,23 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 public class ProbeTaskController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProbeTaskController.class);
-    private final ProbeTaskService service;
+  private static final Logger logger = LoggerFactory.getLogger(ProbeTaskController.class);
+  private final ProbeTaskService service;
 
-    public ProbeTaskController(ProbeTaskService service) {
-        this.service = service;
-    }
+  public ProbeTaskController(ProbeTaskService service) {
+    this.service = service;
+  }
 
-    @PostMapping({"/probe-tasks", "/detection-tasks"})
-    public ApiResponse<ProbeTaskDtos.ProbeTaskCreateResponse> create(@RequestBody ProbeTaskDtos.ProbeTaskCreateRequest req) {
-        logger.info("POST /api/probe-tasks name={}, systemId={}, apiId={}, requestNum={}", req.name, req.systemId, req.apiId, req.requestNum);
-        var resp = service.createProbeTask(req);
-        return ApiResponse.success(resp);
-    }
+  @PostMapping({"/probe-tasks", "/detection-tasks"})
+  public ApiResponse<ProbeTaskDtos.ProbeTaskCreateResponse> create(
+      @RequestBody ProbeTaskDtos.ProbeTaskCreateRequest req) {
+    logger.info(
+        "POST /api/probe-tasks name={}, systemId={}, apiId={}, requestNum={}",
+        req.name,
+        req.systemId,
+        req.apiId,
+        req.requestNum);
+    var resp = service.createProbeTask(req);
+    return ApiResponse.success(resp);
+  }
 }
-
