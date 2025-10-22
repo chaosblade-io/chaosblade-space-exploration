@@ -12,22 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM openjdk:21-jdk-slim
+.PHONY: license-check
+license-check:
+	@echo "Checking license headers..."
+	docker run -it --rm -v $(shell pwd):/github/workspace ghcr.io/korandoru/hawkeye check
 
-# 设置工作目录
-WORKDIR /app
+.PHONY: license-format
+license-format:
+	@echo "Formatting license headers..."
+	docker run -it --rm -v $(shell pwd):/github/workspace ghcr.io/korandoru/hawkeye format
 
-# 复制 JAR 文件到容器中
-COPY ./target/svc-topo-1.0.0.jar ./svc-topo.jar
-
-# 暴露端口
-EXPOSE 8106
-
-# 设置环境变量，用于配置 Jaeger 和服务名称
-# 如果环境变量未指定，则使用 application.yml 中的默认配置
-ENV JaegerHost=""
-ENV JaegerPort=""
-ENV EntryService=""
-
-# 启动应用
-ENTRYPOINT ["java", "-Duser.timezone=Asia/Shanghai", "-jar", "svc-topo.jar"]
+.PHONY: help
+help:
+	@echo "Makefile commands:"
+	@echo "  license-check   - Check license headers in source files."
+	@echo "  license-format  - Format license headers in source files."
