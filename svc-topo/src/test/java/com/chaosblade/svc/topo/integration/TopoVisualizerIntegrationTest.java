@@ -58,7 +58,7 @@ class TopoVisualizerIntegrationTest {
 
         // 解析响应获取拓扑数据
         String responseContent = uploadResult.getResponse().getContentAsString();
-        var response = objectMapper.readValue(responseContent, java.util.Map.class);
+        java.util.Map<String, Object> response = objectMapper.readValue(responseContent, java.util.Map.class);
         Object topologyObj = response.get("topology");
 
         // 4. 测试Mermaid图生成
@@ -140,102 +140,100 @@ class TopoVisualizerIntegrationTest {
     }
 
     private String createSampleTraceJson() {
-        return """
-            {
-              "data": [
-                {
-                  "traceID": "2b0b05fdc85d932b5c86887945fb5593",
-                  "spans": [
-                    {
-                      "traceID": "2b0b05fdc85d932b5c86887945fb5593",
-                      "spanID": "5ed3557f1c414ffc",
-                      "operationName": "oteldemo.ShippingService/ShipOrder",
-                      "references": [],
-                      "startTime": 1747797378423935,
-                      "duration": 38,
-                      "tags": [
-                        {
-                          "key": "service.name",
-                          "type": "string",
-                          "value": "shipping"
-                        },
-                        {
-                          "key": "rpc.service",
-                          "type": "string",
-                          "value": "oteldemo.ShippingService"
-                        },
-                        {
-                          "key": "rpc.method",
-                          "type": "string",
-                          "value": "ShipOrder"
-                        }
-                      ],
-                      "logs": [],
-                      "processID": "p1"
-                    },
-                    {
-                      "traceID": "2b0b05fdc85d932b5c86887945fb5593",
-                      "spanID": "4b103ecc62341fcc",
-                      "operationName": "Currency/Convert",
-                      "references": [],
-                      "startTime": 1747797378413556,
-                      "duration": 972,
-                      "tags": [
-                        {
-                          "key": "service.name",
-                          "type": "string",
-                          "value": "currency"
-                        }
-                      ],
-                      "logs": [],
-                      "processID": "p2"
-                    }
-                  ],
-                  "processes": {
-                    "p1": {
-                      "serviceName": "shipping",
-                      "tags": [
-                        {
-                          "key": "hostname",
-                          "type": "string",
-                          "value": "shipping-pod"
-                        },
-                        {
-                          "key": "k8s.pod.name",
-                          "type": "string",
-                          "value": "shipping-68654fd7fb-jnxff"
-                        },
-                        {
-                          "key": "k8s.namespace.name",
-                          "type": "string",
-                          "value": "default"
-                        }
-                      ]
-                    },
-                    "p2": {
-                      "serviceName": "currency",
-                      "tags": [
-                        {
-                          "key": "hostname",
-                          "type": "string",
-                          "value": "currency-pod"
-                        },
-                        {
-                          "key": "k8s.pod.name",
-                          "type": "string",
-                          "value": "currency-74b7b67479-r7nr9"
-                        },
-                        {
-                          "key": "k8s.namespace.name",
-                          "type": "string",
-                          "value": "default"
-                        }
-                      ]
-                    }
-                  }
-                }
-              ]
-            }
-            """;
+        return "{\n" +
+            "  \"data\": [\n" +
+            "    {\n" +
+            "      \"traceID\": \"2b0b05fdc85d932b5c86887945fb5593\",\n" +
+            "      \"spans\": [\n" +
+            "        {\n" +
+            "          \"traceID\": \"2b0b05fdc85d932b5c86887945fb5593\",\n" +
+            "          \"spanID\": \"5ed3557f1c414ffc\",\n" +
+            "          \"operationName\": \"oteldemo.ShippingService/ShipOrder\",\n" +
+            "          \"references\": [],\n" +
+            "          \"startTime\": 1747797378423935,\n" +
+            "          \"duration\": 38,\n" +
+            "          \"tags\": [\n" +
+            "            {\n" +
+            "              \"key\": \"service.name\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"shipping\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "              \"key\": \"rpc.service\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"oteldemo.ShippingService\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "              \"key\": \"rpc.method\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"ShipOrder\"\n" +
+            "            }\n" +
+            "          ],\n" +
+            "          \"logs\": [],\n" +
+            "          \"processID\": \"p1\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "          \"traceID\": \"2b0b05fdc85d932b5c86887945fb5593\",\n" +
+            "          \"spanID\": \"4b103ecc62341fcc\",\n" +
+            "          \"operationName\": \"Currency/Convert\",\n" +
+            "          \"references\": [],\n" +
+            "          \"startTime\": 1747797378413556,\n" +
+            "          \"duration\": 972,\n" +
+            "          \"tags\": [\n" +
+            "            {\n" +
+            "              \"key\": \"service.name\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"currency\"\n" +
+            "            }\n" +
+            "          ],\n" +
+            "          \"logs\": [],\n" +
+            "          \"processID\": \"p2\"\n" +
+            "        }\n" +
+            "      ],\n" +
+            "      \"processes\": {\n" +
+            "        \"p1\": {\n" +
+            "          \"serviceName\": \"shipping\",\n" +
+            "          \"tags\": [\n" +
+            "            {\n" +
+            "              \"key\": \"hostname\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"shipping-pod\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "              \"key\": \"k8s.pod.name\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"shipping-68654fd7fb-jnxff\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "              \"key\": \"k8s.namespace.name\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"default\"\n" +
+            "            }\n" +
+            "          ]\n" +
+            "        },\n" +
+            "        \"p2\": {\n" +
+            "          \"serviceName\": \"currency\",\n" +
+            "          \"tags\": [\n" +
+            "            {\n" +
+            "              \"key\": \"hostname\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"currency-pod\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "              \"key\": \"k8s.pod.name\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"currency-74b7b67479-r7nr9\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "              \"key\": \"k8s.namespace.name\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"default\"\n" +
+            "            }\n" +
+            "          ]\n" +
+            "        }\n" +
+            "      }\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}";
     }
 }

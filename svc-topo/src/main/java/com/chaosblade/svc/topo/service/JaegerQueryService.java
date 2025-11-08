@@ -13,11 +13,11 @@ import io.jaegertracing.api_v2.Model;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.protobuf.ByteString;
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.ClassicHttpResponse;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -195,10 +195,10 @@ public class JaegerQueryService {
                 httpGet.setHeader("Accept", "application/json");
 
                 // 执行HTTP请求
-                ClassicHttpResponse response = httpClient.execute(httpGet);
+                CloseableHttpResponse response = httpClient.execute(httpGet);
 
                 // 检查响应状态
-                int statusCode = response.getCode();
+                int statusCode = response.getStatusLine().getStatusCode();
                 if (statusCode != 200) {
                     String responseContent = EntityUtils.toString(response.getEntity());
                     logger.error("Jaeger HTTP API调用失败，状态码: {}, 响应内容: {}", statusCode, responseContent);
@@ -283,10 +283,10 @@ public class JaegerQueryService {
                 httpGet.setHeader("Accept", "application/json");
 
                 // 执行HTTP请求
-                ClassicHttpResponse response = httpClient.execute(httpGet);
+                CloseableHttpResponse response = httpClient.execute(httpGet);
 
                 // 检查响应状态
-                int statusCode = response.getCode();
+                int statusCode = response.getStatusLine().getStatusCode();
                 if (statusCode != 200) {
                     String responseContent = EntityUtils.toString(response.getEntity());
                     logger.error("Jaeger HTTP API调用失败，状态码: {}, 响应内容: {}", statusCode, responseContent);

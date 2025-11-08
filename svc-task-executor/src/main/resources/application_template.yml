@@ -1,0 +1,61 @@
+kubernetes:
+  api-url: ${K8S_API_URL:https://127.0.0.1:6443}
+  token: ${K8S_TOKEN:}
+  verify-ssl: ${K8S_VERIFY_SSL:false}
+
+server:
+  port: 8102
+spring:
+  application:
+    name: svc-task-executor
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/spaceexploration?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+proxy:
+  base-url: ${PROXY_BASE_URL:http://localhost:8105}
+  connect-timeout-ms: 10000
+  read-timeout-ms: 30000
+  max-retries: 3
+  backoff-ms: 1000
+  ttl-sec-for-interceptors: 600
+  wait-analyze-timeout-sec: 600
+  wait-interceptor-ready-sec: 30
+
+
+# Fault scheduler endpoint
+scheduler:
+  base-url: ${SCHEDULER_BASE_URL:http://localhost:8103}
+
+recording:
+  default-port: 0
+  service-ports: {}
+  token: ${RECORDING_TOKEN:}
+  verify-ssl: false
+
+
+llm:
+  api:
+    url: ${LLM_API_URL:https://api.siliconflow.cn/v1/chat/completions}
+    key: ${LLM_API_KEY:}
+    model: ${LLM_API_MODEL:Qwen/QwQ-32B}
+  timeout:
+    ms: 2000000
+  retries: 2
+

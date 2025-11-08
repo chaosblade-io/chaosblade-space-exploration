@@ -230,7 +230,9 @@ class TopologyAutoRefreshServiceTest {
         TraceData traceData = new TraceData();
         TraceData.TraceRecord record = new TraceData.TraceRecord();
         record.setTraceId("test-trace-id");
-        traceData.setData(java.util.List.of(record));
+        java.util.List<TraceData.TraceRecord> records = new java.util.ArrayList<>();
+        records.add(record);
+        traceData.setData(records);
         return traceData;
     }
 

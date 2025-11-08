@@ -25,44 +25,42 @@ class TraceParserServiceTest {
     @Test
     void testParseValidTraceFile() throws IOException {
         // 准备测试数据
-        String traceJson = """
-            {
-              "data": [
-                {
-                  "traceID": "2b0b05fdc85d932b5c86887945fb5593",
-                  "spans": [
-                    {
-                      "traceID": "2b0b05fdc85d932b5c86887945fb5593",
-                      "spanID": "5ed3557f1c414ffc",
-                      "operationName": "oteldemo.ShippingService/ShipOrder",
-                      "startTime": 1747797378423935,
-                      "duration": 38,
-                      "tags": [
-                        {
-                          "key": "service.name",
-                          "type": "string",
-                          "value": "shipping"
-                        }
-                      ],
-                      "processID": "p1"
-                    }
-                  ],
-                  "processes": {
-                    "p1": {
-                      "serviceName": "shipping",
-                      "tags": [
-                        {
-                          "key": "hostname",
-                          "type": "string",
-                          "value": "shipping-pod"
-                        }
-                      ]
-                    }
-                  }
-                }
-              ]
-            }
-            """;
+        String traceJson = "{\n" +
+            "  \"data\": [\n" +
+            "    {\n" +
+            "      \"traceID\": \"2b0b05fdc85d932b5c86887945fb5593\",\n" +
+            "      \"spans\": [\n" +
+            "        {\n" +
+            "          \"traceID\": \"2b0b05fdc85d932b5c86887945fb5593\",\n" +
+            "          \"spanID\": \"5ed3557f1c414ffc\",\n" +
+            "          \"operationName\": \"oteldemo.ShippingService/ShipOrder\",\n" +
+            "          \"startTime\": 1747797378423935,\n" +
+            "          \"duration\": 38,\n" +
+            "          \"tags\": [\n" +
+            "            {\n" +
+            "              \"key\": \"service.name\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"shipping\"\n" +
+            "            }\n" +
+            "          ],\n" +
+            "          \"processID\": \"p1\"\n" +
+            "        }\n" +
+            "      ],\n" +
+            "      \"processes\": {\n" +
+            "        \"p1\": {\n" +
+            "          \"serviceName\": \"shipping\",\n" +
+            "          \"tags\": [\n" +
+            "            {\n" +
+            "              \"key\": \"hostname\",\n" +
+            "              \"type\": \"string\",\n" +
+            "              \"value\": \"shipping-pod\"\n" +
+            "            }\n" +
+            "          ]\n" +
+            "        }\n" +
+            "      }\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}";
 
         MockMultipartFile file = new MockMultipartFile(
             "file",
@@ -115,21 +113,19 @@ class TraceParserServiceTest {
 
     @Test
     void testExtractServiceNames() throws IOException {
-        String traceJson = """
-            {
-              "data": [
-                {
-                  "traceID": "test-trace",
-                  "spans": [],
-                  "processes": {
-                    "p1": {"serviceName": "shipping"},
-                    "p2": {"serviceName": "checkout"},
-                    "p3": {"serviceName": "currency"}
-                  }
-                }
-              ]
-            }
-            """;
+        String traceJson = "{\n" +
+            "  \"data\": [\n" +
+            "    {\n" +
+            "      \"traceID\": \"test-trace\",\n" +
+            "      \"spans\": [],\n" +
+            "      \"processes\": {\n" +
+            "        \"p1\": {\"serviceName\": \"shipping\"},\n" +
+            "        \"p2\": {\"serviceName\": \"checkout\"},\n" +
+            "        \"p3\": {\"serviceName\": \"currency\"}\n" +
+            "      }\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}";
 
         TraceData traceData = traceParserService.parseTraceContent(traceJson);
         Set<String> serviceNames = traceParserService.extractServiceNames(traceData);

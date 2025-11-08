@@ -19,19 +19,20 @@
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <spring-boot.version>3.2.0</spring-boot.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <spring-boot.version>2.7.18</spring-boot.version>
         <apache.common.version>4.4</apache.common.version>
-        <apache.common.lang3.version>3.13.0</apache.common.lang3.version>
-        <fastjson.version>2.0.40</fastjson.version>
-        <lombok.version>1.18.30</lombok.version>
-        <slf4j.version>2.0.9</slf4j.version>
-        <hutool.version>5.8.22</hutool.version>
-        <guava.version>32.1.3-jre</guava.version>
-        <jackson.version>2.15.2</jackson.version>
-        <jgrapht.version>1.5.2</jgrapht.version>
-        <grpc.version>1.58.0</grpc.version>
+        <apache.common.lang3.version>3.12.0</apache.common.lang3.version>
+        <fastjson.version>1.2.83</fastjson.version>
+        <lombok.version>1.18.24</lombok.version>
+        <slf4j.version>1.7.36</slf4j.version>
+        <hutool.version>5.8.11</hutool.version>
+        <guava.version>31.1-jre</guava.version>
+        <jackson.version>2.13.5</jackson.version>
+        <jgrapht.version>1.4.0</jgrapht.version>
+        <grpc.version>1.50.2</grpc.version>
     </properties>
 
     <dependencyManagement>
@@ -221,11 +222,11 @@
             <artifactId>fastjson</artifactId>
         </dependency>
 
-        <!-- 添加HTTP客户端依赖 -->
+        <!-- 添加HTTP客户端依赖 (Java 8 兼容版本) -->
         <dependency>
-            <groupId>org.apache.httpcomponents.client5</groupId>
-            <artifactId>httpclient5</artifactId>
-            <version>5.1</version>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
         </dependency>
 
         <!-- Utilities -->

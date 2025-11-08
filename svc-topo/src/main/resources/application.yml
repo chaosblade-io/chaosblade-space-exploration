@@ -66,13 +66,13 @@ topology:
         time-range-seconds: 15           # 查询时间范围（秒）
     # 数据源
     jaeger:
-        host: localhost # Jaeger 主机地址
-        port: 16685 # Jaeger gRPC 端口
-        http-port: 16686 # Jaeger HTTP API 端口
+        host: 116.63.51.45 # Jaeger 主机地址
+        port: 30688 # Jaeger gRPC 端口
+        http-port: 30688 # Jaeger HTTP API 端口
         query-method: http # Jaeger 查询方式：grpc 或 http
     # 被测系统
     sut:
-        system-name: train-ticket # 被测系统名称
+        system-name: deafult # 被测系统名称
         service-name: ts-preserve-service # 入口服务名称
         # operation-name: all # 入口操作名称
 

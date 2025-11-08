@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -155,7 +156,7 @@ public class ApiQueryController {
 
             if (systemInfos == null) {
                 logger.warn("系统目录为空");
-                SystemListResponse.SystemListData data = new SystemListResponse.SystemListData(List.of(), 0);
+                SystemListResponse.SystemListData data = new SystemListResponse.SystemListData(Collections.emptyList(), 0);
                 return ResponseEntity.ok(new SystemListResponse(true, data));
             }
 
@@ -184,7 +185,7 @@ public class ApiQueryController {
             TopologyGraph currentTopology = topologyConverterService.getCurrentTopology();
             if (currentTopology == null) {
                 logger.warn("当前拓扑图为空");
-                NamespaceListResponse.NamespaceListData data = new NamespaceListResponse.NamespaceListData(List.of(), 0);
+                NamespaceListResponse.NamespaceListData data = new NamespaceListResponse.NamespaceListData(Collections.emptyList(), 0);
                 return ResponseEntity.ok(new NamespaceListResponse(true, data)); // 返回空列表而不是null
             }
 

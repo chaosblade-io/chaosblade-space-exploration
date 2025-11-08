@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,6 +43,40 @@ public class XFlowController {
 
     @Autowired
     private TopologyAutoRefreshService autoRefreshService;
+
+    /**
+     * 创建包含两个键值对的 Map (Java 8 兼容)
+     */
+    private Map<String, Object> createMap(String k1, Object v1, String k2, Object v2) {
+        Map<String, Object> map = new HashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        return map;
+    }
+
+    /**
+     * 创建包含三个键值对的 Map (Java 8 兼容)
+     */
+    private Map<String, Object> createMap(String k1, Object v1, String k2, Object v2, String k3, Object v3) {
+        Map<String, Object> map = new HashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        map.put(k3, v3);
+        return map;
+    }
+
+    /**
+     * 创建包含五个键值对的 Map (Java 8 兼容)
+     */
+    private Map<String, Object> createMap(String k1, Object v1, String k2, Object v2, String k3, Object v3, String k4, Object v4, String k5, Object v5) {
+        Map<String, Object> map = new HashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        map.put(k3, v3);
+        map.put(k4, v4);
+        map.put(k5, v5);
+        return map;
+    }
 
     /**
      * 获取当前拓扑的 XFlow 格式数据
@@ -69,7 +104,7 @@ public class XFlowController {
         } catch (Exception e) {
             logger.error("获取 XFlow 格式拓扑数据失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "error", "获取拓扑数据失败",
                         "message", e.getMessage()
                     ));
@@ -95,7 +130,7 @@ public class XFlowController {
         } catch (Exception e) {
             logger.error("刷新 XFlow 格式拓扑数据失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "error", "刷新拓扑数据失败",
                         "message", e.getMessage()
                     ));
@@ -118,7 +153,7 @@ public class XFlowController {
             if (nodeDetails.isEmpty()) {
                 logger.warn("未找到节点: {}", nodeId);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "节点不存在", "nodeId", nodeId));
+                        .body(createMap("error", "节点不存在", "nodeId", nodeId));
             }
 
             return ResponseEntity.ok(nodeDetails);
@@ -126,7 +161,7 @@ public class XFlowController {
         } catch (Exception e) {
             logger.error("获取节点详情失败: {}", nodeId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "error", "获取节点详情失败",
                         "message", e.getMessage()
                     ));
@@ -144,7 +179,7 @@ public class XFlowController {
         try {
             String algorithm = (String) layoutRequest.get("algorithm");
             String direction = (String) layoutRequest.getOrDefault("direction", "TB");
-            Map<String, Object> options = (Map<String, Object>) layoutRequest.getOrDefault("options", Map.of());
+            Map<String, Object> options = (Map<String, Object>) layoutRequest.getOrDefault("options", Collections.emptyMap());
 
             logger.info("应用布局算法: {}, 方向: {}", algorithm, direction);
 
@@ -156,7 +191,7 @@ public class XFlowController {
         } catch (Exception e) {
             logger.error("应用布局算法失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "error", "应用布局失败",
                         "message", e.getMessage()
                     ));
@@ -187,7 +222,7 @@ public class XFlowController {
         } catch (Exception e) {
             logger.error("获取自动刷新状态失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "success", false,
                         "error", "获取状态失败",
                         "message", e.getMessage()
@@ -217,7 +252,7 @@ public class XFlowController {
         } catch (Exception e) {
             logger.error("手动刷新失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "success", false,
                         "error", "手动刷新失败",
                         "message", e.getMessage()
@@ -237,16 +272,16 @@ public class XFlowController {
 
             autoRefreshService.enableAutoRefresh();
 
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "自动刷新已启用",
-                "timestamp", System.currentTimeMillis()
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "自动刷新已启用");
+            response.put("timestamp", System.currentTimeMillis());
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             logger.error("启用自动刷新失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "success", false,
                         "error", "启用失败",
                         "message", e.getMessage()
@@ -266,16 +301,16 @@ public class XFlowController {
 
             autoRefreshService.disableAutoRefresh();
 
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "自动刷新已禁用",
-                "timestamp", System.currentTimeMillis()
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "自动刷新已禁用");
+            response.put("timestamp", System.currentTimeMillis());
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             logger.error("禁用自动刷新失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "success", false,
                         "error", "禁用失败",
                         "message", e.getMessage()
@@ -302,23 +337,24 @@ public class XFlowController {
 
             autoRefreshService.updateJaegerConfig(host, port, serviceName, operationName, timeRangeMinutes);
 
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "Jaeger 配置已更新",
-                "config", Map.of(
-                    "host", host,
-                    "port", port,
-                    "serviceName", serviceName,
-                    "operationName", operationName,
-                    "timeRangeMinutes", timeRangeMinutes
-                ),
-                "timestamp", System.currentTimeMillis()
-            ));
+            Map<String, Object> configMap = new HashMap<>();
+            configMap.put("host", host);
+            configMap.put("port", port);
+            configMap.put("serviceName", serviceName);
+            configMap.put("operationName", operationName);
+            configMap.put("timeRangeMinutes", timeRangeMinutes);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Jaeger 配置已更新");
+            response.put("config", configMap);
+            response.put("timestamp", System.currentTimeMillis());
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             logger.error("更新 Jaeger 配置失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
+                    .body(createMap(
                         "success", false,
                         "error", "配置更新失败",
                         "message", e.getMessage()

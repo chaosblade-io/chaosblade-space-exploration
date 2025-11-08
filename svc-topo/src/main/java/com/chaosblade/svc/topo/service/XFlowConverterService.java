@@ -285,7 +285,10 @@ public class XFlowConverterService {
         text.put("fill", colorConfig.get("textColor"));
         text.put("textAnchor", "middle");
         text.put("textVerticalAnchor", "middle");
-        text.put("textWrap", Map.of("width", "90%", "height", "90%"));
+        Map<String, String> textWrap = new HashMap<>();
+        textWrap.put("width", "90%");
+        textWrap.put("height", "90%");
+        text.put("textWrap", textWrap);
         // 添加节点名称作为文本内容
         text.put("text", node.getDisplayName());
         attrs.put("text", text);
@@ -511,7 +514,7 @@ public class XFlowConverterService {
         try {
             TopologyGraph topology = topologyConverterService.getCurrentTopology();
             if (topology == null) {
-                return Map.of();
+                return Collections.emptyMap();
             }
 
             Optional<Node> nodeOpt = topology.getNodes().stream()
@@ -530,7 +533,7 @@ public class XFlowConverterService {
                 return details;
             }
 
-            return Map.of();
+            return Collections.emptyMap();
         } catch (Exception e) {
             logger.error("获取节点详情失败: {}", nodeId, e);
             throw new RuntimeException("获取节点详情失败", e);
@@ -582,10 +585,10 @@ public class XFlowConverterService {
         Map<String, Object> result = new HashMap<>();
         result.put("nodes", new ArrayList<>());
         result.put("edges", new ArrayList<>());
-        result.put("statistics", Map.of(
-            "nodeCount", 0,
-            "edgeCount", 0
-        ));
+        Map<String, Integer> statistics = new HashMap<>();
+        statistics.put("nodeCount", 0);
+        statistics.put("edgeCount", 0);
+        result.put("statistics", statistics);
         result.put("metadata", createMetadata());
         return result;
     }
