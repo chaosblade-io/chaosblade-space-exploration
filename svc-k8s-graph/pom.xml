@@ -11,15 +11,25 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>svc-reqrsp-proxy</artifactId>
-    <name>svc-reqrsp-proxy</name>
+    <artifactId>svc-k8s-graph</artifactId>
+    <name>svc-k8s-graph</name>
     <packaging>jar</packaging>
 
+    <description>K8s资源拓扑关系可视化服务，采用分域设计展示K8s资源依赖关系</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.fabric8</groupId>
+                <artifactId>kubernetes-client-bom</artifactId>
+                <version>6.13.4</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -29,41 +39,36 @@
             <artifactId>common-core</artifactId>
         </dependency>
 
-        <!-- Fabric8 Kubernetes Client -->
+        <!-- Fabric8 Kubernetes Client (版本由BOM管理) -->
         <dependency>
             <groupId>io.fabric8</groupId>
             <artifactId>kubernetes-client</artifactId>
-            <version>6.13.4</version>
-        </dependency>
-        <dependency>
-            <groupId>io.fabric8</groupId>
-            <artifactId>kubernetes-client-api</artifactId>
-            <version>6.13.4</version>
         </dependency>
 
-        <!-- Spring Data Redis (Lettuce) -->
+        <!-- Jackson for JSON processing (需要 2.15+ 版本以支持 Fabric8 K8s Client) -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.17.2</version>
         </dependency>
-
-        <!-- YAML processing -->
-        <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-        </dependency>
-
-        <!-- Mustache template engine -->
-        <dependency>
-            <groupId>com.github.spullara.mustache.java</groupId>
-            <artifactId>compiler</artifactId>
-            <version>0.9.14</version>
-        </dependency>
-
-        <!-- Jackson for JSON processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
             <version>2.17.2</version>
         </dependency>
 
@@ -72,26 +77,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-
-        <!-- Task scheduling -->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-        </dependency>
-
-        <!-- MySQL Database Support -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- HTTP Client for making requests (already included above) -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -36,6 +36,7 @@
         <module>svc-result-processor</module>
         <module>svc-reqrsp-proxy</module>
         <module>svc-topo</module>
+        <module>svc-k8s-graph</module>
     </modules>
 
     <dependencyManagement>
