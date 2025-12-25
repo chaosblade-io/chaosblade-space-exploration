@@ -135,6 +135,18 @@ public class Node {
         private RedMetrics red;
 
         /**
+         * Prometheus 指标数据（新增）
+         */
+        @JsonProperty("prometheus")
+        private com.chaosblade.svc.topo.model.metrics.PrometheusMetrics prometheus;
+
+        /**
+         * Kubernetes 元数据（新增）
+         */
+        @JsonProperty("kubernetes")
+        private com.chaosblade.svc.topo.model.k8s.KubernetesMetadata kubernetes;
+
+        /**
          * 扩展属性
          */
         @JsonProperty("extensions")
@@ -150,6 +162,22 @@ public class Node {
 
         public void setRed(RedMetrics red) {
             this.red = red;
+        }
+
+        public com.chaosblade.svc.topo.model.metrics.PrometheusMetrics getPrometheus() {
+            return prometheus;
+        }
+
+        public void setPrometheus(com.chaosblade.svc.topo.model.metrics.PrometheusMetrics prometheus) {
+            this.prometheus = prometheus;
+        }
+
+        public com.chaosblade.svc.topo.model.k8s.KubernetesMetadata getKubernetes() {
+            return kubernetes;
+        }
+
+        public void setKubernetes(com.chaosblade.svc.topo.model.k8s.KubernetesMetadata kubernetes) {
+            this.kubernetes = kubernetes;
         }
 
         public Map<String, Object> getExtensions() {
@@ -171,6 +199,8 @@ public class Node {
         public String toString() {
             return "NodeAttributes{" +
                     "red=" + red +
+                    ", prometheus=" + prometheus +
+                    ", kubernetes=" + kubernetes +
                     ", extensions=" + extensions +
                     '}';
         }

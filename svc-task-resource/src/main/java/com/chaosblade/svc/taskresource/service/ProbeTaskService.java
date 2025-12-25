@@ -69,7 +69,7 @@ public class ProbeTaskService {
         // 3) 批量创建 task_slo
         int sloCount = 0;
         if (req.taskSlo != null) {
-            for (var item : req.taskSlo) {
+            for (ProbeTaskDtos.TaskSloItem item : req.taskSlo) {
                 TaskSlo slo = new TaskSlo();
                 slo.setId(com.chaosblade.svc.taskresource.util.Ids.newId());
                 slo.setTaskId(taskId);
@@ -85,7 +85,7 @@ public class ProbeTaskService {
         // 4) 批量创建 fault_config（faultscript 对象 JSON 序列化）
         int fcCount = 0;
         if (req.faultConfigurations != null) {
-            for (var fc : req.faultConfigurations) {
+            for (ProbeTaskDtos.FaultConfigurationItem fc : req.faultConfigurations) {
                 FaultConfig entity = new FaultConfig();
                 entity.setNodeId(fc.nodeId);
                 entity.setTaskId(taskId);
@@ -169,6 +169,6 @@ public class ProbeTaskService {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneId.systemDefault());
     }
 
-    private boolean isBlank(String s) { return s == null || s.isBlank(); }
+    private boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }
 }
 

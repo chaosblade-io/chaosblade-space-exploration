@@ -1,8 +1,8 @@
 package com.chaosblade.svc.taskresource.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import javax.persistence.*;
+import javax.validation.constraints.*;
 
 import java.time.LocalDateTime;
 
@@ -100,12 +100,12 @@ public class HttpReqDef {
         if (bodyMode == null) return true;
         switch (bodyMode) {
             case NONE:
-                return (bodyTemplate == null || bodyTemplate.isBlank()) && (rawBody == null || rawBody.isBlank());
+                return (bodyTemplate == null || bodyTemplate.trim().isEmpty()) && (rawBody == null || rawBody.trim().isEmpty());
             case JSON:
             case FORM:
-                return bodyTemplate != null && !bodyTemplate.isBlank() && (rawBody == null || rawBody.isBlank());
+                return bodyTemplate != null && !bodyTemplate.trim().isEmpty() && (rawBody == null || rawBody.trim().isEmpty());
             case RAW:
-                return (bodyTemplate == null || bodyTemplate.isBlank()) && rawBody != null && !rawBody.isBlank();
+                return (bodyTemplate == null || bodyTemplate.trim().isEmpty()) && rawBody != null && !rawBody.trim().isEmpty();
             default:
                 return true;
         }

@@ -1,7 +1,7 @@
 package com.chaosblade.svc.reqrspproxy.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 
 import java.util.HashMap;
 import java.util.Map;

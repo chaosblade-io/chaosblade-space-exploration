@@ -79,3 +79,55 @@ topology:
 # 拓扑缓存配置
     cache:
         max-size: 100                   # 缓存最大条目数
+
+# Prometheus 配置
+prometheus:
+    enabled: true                       # 是否启用 Prometheus 集成
+    host: prometheus.monitoring.svc.cluster.local # Prometheus 服务地址
+    port: 9090                          # Prometheus 端口
+    query-timeout: 30                   # 查询超时时间（秒）
+
+    # Prometheus 查询 endpoint 配置
+    queries:
+        # Pod 资源指标查询
+        pod:
+            cpu-usage: "sum(rate(container_cpu_usage_seconds_total{namespace=\"%s\",pod=\"%s\",container!=\"\"}[5m]))"
+            cpu-limit: "sum(container_spec_cpu_quota{namespace=\"%s\",pod=\"%s\"}/100000)"
+            memory-usage: "sum(container_memory_usage_bytes{namespace=\"%s\",pod=\"%s\",container!=\"\"})"
+            memory-limit: "sum(container_spec_memory_limit_bytes{namespace=\"%s\",pod=\"%s\"})"
+            network-receive: "sum(rate(container_network_receive_bytes_total{namespace=\"%s\",pod=\"%s\"}[5m]))"
+            network-transmit: "sum(rate(container_network_transmit_bytes_total{namespace=\"%s\",pod=\"%s\"}[5m]))"
+            restart-count: "sum(kube_pod_container_status_restarts_total{namespace=\"%s\",pod=\"%s\"})"
+            status-running: "kube_pod_status_phase{namespace=\"%s\",pod=\"%s\",phase=\"Running\"}"
+
+        # Node 资源指标查询
+        node:
+            cpu-usage: "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\",instance=~\"%s.*\"}[5m])) * 100)"
+            memory-usage: "(1 - (node_memory_MemAvailable_bytes{instance=~\"%s.*\"} / node_memory_MemTotal_bytes{instance=~\"%s.*\"})) * 100"
+            network-receive: "sum(rate(node_network_receive_bytes_total{instance=~\"%s.*\"}[5m]))"
+            network-transmit: "sum(rate(node_network_transmit_bytes_total{instance=~\"%s.*\"}[5m]))"
+            disk-usage: "(1 - (node_filesystem_avail_bytes{instance=~\"%s.*\",mountpoint=\"/\"} / node_filesystem_size_bytes{instance=~\"%s.*\",mountpoint=\"/\"})) * 100"
+            status-ready: "kube_node_status_condition{node=\"%s\",condition=\"Ready\",status=\"true\"}"
+
+        # Container 资源指标查询
+        container:
+            cpu-usage: "rate(container_cpu_usage_seconds_total{namespace=\"%s\",pod=\"%s\",container=\"%s\"}[5m])"
+            cpu-limit: "container_spec_cpu_quota{namespace=\"%s\",pod=\"%s\",container=\"%s\"}/100000"
+            memory-usage: "container_memory_usage_bytes{namespace=\"%s\",pod=\"%s\",container=\"%s\"}"
+            memory-limit: "container_spec_memory_limit_bytes{namespace=\"%s\",pod=\"%s\",container=\"%s\"}"
+            restart-count: "kube_pod_container_status_restarts_total{namespace=\"%s\",pod=\"%s\",container=\"%s\"}"
+
+        # 应用性能指标查询（如果应用暴露了 Prometheus 指标）
+        application:
+            request-rate: "sum(rate(http_requests_total{namespace=\"%s\",pod=\"%s\"}[5m]))"
+            error-rate: "sum(rate(http_requests_total{namespace=\"%s\",pod=\"%s\",status=~\"5..\"}[5m]))"
+            latency-p50: "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{namespace=\"%s\",pod=\"%s\"}[5m])) by (le))"
+            latency-p95: "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"%s\",pod=\"%s\"}[5m])) by (le))"
+            latency-p99: "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace=\"%s\",pod=\"%s\"}[5m])) by (le))"
+
+# Kubernetes 配置
+kubernetes:
+    enabled: true                       # 是否启用 Kubernetes 集成
+    api-server: https://kubernetes.default.svc # K8s API Server 地址
+    namespace: default                  # 默认命名空间
+    service-account-token-path: /var/run/secrets/kubernetes.io/serviceaccount/token # Service Account Token 路径

@@ -1,0 +1,85 @@
+# values.yaml
+# Prometheus 配置
+prometheus:
+  prometheusSpec:
+    # 数据保留时间
+    retention: 15d
+    # 存储配置
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard  # 根据您的集群修改
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+    # 资源限制
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+# Grafana 配置
+grafana:
+  enabled: true
+  adminPassword: "Zmzzmz010627!"  # 修改为强密码
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 10Gi
+  # Ingress 配置（可选）
+  ingress:
+    enabled: false
+    # 如需暴露 Grafana，配置如下：
+    # enabled: true
+    # hosts:
+    #   - grafana.yourdomain.com
+    # tls:
+    #   - secretName: grafana-tls
+    #     hosts:
+    #       - grafana.yourdomain.com
+
+# Alertmanager 配置
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+# Node Exporter 配置
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics 配置
+kubeStateMetrics:
+  enabled: true
+
+# 默认的 ServiceMonitor
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: true
+    general: true
+    k8s: true
+    kubeApiserver: true
+    kubePrometheusNodeAlerting: true
+    kubePrometheusNodeRecording: true
+    kubernetesAbsent: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeScheduler: true
+    network: true
+    node: true
+    prometheus: true
+    prometheusOperator: true

@@ -37,7 +37,7 @@ public class FaultConfigService {
     }
 
     public FaultConfig create(FaultConfig cfg) {
-        if (cfg.getFaultscript() == null || cfg.getFaultscript().isBlank()) {
+        if (cfg.getFaultscript() == null || cfg.getFaultscript().trim().isEmpty()) {
             throw new BusinessException("FAULT_SCRIPT_INVALID", "faultscript 不能为空");
         }
         FaultConfig saved = repository.save(cfg);

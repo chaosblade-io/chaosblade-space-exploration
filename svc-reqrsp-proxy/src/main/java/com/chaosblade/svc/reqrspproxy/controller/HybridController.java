@@ -3,7 +3,7 @@ package com.chaosblade.svc.reqrspproxy.controller;
 import com.chaosblade.common.core.ApiResponse;
 import com.chaosblade.svc.reqrspproxy.dto.*;
 import com.chaosblade.svc.reqrspproxy.service.HybridService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

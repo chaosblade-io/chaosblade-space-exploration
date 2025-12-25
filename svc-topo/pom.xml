@@ -33,6 +33,7 @@
         <jackson.version>2.13.5</jackson.version>
         <jgrapht.version>1.4.0</jgrapht.version>
         <grpc.version>1.50.2</grpc.version>
+        <fabric8.version>5.12.4</fabric8.version>
     </properties>
 
     <dependencyManagement>
@@ -227,6 +228,19 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.5.14</version>
+        </dependency>
+
+        <!-- Fabric8 Kubernetes Client -->
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>kubernetes-client</artifactId>
+            <version>${fabric8.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>kubernetes-model-core</artifactId>
+            <version>${fabric8.version}</version>
         </dependency>
 
         <!-- Utilities -->

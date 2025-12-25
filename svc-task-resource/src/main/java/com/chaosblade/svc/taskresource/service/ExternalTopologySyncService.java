@@ -51,7 +51,7 @@ public class ExternalTopologySyncService {
     public void syncBeforeList() {
         String base = props.getBaseUrl();
         log.info("我执行了哦: {}", base);
-        if (base == null || base.isBlank()) {
+        if (base == null || base.trim().isEmpty()) {
             log.warn("external.topology.base-url not configured, skip external sync");
             return;
         }
@@ -66,7 +66,7 @@ public class ExternalTopologySyncService {
             List<NewSystemPair> newlyCreated = new ArrayList<>();
 
             for (ExternalSystemItem ext : externalSystems) {
-                if (ext.systemKey == null || ext.systemKey.isBlank()) continue;
+                if (ext.systemKey == null || ext.systemKey.trim().isEmpty()) continue;
                 boolean exists = systemRepository.existsBySystemKey(ext.systemKey);
                 log.info("ext.systemKey: {}", ext.systemKey);
                 log.info("ext.name: {}", ext.name);
@@ -98,7 +98,7 @@ public class ExternalTopologySyncService {
                     if (apis == null) continue;
                     for (ExternalApiItem extApi : apis) {
                         // dedupe by (systemId, operationId)
-                        if (extApi.operationId == null || extApi.operationId.isBlank()) continue;
+                        if (extApi.operationId == null || extApi.operationId.trim().isEmpty()) continue;
                         if (apiRepository.existsBySystemIdAndOperationId(p.localSystemId, extApi.operationId)) {
                             continue;
                         }

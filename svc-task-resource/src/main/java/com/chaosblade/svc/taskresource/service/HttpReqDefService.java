@@ -76,7 +76,7 @@ public class HttpReqDefService {
     }
 
     private void validate(HttpReqDef def, boolean creating) {
-        if (def.getUrlTemplate() == null || def.getUrlTemplate().isBlank()) {
+        if (def.getUrlTemplate() == null || def.getUrlTemplate().trim().isEmpty()) {
             throw new BusinessException("URL_TEMPLATE_INVALID", "URL 模板不能为空");
         }
         // 简单格式校验：以 / 开头，可包含 {var}

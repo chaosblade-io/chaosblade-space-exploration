@@ -87,14 +87,14 @@ class FixtureUpsertPayloadDumpSpringTest {
     }
 
     private static List<String> splitTokens(String tokens) {
-        if (tokens == null || tokens.isBlank()) return Collections.emptyList();
+        if (tokens == null || tokens.trim().isEmpty()) return Collections.emptyList();
         List<String> list = new ArrayList<>();
-        for (String t : tokens.split(",")) if (t != null && !t.isBlank()) list.add(t.trim());
+        for (String t : tokens.split(",")) if (t != null && !t.trim().isEmpty()) list.add(t.trim());
         return list;
     }
 
     private static Map<String,Object> parseJsonToMap(String json) {
-        if (json == null || json.isBlank()) return null;
+        if (json == null || json.trim().isEmpty()) return null;
         try { return MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {}); }
         catch (Exception ex) { return null; }
     }

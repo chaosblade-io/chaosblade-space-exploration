@@ -17,14 +17,14 @@ public class TestExecutionController {
     // 启动一次测试执行：随机选择一个非基线用例 -> 注入故障 -> 发起HTTP请求
     @PostMapping("/start")
     public ApiResponse<TestExecutionService.ExecutionResult> start(@RequestParam("taskId") Long taskId) {
-        var result = testExecutionService.startExecution(taskId);
+        TestExecutionService.ExecutionResult result = testExecutionService.startExecution(taskId);
         return ApiResponse.ok(result);
     }
 
     // 查询执行结果（内存存储）
     @GetMapping("/{executionId}/results")
     public ApiResponse<TestExecutionService.ExecutionResult> get(@PathVariable("executionId") String executionId) {
-        var result = testExecutionService.getExecution(executionId);
+        TestExecutionService.ExecutionResult result = testExecutionService.getExecution(executionId);
         return ApiResponse.ok(result);
     }
     @PostMapping("/analyze-patterns")

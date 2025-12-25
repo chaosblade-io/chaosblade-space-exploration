@@ -190,8 +190,8 @@ public class XFlowConverterService {
                 return "custom-rpc";
             case RPC_GROUP:
                 return "custom-rpc-group";
-            case HOST:
-                return "custom-host";
+            case NODE:
+                return "custom-node";
             default:
                 return "rect";
         }
@@ -210,7 +210,7 @@ public class XFlowConverterService {
                 return new Size(100, 40);
             case RPC_GROUP:
                 return new Size(140, 50);
-            case HOST:
+            case NODE:
                 return new Size(100, 50);
             default:
                 return new Size(100, 50);
@@ -237,7 +237,7 @@ public class XFlowConverterService {
                 baseX = 200;
                 baseY = 150;
                 break;
-            case HOST:
+            case NODE:
                 baseX = 400;
                 baseY = 50;
                 break;
@@ -355,7 +355,7 @@ public class XFlowConverterService {
                 config.put("stroke", "#52c41a");
                 config.put("textColor", "#52c41a");
                 break;
-            case HOST:
+            case NODE:
                 config.put("fill", "#fff2e8");     // 橙色背景
                 config.put("stroke", "#fa8c16");
                 config.put("textColor", "#fa8c16");
@@ -448,7 +448,7 @@ public class XFlowConverterService {
                 return 14;
             case SERVICE:
                 return 12;
-            case HOST:
+            case NODE:
                 return 12;
             case RPC_GROUP:
                 return 11;

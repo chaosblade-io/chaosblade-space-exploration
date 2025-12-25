@@ -1,7 +1,7 @@
 package com.chaosblade.svc.taskexecutor.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity

@@ -1,8 +1,8 @@
 package com.chaosblade.svc.reqrspproxy.dto;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 
 import java.util.List;
 

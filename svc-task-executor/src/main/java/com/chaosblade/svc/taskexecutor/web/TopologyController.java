@@ -77,7 +77,7 @@ public class TopologyController {
      */
     @GetMapping("/detection-tasks/{taskId}/test-cases/step1")
     public ApiResponse<TestCaseGenerationService.Step1Result> getStep1(@PathVariable("taskId") Long taskId) {
-        var result = testCaseGenerationService.computeStep1(taskId);
+        TestCaseGenerationService.Step1Result result = testCaseGenerationService.computeStep1(taskId);
         return ApiResponse.ok(result);
     }
 
@@ -89,7 +89,7 @@ public class TopologyController {
      */
     @GetMapping("/detection-tasks/{taskId}/test-cases/simple")
     public ApiResponse<List<EnhancedSimplifiedTestCaseDTO>> generateSimpleTestCases(@PathVariable("taskId") Long taskId) {
-        var cases = testCaseGenerationService.generateEnhancedSimpleCases(taskId);
+        List<EnhancedSimplifiedTestCaseDTO> cases = testCaseGenerationService.generateEnhancedSimpleCases(taskId);
         return ApiResponse.ok(cases);
     }
 }

@@ -5,8 +5,8 @@ import com.chaosblade.common.core.dto.PageResponse;
 import com.chaosblade.svc.taskresource.entity.Api;
 import com.chaosblade.svc.taskresource.service.ApiService;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

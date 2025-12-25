@@ -1,6 +1,6 @@
 package com.chaosblade.svc.taskresource.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 import java.math.BigDecimal;
 

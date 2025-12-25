@@ -1,6 +1,6 @@
 package com.chaosblade.svc.taskexecutor.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 @Entity
 @Table(name = "api_topology_nodes")

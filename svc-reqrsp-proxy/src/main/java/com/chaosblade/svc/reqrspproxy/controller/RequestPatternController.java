@@ -7,7 +7,7 @@ import com.chaosblade.svc.reqrspproxy.dto.ReplayRequest;
 import com.chaosblade.svc.reqrspproxy.dto.ReplayResult;
 import com.chaosblade.svc.reqrspproxy.service.RequestPatternService;
 import com.chaosblade.svc.reqrspproxy.service.ReplayService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

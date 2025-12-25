@@ -1,0 +1,388 @@
+{
+  "info": {
+    "name": "svc-topo API Collection",
+    "description": "Complete API collection for svc-topo service with Prometheus and Kubernetes integration",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8106",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Prometheus Metrics",
+      "item": [
+        {
+          "name": "Get Pod Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/metrics/pod/default/test-pod",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "metrics", "pod", "default", "test-pod"]
+            },
+            "description": "Query Prometheus metrics for a specific Pod"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Node Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/metrics/node/worker-node-1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "metrics", "node", "worker-node-1"]
+            },
+            "description": "Query Prometheus metrics for a specific Node"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Container Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/metrics/container/default/test-pod/app-container",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "metrics", "container", "default", "test-pod", "app-container"]
+            },
+            "description": "Query Prometheus metrics for a specific Container"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. XFlow Topology",
+      "item": [
+        {
+          "name": "Get Topology",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/topology",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "topology"]
+            },
+            "description": "Get current topology in XFlow format"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Topology",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "refresh"]
+            },
+            "description": "Manually trigger topology data refresh"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Node Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/nodes/:nodeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "nodes", ":nodeId"],
+              "variable": [
+                {
+                  "key": "nodeId",
+                  "value": "node-1",
+                  "description": "Node ID to query"
+                }
+              ]
+            },
+            "description": "Get detailed information for a specific node"
+          },
+          "response": []
+        },
+        {
+          "name": "Apply Layout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"algorithm\": \"dagre\",\n  \"direction\": \"TB\",\n  \"options\": {\n    \"rankSep\": 50,\n    \"nodeSep\": 30\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/layout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "layout"]
+            },
+            "description": "Apply layout algorithm to topology"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Auto-Refresh Management",
+      "item": [
+        {
+          "name": "Get Auto-Refresh Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/auto-refresh/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "auto-refresh", "status"]
+            },
+            "description": "Get current auto-refresh status"
+          },
+          "response": []
+        },
+        {
+          "name": "Trigger Manual Refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/auto-refresh/trigger",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "auto-refresh", "trigger"]
+            },
+            "description": "Manually trigger a topology refresh"
+          },
+          "response": []
+        },
+        {
+          "name": "Enable Auto-Refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/auto-refresh/enable",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "auto-refresh", "enable"]
+            },
+            "description": "Enable automatic topology refresh"
+          },
+          "response": []
+        },
+        {
+          "name": "Disable Auto-Refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/auto-refresh/disable",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "auto-refresh", "disable"]
+            },
+            "description": "Disable automatic topology refresh"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Jaeger Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"host\": \"localhost\",\n  \"port\": 16685,\n  \"serviceName\": \"frontend\",\n  \"operationName\": \"all\",\n  \"timeRangeMinutes\": 15\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/xflow/auto-refresh/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "xflow", "auto-refresh", "config"]
+            },
+            "description": "Update Jaeger data source configuration"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Cache Management",
+      "item": [
+        {
+          "name": "Get Cache Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/cache/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "cache", "stats"]
+            },
+            "description": "Get topology cache statistics"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cache by Time Index",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/cache/time-index/:timeIndex",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "cache", "time-index", ":timeIndex"],
+              "variable": [
+                {
+                  "key": "timeIndex",
+                  "value": "5",
+                  "description": "Time index (0-14)"
+                }
+              ]
+            },
+            "description": "Query cache entries by time index"
+          },
+          "response": []
+        },
+        {
+          "name": "Clear Cache",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/cache/clear",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "cache", "clear"]
+            },
+            "description": "Clear all topology cache"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. API Query",
+      "item": [
+        {
+          "name": "Get Namespaces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/namespaces",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "namespaces"]
+            },
+            "description": "Get list of all namespaces in topology"
+          },
+          "response": []
+        },
+        {
+          "name": "Get System APIs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topology/:systemId/apis",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topology", ":systemId", "apis"],
+              "variable": [
+                {
+                  "key": "systemId",
+                  "value": "1",
+                  "description": "System ID"
+                }
+              ]
+            },
+            "description": "Get all APIs for a specific system"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Root APIs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topology/:systemId/apis/root",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topology", ":systemId", "apis", "root"],
+              "variable": [
+                {
+                  "key": "systemId",
+                  "value": "1",
+                  "description": "System ID"
+                }
+              ]
+            },
+            "description": "Get root APIs for a specific system"
+          },
+          "response": []
+        },
+        {
+          "name": "Get API Request Payloads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topology/api-requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topology", "api-requests"]
+            },
+            "description": "Get all API request payload configurations"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Health Check",
+      "item": [
+        {
+          "name": "Actuator Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Spring Boot Actuator health check"
+          },
+          "response": []
+        },
+        {
+          "name": "Actuator Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "info"]
+            },
+            "description": "Get application information"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
+

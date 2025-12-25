@@ -33,7 +33,7 @@ public class TaskExecutionLogController {
                                                    @RequestParam(value = "page", defaultValue = "1") Integer page,
                                                    @RequestParam(value = "size", defaultValue = "100") Integer size) {
         Integer minLevel = null;
-        if (level != null && !level.isBlank()) {
+        if (level != null && !level.trim().isEmpty()) {
             try {
                 TaskExecutionLog.LogLevel lv = TaskExecutionLog.LogLevel.valueOf(level.trim().toUpperCase());
                 minLevel = lv.getValue();

@@ -21,7 +21,7 @@ public class ProbeTaskController {
     @PostMapping({"/probe-tasks", "/detection-tasks"})
     public ApiResponse<ProbeTaskDtos.ProbeTaskCreateResponse> create(@RequestBody ProbeTaskDtos.ProbeTaskCreateRequest req) {
         logger.info("POST /api/probe-tasks name={}, systemId={}, apiId={}, requestNum={}", req.name, req.systemId, req.apiId, req.requestNum);
-        var resp = service.createProbeTask(req);
+        ProbeTaskDtos.ProbeTaskCreateResponse resp = service.createProbeTask(req);
         return ApiResponse.success(resp);
     }
 }

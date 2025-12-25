@@ -4,7 +4,7 @@ import com.chaosblade.svc.reqrspproxy.dto.FixtureUpsertRequest;
 import com.chaosblade.svc.reqrspproxy.dto.FixtureUpsertResponse;
 import com.chaosblade.svc.reqrspproxy.entity.RecordingState;
 import com.chaosblade.svc.reqrspproxy.config.RecordingConfig;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ public class FixtureInterceptionService {
      */
     public FixtureUpsertResponse upsert(FixtureUpsertRequest req, HttpServletRequest httpRequest) {
         String namespace = inferNamespace(req.getNamespace(), httpRequest);
-        if (namespace == null || namespace.isBlank()) {
+        if (namespace == null || namespace.trim().isEmpty()) {
             throw new IllegalArgumentException("必须提供namespace");
         }
 
@@ -166,13 +166,13 @@ public class FixtureInterceptionService {
     }
 
     private String buildSessionId(String recordId, String serviceName) {
-        String base = (recordId != null && !recordId.isBlank()) ? recordId.trim() : generateSessionId();
+        String base = (recordId != null && !recordId.trim().isEmpty()) ? recordId.trim() : generateSessionId();
         // 保证同一组内不同服务不冲突
         return base + "-" + serviceName;
     }
 
     private String inferNamespace(String explicit, HttpServletRequest httpRequest) {
-        return (explicit != null && !explicit.isBlank()) ? explicit.trim() : null;
+        return (explicit != null && !explicit.trim().isEmpty()) ? explicit.trim() : null;
     }
 
     private Map<String, List<FixtureUpsertRequest.FixtureItem>> groupByService(List<FixtureUpsertRequest.FixtureItem> items) {

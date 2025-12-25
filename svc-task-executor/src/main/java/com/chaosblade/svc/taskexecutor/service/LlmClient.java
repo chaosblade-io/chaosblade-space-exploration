@@ -31,7 +31,7 @@ public class LlmClient {
     private RestTemplate restTemplate = new RestTemplate();
 
     public String chat(String userContent) {
-        if (apiKey == null || apiKey.isBlank()) {
+        if (apiKey == null || apiKey.trim().isEmpty()) {
             log.warn("LLM apiKey not configured, skip LLM call");
             return null;
         }

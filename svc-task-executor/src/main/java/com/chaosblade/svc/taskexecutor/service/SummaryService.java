@@ -68,9 +68,9 @@ public class SummaryService {
         for (var r : rrs) {
             String svc = r.getServiceName();
             String type = r.getFaultType();
-            if (svc == null || svc.isBlank()) continue;
+            if (svc == null || svc.trim().isEmpty()) continue;
             serviceToTypes.computeIfAbsent(svc, k -> new LinkedHashSet<>());
-            if (type != null && !type.isBlank()) serviceToTypes.get(svc).add(type);
+            if (type != null && !type.trim().isEmpty()) serviceToTypes.get(svc).add(type);
         }
         int affectedServices = serviceToTypes.size();
         Set<String> allTypes = new LinkedHashSet<>();
@@ -83,7 +83,7 @@ public class SummaryService {
         } catch (Exception ex) {
             log.warn("LLM call error: {}", ex.getMessage());
         }
-        if (content == null || content.isBlank()) {
+        if (content == null || content.trim().isEmpty()) {
             content = fallbackSummary(totalCases, failedCases, avgErrRate, affectedServices, allTypes);
         }
         TaskConclusion tc = new TaskConclusion();

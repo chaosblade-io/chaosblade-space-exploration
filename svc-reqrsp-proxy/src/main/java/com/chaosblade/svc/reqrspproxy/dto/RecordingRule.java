@@ -1,7 +1,7 @@
 package com.chaosblade.svc.reqrspproxy.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 
 /**
  * 录制规则 - 定义要录制的路径和方法

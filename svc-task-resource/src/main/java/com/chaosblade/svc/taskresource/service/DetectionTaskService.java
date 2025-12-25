@@ -364,11 +364,17 @@ public class DetectionTaskService {
             java.util.List<com.chaosblade.svc.taskresource.entity.TaskExecutionLog> logs =
                     taskExecutionLogRepository.findByExecutionIdOrderByTsAsc(executionId);
             java.util.List<ExecutionDetailsDto.LogEntry> out = new java.util.ArrayList<>();
-            for (var lg : logs) {
+            for (com.chaosblade.svc.taskresource.entity.TaskExecutionLog lg : logs) {
                 ExecutionDetailsDto.LogEntry e = new ExecutionDetailsDto.LogEntry();
                 e.ts = lg.getTs();
-                e.level = switch (java.util.Objects.requireNonNullElse(lg.getLevel(), 1)) {
-                    case 0 -> "DEBUG"; case 1 -> "INFO"; case 2 -> "WARN"; case 3 -> "ERROR"; default -> "INFO"; };
+                int lvl = lg.getLevel() != null ? lg.getLevel() : 1;
+                switch (lvl) {
+                    case 0: e.level = "DEBUG"; break;
+                    case 1: e.level = "INFO"; break;
+                    case 2: e.level = "WARN"; break;
+                    case 3: e.level = "ERROR"; break;
+                    default: e.level = "INFO"; break;
+                }
                 e.message = lg.getMessage();
 
                 out.add(e);
@@ -378,9 +384,9 @@ public class DetectionTaskService {
             logger.info("[ExecDetails] logs.size={}", (dto.logs==null?0:dto.logs.size()));
 
 
-        var cases = testCaseRepository.findByExecutionId(executionId);
+        java.util.List<TestCase> cases = testCaseRepository.findByExecutionId(executionId);
         // 合并 testCases + metrics
-        var trList = testResultRepository.findByExecutionId(executionId);
+        java.util.List<com.chaosblade.svc.taskresource.entity.TestResult> trList = testResultRepository.findByExecutionId(executionId);
         logger.info("[ExecDetails] cases.size={}, testResults.size={}", (cases==null?0:cases.size()), (trList==null?0:trList.size()));
 
         java.util.Map<Long, com.chaosblade.svc.taskresource.entity.TestResult> trMap = new java.util.HashMap<>();
@@ -397,8 +403,8 @@ public class DetectionTaskService {
                 // 兼容历史数据：若按 test_case_id 精确匹配不到，则按旧算法(caseId hash)回查
                 if (tr == null) {
                     try {
-                        java.util.List<?> arr = (tc.getFaultsJson()==null||tc.getFaultsJson().isBlank())
-                                ? java.util.List.of() : om2.readValue(tc.getFaultsJson(), java.util.List.class);
+                        java.util.List<?> arr = (tc.getFaultsJson()==null||tc.getFaultsJson().trim().isEmpty())
+                                ? java.util.Collections.emptyList() : om2.readValue(tc.getFaultsJson(), java.util.List.class);
                         String caseIdStr;
                         if (arr.isEmpty()) caseIdStr = "baseline";
                         else {
@@ -449,7 +455,7 @@ public class DetectionTaskService {
             int cntWith = 0;
             int total = (items==null?0:items.size());
             if (items != null) {
-                for (var tci : items) {
+                for (ExecutionDetailsDto.TestCaseItem tci : items) {
                     if ((tci.p50!=null && tci.p50.value!=null) || (tci.p95!=null && tci.p95.value!=null) || (tci.p99!=null && tci.p99.value!=null) || (tci.errRate!=null && tci.errRate.value!=null)) cntWith++;
                 }
             }
@@ -461,9 +467,9 @@ public class DetectionTaskService {
         java.util.Map<String, java.util.Set<String>> svc2types = new java.util.LinkedHashMap<>();
         com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
         if (cases != null) {
-            for (var tc : cases) {
+            for (TestCase tc : cases) {
                 String json = tc.getFaultsJson();
-                if (json == null || json.isBlank()) continue;
+                if (json == null || json.trim().isEmpty()) continue;
                 try {
                     java.util.List<?> arr = om.readValue(json, java.util.List.class);
 
@@ -473,7 +479,7 @@ public class DetectionTaskService {
                         java.util.Map<?,?> m = (java.util.Map<?,?>) o;
                         Object svcObj = m.get("serviceName");
                         String svc = (svcObj==null)? null : String.valueOf(svcObj);
-                        if (svc == null || svc.isBlank()) continue;
+                        if (svc == null || svc.trim().isEmpty()) continue;
                         String ftype = "unknown";
                         Object fd = m.get("faultDefinition");
                         if (fd instanceof java.util.Map) {
@@ -495,7 +501,7 @@ public class DetectionTaskService {
             }
         }
         java.util.List<ExecutionDetailsDto.FaultInjectionSummary> fi = new java.util.ArrayList<>();
-        for (var e : svc2types.entrySet()) {
+        for (java.util.Map.Entry<String, java.util.Set<String>> e : svc2types.entrySet()) {
             ExecutionDetailsDto.FaultInjectionSummary s = new ExecutionDetailsDto.FaultInjectionSummary();
             s.serviceName = e.getKey();
             s.faultTypes = new java.util.ArrayList<>(e.getValue());
@@ -506,10 +512,10 @@ public class DetectionTaskService {
         // SLO 合规判定与 LLM 总结（仅在 DONE 状态执行）
         if ("DONE".equalsIgnoreCase(exec.getStatus())) {
             // 1) 收集任务级 SLO 阈值（选择更严格的阈值：取最小非空值）
-            var sloPage = taskSloRepository.findByConditions(null, null, null, task.getId(), null,
+            Page<TaskSlo> sloPage = taskSloRepository.findByConditions(null, null, null, task.getId(), null,
                     org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE));
             Integer sloP95 = null, sloP99 = null, sloErr = null;
-            for (var slo : sloPage.getContent()) {
+            for (TaskSlo slo : sloPage.getContent()) {
                 if (slo.getP95() != null) sloP95 = (sloP95 == null) ? slo.getP95() : Math.min(sloP95, slo.getP95());
                 if (slo.getP99() != null) sloP99 = (sloP99 == null) ? slo.getP99() : Math.min(sloP99, slo.getP99());
                 if (slo.getErrRate() != null) sloErr = (sloErr == null) ? slo.getErrRate() : Math.min(sloErr, slo.getErrRate());
@@ -527,7 +533,7 @@ public class DetectionTaskService {
 
             com.fasterxml.jackson.databind.ObjectMapper omFail = new com.fasterxml.jackson.databind.ObjectMapper();
 
-            for (var it : dto.testCases) {
+            for (ExecutionDetailsDto.TestCaseItem it : dto.testCases) {
                 // 计算 meetsSlo
                 Boolean p50Ok = null, p95Ok = null, p99Ok = null, errOk = null;
                 // p50：复用 sloP95 作为评估阈值（若存在），否则不判定
@@ -567,12 +573,12 @@ public class DetectionTaskService {
                     fail++;
                     // 统计失败类型与受影响服务
                     try {
-                        if (it.faultsJson != null && !it.faultsJson.isBlank()) {
+                        if (it.faultsJson != null && !it.faultsJson.trim().isEmpty()) {
                             java.util.List<?> arr = omFail.readValue(it.faultsJson, java.util.List.class);
                             java.util.List<String> svcNames = new java.util.ArrayList<>();
                             java.util.List<String> typeNames = new java.util.ArrayList<>();
                             for (Object o : arr) if (o instanceof java.util.Map) {
-                                var m = (java.util.Map<?,?>) o;
+                                java.util.Map<?,?> m = (java.util.Map<?,?>) o;
                                 Object svcObj = m.get("serviceName");
                                 if (svcObj != null) {
                                     String svc = String.valueOf(svcObj);
@@ -634,11 +640,11 @@ public class DetectionTaskService {
 
             // 3) 主要失败类型与最受影响服务
             String mainFailType = null; int typeMax = 0;
-            for (var e : failTypeCnt.entrySet()) {
+            for (java.util.Map.Entry<String, Integer> e : failTypeCnt.entrySet()) {
                 if (e.getValue() > typeMax) { typeMax = e.getValue(); mainFailType = e.getKey(); }
             }
             String worstService = null; int svcMax = 0;
-            for (var e : failSvcCnt.entrySet()) {
+            for (java.util.Map.Entry<String, Integer> e : failSvcCnt.entrySet()) {
                 if (e.getValue() > svcMax) { svcMax = e.getValue(); worstService = e.getKey(); }
             }
 
@@ -649,7 +655,7 @@ public class DetectionTaskService {
                         .orElse(null);
                 if (dto.llmSummary == null) {
                     // 拓扑数据
-                    var topoOpt = apiTopologyRepository.findBySystemIdAndApiId(task.getSystemId(), task.getApiId());
+                    java.util.Optional<ApiTopology> topoOpt = apiTopologyRepository.findBySystemIdAndApiId(task.getSystemId(), task.getApiId());
                     java.util.List<ApiTopologyNode> nodes = java.util.Collections.emptyList();
                     java.util.List<ApiTopologyEdge> edges = java.util.Collections.emptyList();
                     if (topoOpt.isPresent()) {
@@ -671,8 +677,8 @@ public class DetectionTaskService {
                             "注意：内容越详细越好，不超过1500字，以md的格式返回";
 
                     // 调用 LLM
-                    var rt = new org.springframework.web.client.RestTemplate();
-                    var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+                    org.springframework.web.client.RestTemplate rt = new org.springframework.web.client.RestTemplate();
+                    org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
                     factory.setConnectTimeout(llmProperties.getTimeout().getMs());
                     factory.setReadTimeout(llmProperties.getTimeout().getMs());
                     rt.setRequestFactory(factory);
@@ -694,23 +700,23 @@ public class DetectionTaskService {
                     String llmResp = null; String summary = null; Exception lastEx = null;
                     for (int i = 0; i < Math.max(1, llmProperties.getRetries()); i++) {
                         try {
-                            var req = new org.springframework.http.HttpEntity<>(body, headers);
-                            var resp = rt.postForEntity(llmProperties.getApi().getUrl(), req, String.class);
+                            org.springframework.http.HttpEntity<java.util.Map<String, Object>> req = new org.springframework.http.HttpEntity<>(body, headers);
+                            org.springframework.http.ResponseEntity<String> resp = rt.postForEntity(llmProperties.getApi().getUrl(), req, String.class);
                             llmResp = resp.getBody();
                             // 解析 content
                             if (llmResp != null) {
                                 com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(llmResp);
                                 // OpenAI兼容：choices[0].message.content
-                                var choices = root.path("choices");
+                                com.fasterxml.jackson.databind.JsonNode choices = root.path("choices");
                                 if (choices.isArray() && choices.size() > 0) {
-                                    var content = choices.get(0).path("message").path("content");
+                                    com.fasterxml.jackson.databind.JsonNode content = choices.get(0).path("message").path("content");
                                     if (content.isTextual()) summary = content.asText();
                                 }
                             }
-                            if (summary != null && !summary.isBlank()) break;
+                            if (summary != null && !summary.trim().isEmpty()) break;
                         } catch (Exception ex2) { lastEx = ex2; }
                     }
-                    if (summary == null || summary.isBlank()) {
+                    if (summary == null || summary.trim().isEmpty()) {
                         logger.warn("[ExecDetails] LLM summary generation failed, resp={}, ex={}", llmResp, (lastEx==null?null:lastEx.toString()));
                     } else {
                         // 保存LLM总结到数据库
@@ -761,7 +767,7 @@ public class DetectionTaskService {
                 taskId, status, namespace, startDate, endDate, page, size);
         Pageable pageable = PageRequest.of(page - 1, size);
         Page<TaskExecution> p = taskExecutionRepository.findByConditions(taskId, status, namespace, startDate, endDate, pageable);
-        var list = p.getContent();
+        java.util.List<TaskExecution> list = p.getContent();
         // 批量查询任务名称，避免 N+1
         java.util.Set<Long> taskIds = new java.util.LinkedHashSet<>();
         for (TaskExecution te : list) taskIds.add(te.getTaskId());

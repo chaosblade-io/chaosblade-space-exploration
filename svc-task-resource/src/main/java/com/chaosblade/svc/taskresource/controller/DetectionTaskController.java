@@ -11,8 +11,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import com.chaosblade.svc.taskresource.config.EndpointsProperties;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
 import java.time.LocalDateTime;
 
 /**
@@ -65,7 +65,7 @@ public class DetectionTaskController {
     @GetMapping("/detection-tasks/{taskId}")
     public ApiResponse<com.chaosblade.svc.taskresource.dto.DetectionTaskDtos.DetectionTaskDetails> getDetectionTaskDetails(@PathVariable Long taskId) {
         logger.info("GET /api/detection-tasks/{}", taskId);
-        var details = detectionTaskService.getDetectionTaskDetails(taskId);
+        com.chaosblade.svc.taskresource.dto.DetectionTaskDtos.DetectionTaskDetails details = detectionTaskService.getDetectionTaskDetails(taskId);
         return ApiResponse.success(details);
     }
 
@@ -145,7 +145,7 @@ public class DetectionTaskController {
         logger.info("[PROXY] POST /api/detection-tasks/{}/execute -> {}", taskId, url);
         try {
             // 配置超时时间，避免连接悬挂导致客户端报 Premature EOF
-            var f = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+            org.springframework.http.client.SimpleClientHttpRequestFactory f = new org.springframework.http.client.SimpleClientHttpRequestFactory();
             f.setConnectTimeout(50000);
             f.setReadTimeout(300000);
             org.springframework.web.client.RestTemplate rt = new org.springframework.web.client.RestTemplate(f);
@@ -172,7 +172,7 @@ public class DetectionTaskController {
             if (!h.containsKey(org.springframework.http.HttpHeaders.CONTENT_TYPE)) {
                 h.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
             }
-            var req = new org.springframework.http.HttpEntity<>(body, h);
+            org.springframework.http.HttpEntity<String> req = new org.springframework.http.HttpEntity<>(body, h);
             org.springframework.http.ResponseEntity<String> resp = rt.postForEntity(url, req, String.class);
             logger.info("[PROXY] executor responded: status={} length={}", resp.getStatusCode(), (resp.getBody()==null?0:resp.getBody().length()));
             //
@@ -248,7 +248,7 @@ public class DetectionTaskController {
             @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
             @RequestParam(value = "size", defaultValue = "20") @Min(1) int size) {
         logger.info("GET /api/detection-tasks/{}/executions - page: {}, size: {}", taskId, page, size);
-        var result = detectionTaskService.getTaskExecutions(taskId, page, size);
+        PageResponse<com.chaosblade.svc.taskresource.entity.TaskExecution> result = detectionTaskService.getTaskExecutions(taskId, page, size);
         return ApiResponse.success(result);
     }
 
@@ -269,7 +269,7 @@ public class DetectionTaskController {
             @RequestParam(value = "size", defaultValue = "20") @Min(1) int size) {
         logger.info("GET /api/task-executions - taskId={}, status={}, namespace={}, startDate={}, endDate={}, page={}, size={}",
                 taskId, status, namespace, startDate, endDate, page, size);
-        var resp = detectionTaskService.getExecutions(taskId, status, namespace, startDate, endDate, page, size);
+        PageResponse<com.chaosblade.svc.taskresource.dto.DetectionTaskDtos.TaskExecutionView> resp = detectionTaskService.getExecutions(taskId, status, namespace, startDate, endDate, page, size);
         return ApiResponse.success(resp);
     }
 
@@ -282,7 +282,7 @@ public class DetectionTaskController {
     public ApiResponse<com.chaosblade.svc.taskresource.dto.ExecutionDetailsDto> getExecutionDetailsNew(
             @PathVariable Long executionId) {
         logger.info("GET /api/task-executions/{}", executionId);
-        var details = detectionTaskService.getExecutionDetailsByExecutionId(executionId);
+        com.chaosblade.svc.taskresource.dto.ExecutionDetailsDto details = detectionTaskService.getExecutionDetailsByExecutionId(executionId);
         // 按需裁剪返回：
         // 1) 不返回 llmSummary
         // 2) 过滤掉指定 CaseType 的测试用例（当前为 BASELINE，后续如需改为 SINGLE/DUAL 可调整）
@@ -291,7 +291,7 @@ public class DetectionTaskController {
                 details.llmSummary = null; // 不返回 llmSummary
                 if (details.testCases != null) {
                     java.util.List<com.chaosblade.svc.taskresource.dto.ExecutionDetailsDto.TestCaseItem> filtered = new java.util.ArrayList<>();
-                    for (var t : details.testCases) {
+                    for (com.chaosblade.svc.taskresource.dto.ExecutionDetailsDto.TestCaseItem t : details.testCases) {
                         if (t == null) continue;
                         // 过滤规则：去掉 CaseType == BASELINE 的用例
                         if (t.caseType != null && t.caseType.equalsIgnoreCase("BASELINE")) continue;
@@ -314,7 +314,7 @@ public class DetectionTaskController {
             @PathVariable Long taskId,
             @PathVariable Long executionId) {
         logger.warn("[DEPRECATED] GET /api/detection-tasks/{}/executions/{}", taskId, executionId);
-        var details = detectionTaskService.getExecutionDetails(taskId, executionId);
+        com.chaosblade.svc.taskresource.dto.ExecutionDetailsDto details = detectionTaskService.getExecutionDetails(taskId, executionId);
         return ApiResponse.success(details);
     }
 }

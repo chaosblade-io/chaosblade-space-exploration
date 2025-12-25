@@ -2,9 +2,16 @@ package com.chaosblade.svc.topo.model.entity;
 
 /**
  * 实体类型枚举
- * 基于topo_schema_design.md的三级实体模型定义
+ * 基于PROMETHEUS_INTEGRATION_PLAN.md的四级实体模型定义
  */
 public enum EntityType {
+
+    // ========== 0级实体（集群层） ==========
+
+    /**
+     * Kubernetes 集群
+     */
+    CLUSTER("Cluster"),
 
     // ========== 1级实体（抽象服务实体） ==========
 
@@ -31,19 +38,24 @@ public enum EntityType {
     // ========== 2级实体（运行时实例实体） ==========
 
     /**
-     * 应用实例，代表一个运行中的应用容器实例
+     * Kubernetes 节点（原 HOST，重命名）
+     */
+    NODE("Node"),
+
+    /**
+     * Pod 实例
      */
     POD("Pod"),
+
+    /**
+     * 容器实例（新增）
+     */
+    CONTAINER("Container"),
 
     /**
      * 中间件的具体实例，比如一个DB实例
      */
     INSTANCE("Instance"),
-
-    /**
-     * 主机实例，代表一个ECS主机，或者一个K8s Node
-     */
-    HOST("Host"),
 
     // ========== 3级实体（接口与调用实体） ==========
 
@@ -55,7 +67,19 @@ public enum EntityType {
     /**
      * RPC分组，将具有相似性的接口进行分组聚合
      */
-    RPC_GROUP("RPCGroup");
+    RPC_GROUP("RPCGroup"),
+
+    // ========== 4级实体（指标层） ==========
+
+    /**
+     * Prometheus 指标（新增）
+     */
+    METRIC("Metric"),
+
+    /**
+     * 指标分组（新增）
+     */
+    METRIC_GROUP("MetricGroup");
 
     private final String displayName;
 
@@ -69,24 +93,30 @@ public enum EntityType {
 
     /**
      * 获取实体级别
-     * @return 1, 2, 或 3
+     * @return 0, 1, 2, 3, 或 4
      */
     public int getLevel() {
         switch (this) {
+            case CLUSTER:
+                return 0;
             case NAMESPACE:
             case SERVICE:
             case EXTERNAL_SERVICE:
             case MIDDLEWARE:
                 return 1;
+            case NODE:
             case POD:
+            case CONTAINER:
             case INSTANCE:
-            case HOST:
                 return 2;
             case RPC:
             case RPC_GROUP:
                 return 3;
+            case METRIC:
+            case METRIC_GROUP:
+                return 4;
             default:
-                return 0;
+                return -1;
         }
     }
 
@@ -101,7 +131,7 @@ public enum EntityType {
      * 判断是否为运行时实例
      */
     public boolean isRuntimeInstance() {
-        return this == POD || this == INSTANCE || this == HOST;
+        return this == POD || this == INSTANCE || this == NODE || this == CONTAINER;
     }
 
     /**
@@ -109,6 +139,20 @@ public enum EntityType {
      */
     public boolean isInterfaceType() {
         return this == RPC || this == RPC_GROUP;
+    }
+
+    /**
+     * 判断是否为基础设施实体
+     */
+    public boolean isInfrastructure() {
+        return this == CLUSTER || this == NODE || this == POD || this == CONTAINER;
+    }
+
+    /**
+     * 判断是否为指标实体
+     */
+    public boolean isMetric() {
+        return this == METRIC || this == METRIC_GROUP;
     }
 
     /**

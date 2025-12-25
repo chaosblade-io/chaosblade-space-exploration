@@ -1,6 +1,6 @@
 package com.chaosblade.svc.taskresource.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 /**
  * 任务SLO实体 - 对应表 task_slo（字段：id, p95, p99, err_rate, task_id, node_id）

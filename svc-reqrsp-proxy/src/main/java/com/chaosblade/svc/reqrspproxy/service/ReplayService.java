@@ -221,7 +221,7 @@ public class ReplayService {
             } catch (Exception ignore) {}
         }
         // 2) 默认回退
-        return (defaultScheme == null || defaultScheme.isBlank()) ? "http" : defaultScheme;
+        return (defaultScheme == null || defaultScheme.trim().isEmpty()) ? "http" : defaultScheme;
     }
 
     private boolean isHttpsPort(ServicePort sp) {
@@ -245,7 +245,7 @@ public class ReplayService {
     }
 
     private String extractPathAndQuery(String urlOrPath) {
-        if (urlOrPath == null || urlOrPath.isBlank()) return "/";
+        if (urlOrPath == null || urlOrPath.trim().isEmpty()) return "/";
         int schemeIdx = urlOrPath.indexOf("://");
         if (schemeIdx > 0) {
             int idx = urlOrPath.indexOf('/', schemeIdx + 3);

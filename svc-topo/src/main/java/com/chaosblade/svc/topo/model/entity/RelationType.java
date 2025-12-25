@@ -2,7 +2,7 @@ package com.chaosblade.svc.topo.model.entity;
 
 /**
  * 关系类型枚举
- * 基于topo_schema_design.md的实体间关系定义
+ * 基于PROMETHEUS_INTEGRATION_PLAN.md的实体间关系定义
  */
 public enum RelationType {
 
@@ -29,7 +29,39 @@ public enum RelationType {
      * 调用关系 - 一个实体调用另一个实体的接口
      * 例如：Service调用RPC接口
      */
-    INVOKES("INVOKES", "invokes");
+    INVOKES("INVOKES", "invokes"),
+
+    // ========== 新增关系类型 ==========
+
+    /**
+     * 归属关系 - 实体归属于某个集群或命名空间
+     * 例如：Node → Cluster, Namespace → Cluster
+     */
+    BELONGS_TO("BELONGS_TO", "belongs_to"),
+
+    /**
+     * 托管关系 - 节点托管 Pod
+     * 例如：Node → Pod（一个节点托管多个 Pod）
+     */
+    HOSTS("HOSTS", "hosts"),
+
+    /**
+     * 包含关系（容器级别）- Pod 包含 Container
+     * 例如：Pod → Container（一个 Pod 包含多个容器）
+     */
+    INCLUDES("INCLUDES", "includes"),
+
+    /**
+     * 暴露关系 - 实体暴露指标
+     * 例如：Pod → Metric, Node → Metric, Container → Metric
+     */
+    EXPOSES("EXPOSES", "exposes"),
+
+    /**
+     * 聚合关系 - 指标分组聚合指标
+     * 例如：MetricGroup → Metric
+     */
+    AGGREGATES("AGGREGATES", "aggregates");
 
     private final String displayName;
     private final String identifier;
@@ -53,11 +85,17 @@ public enum RelationType {
     public int getWeight() {
         switch (this) {
             case CONTAINS:
+            case INCLUDES:
                 return 10; // 强关系
             case DEPENDS_ON:
             case INVOKES:
                 return 5;  // 中等关系
             case RUNS_ON:
+            case HOSTS:
+            case BELONGS_TO:
+                return 3;  // 基础设施关系
+            case EXPOSES:
+            case AGGREGATES:
                 return 1;  // 弱关系
             default:
                 return 1;
@@ -68,7 +106,7 @@ public enum RelationType {
      * 判断是否为层级关系（父子关系）
      */
     public boolean isHierarchical() {
-        return this == CONTAINS ;
+        return this == CONTAINS || this == INCLUDES;
     }
 
     /**
@@ -82,7 +120,21 @@ public enum RelationType {
      * 判断是否为部署关系
      */
     public boolean isDeployment() {
-        return this == RUNS_ON ;
+        return this == RUNS_ON || this == HOSTS;
+    }
+
+    /**
+     * 判断是否为基础设施关系
+     */
+    public boolean isInfrastructure() {
+        return this == BELONGS_TO || this == HOSTS || this == INCLUDES;
+    }
+
+    /**
+     * 判断是否为指标关系
+     */
+    public boolean isMetricRelation() {
+        return this == EXPOSES || this == AGGREGATES;
     }
 
     /**

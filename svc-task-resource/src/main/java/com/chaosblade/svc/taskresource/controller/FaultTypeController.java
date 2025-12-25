@@ -9,8 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
 
 import java.util.List;
 import java.util.Map;

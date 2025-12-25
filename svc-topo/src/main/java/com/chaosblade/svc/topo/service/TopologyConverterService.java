@@ -32,6 +32,9 @@ public class TopologyConverterService {
     @Autowired
     private TraceParserService traceParserService;
 
+    @Autowired(required = false)
+    private DataSourceOrchestrator dataSourceOrchestrator;
+
     // 存储当前拓扑图
     private TopologyGraph currentTopology;
 
@@ -90,6 +93,12 @@ public class TopologyConverterService {
 
         // 7. 计算RED指标
         calculateRedMetrics(topology, traceData);
+
+        // 8. 使用 DataSourceOrchestrator 增强节点（添加 Prometheus 和 Kubernetes 数据）
+        if (dataSourceOrchestrator != null) {
+            logger.info("开始使用 Prometheus 和 Kubernetes 数据增强拓扑节点");
+            dataSourceOrchestrator.enrichTopologyNodes(topology.getNodes());
+        }
 
         logger.info("拓扑图转换完成: {} 个节点, {} 条边", topology.getNodes().size(), topology.getEdges().size());
 
@@ -228,9 +237,9 @@ public class TopologyConverterService {
         }
 
         for (String hostName : hostNames) {
-            Entity entity = new Entity("host-" + hostName, EntityType.HOST, hostName + " Host");
+            Entity entity = new Entity("node-" + hostName, EntityType.NODE, hostName + " Node");
             entity.setName(hostName);
-            // Host 节点通常不直接关联到特定的 namespace，所以这里不设置 namespace 字段
+            // Node 节点通常不直接关联到特定的 namespace，所以这里不设置 namespace 字段
 
             entity.setRegionId("unknown");
 

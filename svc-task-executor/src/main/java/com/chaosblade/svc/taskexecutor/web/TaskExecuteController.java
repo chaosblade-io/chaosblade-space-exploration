@@ -38,7 +38,7 @@ public class TaskExecuteController {
 
         // 异步拉起编排
         new Thread(() -> {
-            var options = new ExecutionOrchestrator.OrchestrateOptions();
+            ExecutionOrchestrator.OrchestrateOptions options = new ExecutionOrchestrator.OrchestrateOptions();
             options.ttlSecForInterceptors = proxyProperties.getTtlSecForInterceptors();
             options.waitAnalyzeTimeoutSec = proxyProperties.getWaitAnalyzeTimeoutSec();
             options.waitInterceptorReadySec = proxyProperties.getWaitInterceptorReadySec();
@@ -50,10 +50,10 @@ public class TaskExecuteController {
             orchestrator.run(executionId, options);
         }, "exec-"+executionId).start();
 
-        return ResponseEntity.ok(ApiResponse.ok(Map.of(
-                "executionId", executionId,
-                "status", te.getStatus()
-        )));
+        java.util.Map<String, Object> resultMap = new java.util.HashMap<>();
+        resultMap.put("executionId", executionId);
+        resultMap.put("status", te.getStatus());
+        return ResponseEntity.ok(ApiResponse.ok(resultMap));
     }
 
     @GetMapping("/executions/{executionId}")

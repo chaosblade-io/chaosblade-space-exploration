@@ -2,8 +2,8 @@ package com.chaosblade.common.core.exception;
 
 import com.chaosblade.common.core.ApiResponse;
 
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

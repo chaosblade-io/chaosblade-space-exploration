@@ -8,8 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
 
 /**
  * 故障配置管理控制器

@@ -6,7 +6,7 @@ import com.chaosblade.svc.reqrspproxy.entity.RecordingState;
 import com.chaosblade.svc.reqrspproxy.service.DirectTapReader;
 import com.chaosblade.svc.reqrspproxy.service.RecordingStateService;
 
-import jakarta.validation.constraints.Min;
+import javax.validation.constraints.Min;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

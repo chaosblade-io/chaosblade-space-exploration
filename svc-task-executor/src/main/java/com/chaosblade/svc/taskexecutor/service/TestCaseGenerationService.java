@@ -151,7 +151,7 @@ public class TestCaseGenerationService {
 
         // 7) 取副本数（通过 K8s 部署信息，按 pod 数估算）
         Map<String, Integer> svcReplicas = new LinkedHashMap<>();
-        var svcFaults = faultConfigQueryService.getFaultConfigsByTaskId(taskId);
+        List<ServiceFaultConfig> svcFaults = faultConfigQueryService.getFaultConfigsByTaskId(taskId);
         for (ServiceFaultConfig sfc : svcFaults) {
             int replicas = (sfc.getNames() != null && !sfc.getNames().isEmpty()) ? sfc.getNames().size() : 1;
             svcReplicas.put(sfc.getServiceName(), replicas);

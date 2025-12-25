@@ -111,14 +111,14 @@ public class ExecFixturesPayloadDumpMain {
     }
 
     private static List<String> splitTokens(String tokens) {
-        if (tokens == null || tokens.isBlank()) return Collections.emptyList();
+        if (tokens == null || tokens.trim().isEmpty()) return Collections.emptyList();
         List<String> list = new ArrayList<>();
-        for (String t : tokens.split(",")) if (t != null && !t.isBlank()) list.add(t.trim());
+        for (String t : tokens.split(",")) if (t != null && !t.trim().isEmpty()) list.add(t.trim());
         return list;
     }
 
     private static Map<String, Object> parseJsonToMap(String json) throws IOException {
-        if (json == null || json.isBlank()) return null;
+        if (json == null || json.trim().isEmpty()) return null;
         return MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
     }
 
@@ -134,7 +134,7 @@ public class ExecFixturesPayloadDumpMain {
 
     private static String getEnvOrDefault(String key, String def) {
         String v = System.getenv(key);
-        return (v == null || v.isBlank()) ? def : v;
+        return (v == null || v.trim().isEmpty()) ? def : v;
     }
 }
 

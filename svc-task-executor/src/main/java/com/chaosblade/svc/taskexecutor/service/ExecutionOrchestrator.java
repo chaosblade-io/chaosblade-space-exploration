@@ -256,7 +256,7 @@ public class ExecutionOrchestrator {
                                 "[Stage4] Injected fault: service="+svc+", bladeName="+bladeName);
 
                         // 等待故障真正生效：轮询 phase=Running，超时30秒，间隔500ms
-                        if (bladeName != null && !bladeName.isBlank()) {
+                        if (bladeName != null && !bladeName.trim().isEmpty()) {
                             long waitDeadline = System.currentTimeMillis() + 30_000L;
                             while (System.currentTimeMillis() < waitDeadline) {
                                 try {
@@ -553,9 +553,9 @@ public class ExecutionOrchestrator {
         List<String> toks = new ArrayList<>();
         for (String svc : services) {
             String v = svcToken.get(svc);
-            if (v == null || v.isBlank()) continue;
+            if (v == null || v.trim().isEmpty()) continue;
             // value 可能为逗号分隔的多个 token；这里全部加入
-            for (String t : v.split(",")) if (t!=null && !t.isBlank()) toks.add(t.trim());
+            for (String t : v.split(",")) if (t!=null && !t.trim().isEmpty()) toks.add(t.trim());
         }
         return toks.isEmpty()? null : String.join(",", toks);
     }
@@ -581,7 +581,7 @@ public class ExecutionOrchestrator {
                 HttpHeaders rh = new HttpHeaders();
                 for (Map.Entry<String,String> e : headerMap.entrySet()) rh.add(e.getKey(), e.getValue());
                 // baggage 头替换逻辑：若存在则替换，否则按需添加
-                if (baggageHeader != null && !baggageHeader.isBlank()) {
+                if (baggageHeader != null && !baggageHeader.trim().isEmpty()) {
                     if (rh.containsKey("baggage")) rh.set("baggage", baggageHeader);
                     else rh.add("baggage", baggageHeader);
                 } else {
@@ -668,7 +668,7 @@ public class ExecutionOrchestrator {
             java.util.Set<String> types = svcTypes.computeIfAbsent(sc.getServiceName(), k -> new LinkedHashSet<>());
             if (sc.getFaultConfig()!=null) {
                 for (ServiceFaultConfig.FaultEntry fe : sc.getFaultConfig()) {
-                    if (fe.getType()!=null && !fe.getType().isBlank()) types.add(fe.getType());
+                    if (fe.getType()!=null && !fe.getType().trim().isEmpty()) types.add(fe.getType());
                 }
             }
         }
@@ -719,7 +719,7 @@ public class ExecutionOrchestrator {
             String tokens = svcBaggage.getOrDefault(svc, "");
             List<String> baggageTokens = new ArrayList<>();
             for (String tok : tokens.split(",")) {
-                if (tok == null || tok.isBlank()) continue;
+                if (tok == null || tok.trim().isEmpty()) continue;
                 baggageTokens.add(tok);
             }
             Map<String,Object> item = new LinkedHashMap<>();
