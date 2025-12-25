@@ -151,11 +151,10 @@ public class FaultsController {
 
         logger.debug("Received health check request");
 
-        Map<String, String> health = Map.of(
-                "status", "UP",
-                "service", "svc-fault-scheduler",
-                "timestamp", String.valueOf(System.currentTimeMillis())
-        );
+        Map<String, String> health = new java.util.LinkedHashMap<>();
+        health.put("status", "UP");
+        health.put("service", "svc-fault-scheduler");
+        health.put("timestamp", String.valueOf(System.currentTimeMillis()));
 
         return ApiResponse.ok(health);
     }

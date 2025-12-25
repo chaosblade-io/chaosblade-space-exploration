@@ -40,8 +40,8 @@ class FixtureUpsertPayloadDumpSpringTest {
         payload.put("items", items);
 
         String json = PRETTY.writeValueAsString(payload);
-        Path out = Path.of("fixtures-upsert-exec-"+executionId+".json");
-        Files.writeString(out, json, StandardCharsets.UTF_8);
+        Path out = java.nio.file.Paths.get("fixtures-upsert-exec-"+executionId+".json");
+        Files.write(out, json.getBytes(StandardCharsets.UTF_8));
         System.out.println("[SpringDump] Wrote payload to: " + out.toAbsolutePath());
         System.out.println("[SpringDump] Items count: " + items.size());
 

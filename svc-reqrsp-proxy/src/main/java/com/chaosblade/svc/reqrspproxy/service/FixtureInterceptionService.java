@@ -64,8 +64,8 @@ public class FixtureInterceptionService {
             state.setRecordingId(sessionId);
             state.setNamespace(namespace);
             state.setServiceName(serviceName);
-            state.setRules(List.of());
-            state.setInterceptionRules(List.of());
+            state.setRules(java.util.Collections.emptyList());
+            state.setInterceptionRules(java.util.Collections.emptyList());
             state.setStatus(RecordingState.RecordingStatus.RECORDING);
             state.setStartedAt(LocalDateTime.now());
             state.setConfigMapName(configMapName);

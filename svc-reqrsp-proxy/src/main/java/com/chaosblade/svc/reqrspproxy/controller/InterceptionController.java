@@ -1,4 +1,5 @@
 package com.chaosblade.svc.reqrspproxy.controller;
+import java.util.stream.Collectors;
 
 import com.chaosblade.common.core.ApiResponse;
 import com.chaosblade.svc.reqrspproxy.dto.*;
@@ -206,7 +207,7 @@ public class InterceptionController {
                         
                         return summary;
                     })
-                    .toList();
+                    .collect(Collectors.toList());
             
             return ApiResponse.success(summaries);
             
@@ -229,15 +230,15 @@ public class InterceptionController {
 
             // 1. 检查拦截状态
             RecordingState state = stateService.loadState(sessionId);
-            diagnosis.put("interceptionState", Map.of(
-                "sessionId", sessionId,
-                "status", state.getStatus().name(),
-                "namespace", state.getNamespace(),
-                "serviceName", state.getServiceName(),
-                "interceptionRulesCount", state.getInterceptionRules().size(),
-                "configMapName", state.getConfigMapName(),
-                "deploymentName", state.getDeploymentName()
-            ));
+            Map<String, Object> stateMap = new java.util.LinkedHashMap<>();
+            stateMap.put("sessionId", sessionId);
+            stateMap.put("status", state.getStatus().name());
+            stateMap.put("namespace", state.getNamespace());
+            stateMap.put("serviceName", state.getServiceName());
+            stateMap.put("interceptionRulesCount", state.getInterceptionRules().size());
+            stateMap.put("configMapName", state.getConfigMapName());
+            stateMap.put("deploymentName", state.getDeploymentName());
+            diagnosis.put("interceptionState", stateMap);
 
             // 2. 生成诊断建议
             List<String> suggestions = new ArrayList<>();

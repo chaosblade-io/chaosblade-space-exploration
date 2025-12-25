@@ -64,7 +64,7 @@ public class TestCaseGenerationService {
         List<ApiTopologyNode> nodes = nodeRepository.findByTopologyId(topo.getId());
         List<ApiTopologyEdge> edges = edgeRepository.findByTopologyId(topo.getId());
 
-        if (nodes.isEmpty()) return List.of();
+        if (nodes.isEmpty()) return Collections.emptyList();
 
         // 2) 构建原始图（按 from -> to）
         Map<Long, String> id2name = nodes.stream().collect(Collectors.toMap(ApiTopologyNode::getId, ApiTopologyNode::getName));
@@ -136,7 +136,7 @@ public class TestCaseGenerationService {
         // 高分挑选（按 comp 去重以降低重叠）
         List<Long> orderByScore = score.entrySet().stream()
                 .sorted((a,b) -> Long.compare(b.getValue(), a.getValue()))
-                .map(Map.Entry::getKey).toList();
+                .map(Map.Entry::getKey).collect(Collectors.toList());
         long covered = 0;
         Set<Integer> pickedComps = new HashSet<>();
         for (Long id : orderByScore) {
@@ -282,7 +282,7 @@ public class TestCaseGenerationService {
                         "未找到该系统与API对应的拓扑: system_id=" + task.getSystemId() + ", api_id=" + task.getApiId()));
         List<ApiTopologyNode> nodes = nodeRepository.findByTopologyId(topo.getId());
         List<ApiTopologyEdge> edges = edgeRepository.findByTopologyId(topo.getId());
-        if (nodes.isEmpty()) return new Step1Result(List.of(), List.of(), 0, 0, highScoreTopK, pathCoverage);
+        if (nodes.isEmpty()) return new Step1Result(Collections.emptyList(), Collections.emptyList(), 0, 0, highScoreTopK, pathCoverage);
 
         Map<Long, String> id2name = nodes.stream().collect(Collectors.toMap(ApiTopologyNode::getId, ApiTopologyNode::getName));
         Map<Long, Set<Long>> g = new LinkedHashMap<>();
@@ -310,7 +310,7 @@ public class TestCaseGenerationService {
         List<Step1Result.NodeScore> ranked = score.entrySet().stream()
                 .sorted((a,b)->Long.compare(b.getValue(), a.getValue()))
                 .map(en -> new Step1Result.NodeScore(en.getKey(), id2name.get(en.getKey()), en.getValue(), inPaths[comp.get(en.getKey())], outPaths[comp.get(en.getKey())], outDeg.getOrDefault(en.getKey(),0), null, comp.get(en.getKey())))
-                .toList();
+                .collect(Collectors.toList());
 
         // 必测集合
         Set<Long> must = new LinkedHashSet<>();
@@ -342,7 +342,7 @@ public class TestCaseGenerationService {
         // 选点来源：Step1 的 selected（若为空，则从 ranked 取前若干）
         List<Step1Result.NodeScore> targets = step1.getSelected();
         if (targets == null || targets.isEmpty()) {
-            targets = step1.getRanked().stream().limit(Math.max(1, highScoreTopK)).toList();
+            targets = step1.getRanked().stream().limit(Math.max(1, highScoreTopK)).collect(Collectors.toList());
         }
         // 去重并按分数降序
         targets = targets.stream()
@@ -351,7 +351,7 @@ public class TestCaseGenerationService {
 
         // 估算副本数（与 Step2 一致）
         Map<String, Integer> svcReplicas = new LinkedHashMap<>();
-        var svcFaults = faultConfigQueryService.getFaultConfigsByTaskId(taskId);
+        List<ServiceFaultConfig> svcFaults = faultConfigQueryService.getFaultConfigsByTaskId(taskId);
         for (ServiceFaultConfig sfc : svcFaults) {
             int replicas = (sfc.getNames() != null && !sfc.getNames().isEmpty()) ? sfc.getNames().size() : 1;
             svcReplicas.put(sfc.getServiceName(), replicas);
@@ -364,28 +364,28 @@ public class TestCaseGenerationService {
         List<SimplifiedTestCaseDTO> result = new ArrayList<>();
 
         // 0 faults baseline（单条基线）
-        result.add(new SimplifiedTestCaseDTO(0, List.of(), "baseline"));
+        result.add(new SimplifiedTestCaseDTO(0, Collections.emptyList(), "baseline"));
 
         // 1 fault：确保每个目标服务至少一次被覆盖
         for (Step1Result.NodeScore ns : targets) {
             String svc = ns.getServiceName();
             int replicas = svcReplicas.getOrDefault(svc, 1);
-            var chaos = (replicas > 1) ? oneDown : allDown;
-            var ft = new SimplifiedTestCaseDTO.FaultTarget(svc, chaos, replicas, ns.getReason()!=null?ns.getReason():"HIGH_SCORE", ns.getScore());
-            result.add(new SimplifiedTestCaseDTO(1, List.of(ft), "single fault: "+svc));
+            TestCaseDTO.ChaosSpec chaos = (replicas > 1) ? oneDown : allDown;
+            SimplifiedTestCaseDTO.FaultTarget ft = new SimplifiedTestCaseDTO.FaultTarget(svc, chaos, replicas, ns.getReason()!=null?ns.getReason():"HIGH_SCORE", ns.getScore());
+            result.add(new SimplifiedTestCaseDTO(1, Collections.singletonList(ft), "single fault: "+svc));
         }
 
         // 2 faults：根据 targets 的降序，生成相邻对（或滑动窗口组合），保证规模可控
         for (int i = 0; i + 1 < targets.size(); i += 2) {
-            var a = targets.get(i);
-            var b = targets.get(i+1);
+            Step1Result.NodeScore a = targets.get(i);
+            Step1Result.NodeScore b = targets.get(i+1);
             String svA = a.getServiceName(); String svB = b.getServiceName();
             int repA = svcReplicas.getOrDefault(svA, 1); int repB = svcReplicas.getOrDefault(svB, 1);
-            var chaosA = (repA > 1) ? oneDown : allDown;
-            var chaosB = (repB > 1) ? oneDown : allDown;
-            var fA = new SimplifiedTestCaseDTO.FaultTarget(svA, chaosA, repA, a.getReason()!=null?a.getReason():"HIGH_SCORE", a.getScore());
-            var fB = new SimplifiedTestCaseDTO.FaultTarget(svB, chaosB, repB, b.getReason()!=null?b.getReason():"HIGH_SCORE", b.getScore());
-            result.add(new SimplifiedTestCaseDTO(2, List.of(fA, fB), "dual fault: "+svA+" + "+svB));
+            TestCaseDTO.ChaosSpec chaosA = (repA > 1) ? oneDown : allDown;
+            TestCaseDTO.ChaosSpec chaosB = (repB > 1) ? oneDown : allDown;
+            SimplifiedTestCaseDTO.FaultTarget fA = new SimplifiedTestCaseDTO.FaultTarget(svA, chaosA, repA, a.getReason()!=null?a.getReason():"HIGH_SCORE", a.getScore());
+            SimplifiedTestCaseDTO.FaultTarget fB = new SimplifiedTestCaseDTO.FaultTarget(svB, chaosB, repB, b.getReason()!=null?b.getReason():"HIGH_SCORE", b.getScore());
+            result.add(new SimplifiedTestCaseDTO(2, Arrays.asList(fA, fB), "dual fault: "+svA+" + "+svB));
         }
 
         return result;
@@ -397,11 +397,11 @@ public class TestCaseGenerationService {
         // 目标集合：优先 selected；为空则从 ranked 取 topK
         List<Step1Result.NodeScore> targets = step1.getSelected();
         if (targets == null || targets.isEmpty()) {
-            targets = step1.getRanked().stream().limit(Math.max(1, highScoreTopK)).toList();
+            targets = step1.getRanked().stream().limit(Math.max(1, highScoreTopK)).collect(Collectors.toList());
         }
         // service -> 任取一个 fault_config_id（若无配置则跳过，无法注入）
         Map<String, Long> pickFaultId = new LinkedHashMap<>();
-        var svcFaults = faultConfigQueryService.getFaultConfigsByTaskId(taskId);
+        List<ServiceFaultConfig> svcFaults = faultConfigQueryService.getFaultConfigsByTaskId(taskId);
         for (ServiceFaultConfig sfc : svcFaults) {
             if (sfc.getFaultConfig()!=null && !sfc.getFaultConfig().isEmpty()) {
                 // 这里简单选第一条，后续可按策略（如 kill-all / count=1 的脚本识别）选择
@@ -411,23 +411,23 @@ public class TestCaseGenerationService {
 
         List<MinimalSimplifiedTestCaseDTO> out = new ArrayList<>();
         // 0 faults 基线
-        out.add(new MinimalSimplifiedTestCaseDTO(List.of()));
+        out.add(new MinimalSimplifiedTestCaseDTO(Collections.emptyList()));
 
         // 1 fault：每个目标服务各1条（排序时会放在前面）
         List<MinimalSimplifiedTestCaseDTO> singles = new ArrayList<>();
         for (Step1Result.NodeScore ns : targets) {
             Long fid = pickFaultId.get(ns.getServiceName());
             if (fid == null) continue; // 无可用故障配置则跳过
-            singles.add(new MinimalSimplifiedTestCaseDTO(List.of(new MinimalSimplifiedTestCaseDTO.Fault(ns.getServiceName(), fid))));
+            singles.add(new MinimalSimplifiedTestCaseDTO(Collections.singletonList(new MinimalSimplifiedTestCaseDTO.Fault(ns.getServiceName(), fid))));
         }
 
         // 2 faults：滑动窗口相邻对，覆盖更充分（i,i+1）
         List<MinimalSimplifiedTestCaseDTO> duals = new ArrayList<>();
         for (int i = 0; i + 1 < targets.size(); i += 1) {
-            var a = targets.get(i); var b = targets.get(i+1);
+            Step1Result.NodeScore a = targets.get(i); Step1Result.NodeScore b = targets.get(i+1);
             Long fa = pickFaultId.get(a.getServiceName()); Long fb = pickFaultId.get(b.getServiceName());
             if (fa == null || fb == null) continue;
-            duals.add(new MinimalSimplifiedTestCaseDTO(List.of(
+            duals.add(new MinimalSimplifiedTestCaseDTO(Arrays.asList(
                     new MinimalSimplifiedTestCaseDTO.Fault(a.getServiceName(), fa),
                     new MinimalSimplifiedTestCaseDTO.Fault(b.getServiceName(), fb)
             )));
@@ -443,9 +443,9 @@ public class TestCaseGenerationService {
     // 生成增强版（包含 ChaosBlade faultDefinition）的最简用例
     public List<EnhancedSimplifiedTestCaseDTO> generateEnhancedSimpleCases(Long taskId) {
         Step1Result step1 = computeStep1(taskId);
-        var targets = step1.getSelected();
+        List<Step1Result.NodeScore> targets = step1.getSelected();
         if (targets==null || targets.isEmpty()) {
-            targets = step1.getRanked().stream().limit(Math.max(1, highScoreTopK)).toList();
+            targets = step1.getRanked().stream().limit(Math.max(1, highScoreTopK)).collect(Collectors.toList());
         }
         // service -> ServiceFaultConfig
         Map<String, ServiceFaultConfig> svcInfo = new LinkedHashMap<>();
@@ -457,8 +457,8 @@ public class TestCaseGenerationService {
         java.util.function.Function<ServiceFaultConfig, EnhancedFaultTargetDTO> buildOne = (sfc) -> {
             String ns = sfc.getNamespace();
             String svc = sfc.getServiceName();
-            java.util.List<String> containerValues = (sfc.getContainerNames()!=null)? sfc.getContainerNames() : java.util.List.of();
-            java.util.List<String> podValues = (sfc.getNames()!=null)? sfc.getNames() : java.util.List.of();
+            java.util.List<String> containerValues = (sfc.getContainerNames()!=null)? sfc.getContainerNames() : java.util.Collections.emptyList();
+            java.util.List<String> podValues = (sfc.getNames()!=null)? sfc.getNames() : java.util.Collections.emptyList();
             java.util.Map<String, Object> def = new java.util.LinkedHashMap<>();
             // 仅返回 spec，不包含 kind/apiVersion/metadata（按要求）
             java.util.Map<String, Object> exp = new java.util.LinkedHashMap<>();
@@ -468,32 +468,44 @@ public class TestCaseGenerationService {
             java.util.List<java.util.Map<String,Object>> matchers = new java.util.ArrayList<>();
             // 命名空间 + 容器名；无容器名时退回到 pod 名（names）
             if (!podValues.isEmpty()) {
-                matchers.add(java.util.Map.of("name","names","value", podValues));
+                java.util.Map<String,Object> namesMatcher = new java.util.LinkedHashMap<>();
+                namesMatcher.put("name", "names");
+                namesMatcher.put("value", podValues);
+                matchers.add(namesMatcher);
             }
-            matchers.add(java.util.Map.of("name","namespace","value", java.util.List.of(ns)));
+            java.util.Map<String,Object> nsMatcher = new java.util.LinkedHashMap<>();
+            nsMatcher.put("name", "namespace");
+            nsMatcher.put("value", java.util.Collections.singletonList(ns));
+            matchers.add(nsMatcher);
             if (!containerValues.isEmpty()) {
-                matchers.add(java.util.Map.of("name","container-names","value", containerValues));
+                java.util.Map<String,Object> contMatcher = new java.util.LinkedHashMap<>();
+                contMatcher.put("name", "container-names");
+                contMatcher.put("value", containerValues);
+                matchers.add(contMatcher);
             }
-            matchers.add(java.util.Map.of("name","force","value", java.util.List.of("true")));
+            java.util.Map<String,Object> forceMatcher = new java.util.LinkedHashMap<>();
+            forceMatcher.put("name", "force");
+            forceMatcher.put("value", java.util.Collections.singletonList("true"));
+            matchers.add(forceMatcher);
             java.util.Map<String, Object> expObj = new java.util.LinkedHashMap<>();
             expObj.putAll(exp);
             expObj.put("matchers", matchers);
             java.util.Map<String, Object> spec = new java.util.LinkedHashMap<>();
-            spec.put("experiments", java.util.List.of(expObj));
+            spec.put("experiments", java.util.Collections.singletonList(expObj));
             def.put("spec", spec);
             return new EnhancedFaultTargetDTO(ns, svc, def);
         };
 
         List<EnhancedSimplifiedTestCaseDTO> out = new ArrayList<>();
         // baseline
-        out.add(new EnhancedSimplifiedTestCaseDTO(java.util.List.of()));
+        out.add(new EnhancedSimplifiedTestCaseDTO(java.util.Collections.emptyList()));
 
         // 1 fault：覆盖所有目标服务
         List<EnhancedSimplifiedTestCaseDTO> singles = new ArrayList<>();
-        for (var ns : targets) {
+        for (Step1Result.NodeScore ns : targets) {
             ServiceFaultConfig sfc = svcInfo.get(ns.getServiceName());
             if (sfc == null) continue; // 无故障配置或无法解析K8s信息
-            singles.add(new EnhancedSimplifiedTestCaseDTO(java.util.List.of(buildOne.apply(sfc))));
+            singles.add(new EnhancedSimplifiedTestCaseDTO(java.util.Collections.singletonList(buildOne.apply(sfc))));
         }
 
         // 2 faults: 生成所有无序对 C(n,2)，避免重复 [A,B]/[B,A]
@@ -503,7 +515,7 @@ public class TestCaseGenerationService {
                 ServiceFaultConfig a = svcInfo.get(targets.get(i).getServiceName());
                 ServiceFaultConfig b = svcInfo.get(targets.get(j).getServiceName());
                 if (a==null || b==null) continue;
-                duals.add(new EnhancedSimplifiedTestCaseDTO(java.util.List.of(buildOne.apply(a), buildOne.apply(b))));
+                duals.add(new EnhancedSimplifiedTestCaseDTO(java.util.Arrays.asList(buildOne.apply(a), buildOne.apply(b))));
             }
         }
 
@@ -531,7 +543,7 @@ public class TestCaseGenerationService {
             if (visited.contains(leaf)) continue;
             visited.add(leaf);
             order.add(leaf);
-            for (String p : parents.getOrDefault(leaf, List.of())) {
+            for (String p : parents.getOrDefault(leaf, Collections.emptyList())) {
                 int d = outDeg.get(p) - 1;
                 outDeg.put(p, d);
                 if (d == 0) queue.addLast(p);

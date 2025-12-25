@@ -283,12 +283,12 @@ public class RecordingService {
      */
     private String getDeploymentStatus(String namespace, String deploymentName) {
         try {
-            var deployment = k8s.apps().deployments().inNamespace(namespace).withName(deploymentName).get();
+            io.fabric8.kubernetes.api.model.apps.Deployment deployment = k8s.apps().deployments().inNamespace(namespace).withName(deploymentName).get();
             if (deployment == null) {
                 return "NOT_FOUND";
             }
-            
-            var status = deployment.getStatus();
+
+            io.fabric8.kubernetes.api.model.apps.DeploymentStatus status = deployment.getStatus();
             if (status == null) {
                 return "UNKNOWN";
             }

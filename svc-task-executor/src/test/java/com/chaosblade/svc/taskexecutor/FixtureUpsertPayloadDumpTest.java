@@ -50,8 +50,8 @@ public class FixtureUpsertPayloadDumpTest {
         payload.put("items", items);
 
         String out = pretty.writeValueAsString(payload);
-        Path outPath = Path.of("fixtures-upsert-exec-" + executionId + ".json");
-        Files.writeString(outPath, out, StandardCharsets.UTF_8);
+        Path outPath = java.nio.file.Paths.get("fixtures-upsert-exec-" + executionId + ".json");
+        Files.write(outPath, out.getBytes(StandardCharsets.UTF_8));
 
         System.out.println("[TestDump] Wrote payload to: " + outPath.toAbsolutePath());
         System.out.println("[TestDump] Items count: " + (items == null ? 0 : items.size()));

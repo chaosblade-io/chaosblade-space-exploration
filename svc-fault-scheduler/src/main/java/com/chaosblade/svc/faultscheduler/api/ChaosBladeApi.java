@@ -117,8 +117,16 @@ public class ChaosBladeApi {
                 Process process = pb.start();
 
                 // 读取输出
-                String output = new String(process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-                String error = new String(process.getErrorStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                java.io.ByteArrayOutputStream outputBaos = new java.io.ByteArrayOutputStream();
+                java.io.ByteArrayOutputStream errorBaos = new java.io.ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int len;
+                java.io.InputStream is = process.getInputStream();
+                while ((len = is.read(buffer)) != -1) outputBaos.write(buffer, 0, len);
+                java.io.InputStream es = process.getErrorStream();
+                while ((len = es.read(buffer)) != -1) errorBaos.write(buffer, 0, len);
+                String output = outputBaos.toString(java.nio.charset.StandardCharsets.UTF_8.name());
+                String error = errorBaos.toString(java.nio.charset.StandardCharsets.UTF_8.name());
 
                 int exitCode = process.waitFor();
 
@@ -288,24 +296,26 @@ public class ChaosBladeApi {
     public Map<String, Object> status(GenericKubernetesResource blade) {
         if (blade == null) {
             logger.debug("Cannot get status from null ChaosBlade resource");
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         
         try {
             Object statusObj = blade.getAdditionalProperties().get("status");
             
-            if (statusObj instanceof Map<?, ?> statusMap) {
+            if (statusObj instanceof Map<?, ?>) {
+                Map<?, ?> statusMap = (Map<?, ?>) statusObj;
+                @SuppressWarnings("unchecked")
                 Map<String, Object> status = (Map<String, Object>) statusMap;
                 logger.debug("Retrieved status for ChaosBlade: {}", status);
                 return status;
             } else {
                 logger.debug("No status found in ChaosBlade resource");
-                return Map.of();
+                return java.util.Collections.emptyMap();
             }
-            
+
         } catch (Exception e) {
             logger.error("Failed to extract status from ChaosBlade resource", e);
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
     }
     
@@ -321,48 +331,49 @@ public class ChaosBladeApi {
         
         try {
             logger.debug("Retrieving events for ChaosBlade: {}, limit: {}", bladeName, limit);
-            
+
             // 获取 core/v1 事件
-            var coreEvents = client.v1().events().inAnyNamespace()
+            List<io.fabric8.kubernetes.api.model.Event> coreEvents = client.v1().events().inAnyNamespace()
                     .withField("involvedObject.kind", "ChaosBlade")
                     .withField("involvedObject.name", bladeName)
                     .list()
                     .getItems();
-            
-            coreEvents.stream()
-                    .limit(limit)
-                    .forEach(event -> {
-                        events.add(Map.of(
-                                "type", event.getType() != null ? event.getType() : "Unknown",
-                                "reason", event.getReason() != null ? event.getReason() : "Unknown",
-                                "message", event.getMessage() != null ? event.getMessage() : "",
-                                "lastTimestamp", event.getLastTimestamp() != null ? 
-                                        event.getLastTimestamp().toString() : "",
-                                "source", "core/v1"
-                        ));
-                    });
-            
+
+            int count = 0;
+            for (io.fabric8.kubernetes.api.model.Event event : coreEvents) {
+                if (count >= limit) break;
+                Map<String, Object> evtMap = new java.util.LinkedHashMap<>();
+                evtMap.put("type", event.getType() != null ? event.getType() : "Unknown");
+                evtMap.put("reason", event.getReason() != null ? event.getReason() : "Unknown");
+                evtMap.put("message", event.getMessage() != null ? event.getMessage() : "");
+                evtMap.put("lastTimestamp", event.getLastTimestamp() != null ? event.getLastTimestamp().toString() : "");
+                evtMap.put("source", "core/v1");
+                events.add(evtMap);
+                count++;
+            }
+
             // 尝试获取 events.k8s.io/v1 事件
             try {
-                var eventsV1 = client.events().v1().events().inAnyNamespace()
+                List<io.fabric8.kubernetes.api.model.events.v1.Event> eventsV1 = client.events().v1().events().inAnyNamespace()
                         .withField("regarding.kind", "ChaosBlade")
                         .withField("regarding.name", bladeName)
                         .list()
                         .getItems();
-                
-                eventsV1.stream()
-                        .limit(Math.max(0, limit - events.size()))
-                        .forEach(event -> {
-                            events.add(Map.of(
-                                    "type", event.getType() != null ? event.getType() : "Unknown",
-                                    "reason", event.getReason() != null ? event.getReason() : "Unknown",
-                                    "note", event.getNote() != null ? event.getNote() : "",
-                                    "eventTime", event.getEventTime() != null ? 
-                                            event.getEventTime().toString() : "",
-                                    "source", "events.k8s.io/v1"
-                            ));
-                        });
-                        
+
+                int remaining = Math.max(0, limit - events.size());
+                int countV1 = 0;
+                for (io.fabric8.kubernetes.api.model.events.v1.Event event : eventsV1) {
+                    if (countV1 >= remaining) break;
+                    Map<String, Object> evtMap = new java.util.LinkedHashMap<>();
+                    evtMap.put("type", event.getType() != null ? event.getType() : "Unknown");
+                    evtMap.put("reason", event.getReason() != null ? event.getReason() : "Unknown");
+                    evtMap.put("note", event.getNote() != null ? event.getNote() : "");
+                    evtMap.put("eventTime", event.getEventTime() != null ? event.getEventTime().toString() : "");
+                    evtMap.put("source", "events.k8s.io/v1");
+                    events.add(evtMap);
+                    countV1++;
+                }
+
             } catch (Exception e) {
                 logger.debug("Failed to retrieve events.k8s.io/v1 events (may not be available): {}", e.getMessage());
             }

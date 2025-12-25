@@ -59,7 +59,7 @@ public class TaskExecuteController {
     @GetMapping("/executions/{executionId}")
     public ResponseEntity<ApiResponse<Map<String,Object>>> getExecutionStatus(@PathVariable("executionId") Long executionId) {
         java.util.Optional<TaskExecution> opt = orchestrator.getExecution(executionId);
-        if (opt.isEmpty()) {
+        if (!opt.isPresent()) {
             return ResponseEntity.ok(ApiResponse.error("404", "Execution not found: "+executionId));
         }
         TaskExecution te = opt.get();

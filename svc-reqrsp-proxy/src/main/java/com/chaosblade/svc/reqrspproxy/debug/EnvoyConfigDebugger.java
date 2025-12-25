@@ -110,7 +110,7 @@ public class EnvoyConfigDebugger implements CommandLineRunner {
         }
         
         // 检查规则数量
-        long ruleCount = yamlContent.lines()
+        long ruleCount = Arrays.stream(yamlContent.split("\n"))
                 .filter(line -> line.trim().contains("http_request_headers_match:"))
                 .count();
         logger.info("✅ 检测到 {} 个录制规则", ruleCount);

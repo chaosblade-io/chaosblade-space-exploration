@@ -94,7 +94,7 @@ public class TopologyLayerService {
         Map<Long, Integer> level = new LinkedHashMap<>();
         Set<Long> tempMark = new HashSet<>(); // 用于检测环
 
-        java.util.function.Function<Long, Integer> dfs = new java.util.function.Function<>() {
+        java.util.function.Function<Long, Integer> dfs = new java.util.function.Function<Long, Integer>() {
             @Override
             public Integer apply(Long u) {
                 if (level.containsKey(u)) return level.get(u);

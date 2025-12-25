@@ -56,7 +56,7 @@ public class FaultConfigQueryService {
                 .orElseThrow(() -> new BusinessException("SYSTEM_NOT_FOUND", "系统不存在: " + task.getSystemId()));
         String namespace = system.getSystemKey();
 
-        List<Long> nodeIds = nodes.stream().map(ApiTopologyNode::getId).toList();
+        List<Long> nodeIds = nodes.stream().map(ApiTopologyNode::getId).collect(java.util.stream.Collectors.toList());
         // 支持 task 范围：优先取 taskId 定向配置，若无则包含公共配置（task_id IS NULL）
         List<FaultConfig> configs = faultConfigRepository.findByNodeIdsWithTaskScope(nodeIds, task.getId());
         if (configs.isEmpty()) {
@@ -79,7 +79,7 @@ public class FaultConfigQueryService {
             futures.add(kubernetesService.getDeploymentInfoAsync(namespace, serviceName)
                     .thenApply(k -> new ServiceFaultConfig(serviceName, k.getNamespace(), k.getPodNames(), k.getContainerNames(), entries)));
         }
-        return futures.stream().map(CompletableFuture::join).toList();
+        return futures.stream().map(CompletableFuture::join).collect(java.util.stream.Collectors.toList());
     }
 }
 

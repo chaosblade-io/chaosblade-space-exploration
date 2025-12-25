@@ -67,8 +67,11 @@ public class SpecNormalizer {
                 // 合并 labels
                 Map<String, String> mergedLabels = new LinkedHashMap<>(labels);
                 Object existingLabels = metadata.get("labels");
-                if (existingLabels instanceof Map<?, ?> labelMap) {
-                    labelMap.forEach((k, v) -> mergedLabels.put(String.valueOf(k), String.valueOf(v)));
+                if (existingLabels instanceof Map<?, ?>) {
+                    Map<?, ?> labelMap = (Map<?, ?>) existingLabels;
+                    for (Map.Entry<?, ?> entry : labelMap.entrySet()) {
+                        mergedLabels.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+                    }
                 }
                 metadata.put("labels", mergedLabels);
                 
@@ -172,15 +175,17 @@ public class SpecNormalizer {
             }
             
             // 如果 experiments 是 List，检查是否为空
-            if (experiments instanceof java.util.List<?> expList) {
+            if (experiments instanceof java.util.List<?>) {
+                java.util.List<?> expList = (java.util.List<?>) experiments;
                 if (expList.isEmpty()) {
                     logger.warn("Experiments list is empty");
                     return false;
                 }
-                
+
                 // 检查每个实验的基本字段
                 for (Object exp : expList) {
-                    if (exp instanceof Map<?, ?> expMap) {
+                    if (exp instanceof Map<?, ?>) {
+                        Map<?, ?> expMap = (Map<?, ?>) exp;
                         if (!expMap.containsKey("scope") || !expMap.containsKey("target") || !expMap.containsKey("action")) {
                             logger.warn("Experiment missing required fields (scope, target, action)");
                             return false;

@@ -49,7 +49,7 @@ public class KubernetesService implements AutoCloseable {
                     if (!pods.isEmpty()) break;
                 }
 
-                List<String> podNames = pods.stream().map(p -> p.getMetadata().getName()).distinct().toList();
+                List<String> podNames = pods.stream().map(p -> p.getMetadata().getName()).distinct().collect(Collectors.toList());
                 List<String> containerNames = pods.stream()
                         .flatMap(p -> p.getSpec().getContainers().stream())
                         .map(Container::getName)
@@ -59,7 +59,7 @@ public class KubernetesService implements AutoCloseable {
                 return new Result(namespace, podNames, containerNames);
             } catch (Exception e) {
                 log.warn("K8s query failed for ns={}, svc={}: {}", namespace, serviceName, e.toString());
-                return new Result(namespace, List.of(), List.of());
+                return new Result(namespace, java.util.Collections.emptyList(), java.util.Collections.emptyList());
             }
         }, executor);
     }
@@ -87,11 +87,11 @@ public class KubernetesService implements AutoCloseable {
      */
     public int getServicePort(String namespace, String serviceName) {
         try {
-            var svc = client.services().inNamespace(namespace).withName(serviceName).get();
+            io.fabric8.kubernetes.api.model.Service svc = client.services().inNamespace(namespace).withName(serviceName).get();
             if (svc == null || svc.getSpec() == null || svc.getSpec().getPorts() == null || svc.getSpec().getPorts().isEmpty()) {
                 // 尝试用 label keys 搜索服务
                 for (String key : props.getLabelKeys()) {
-                    var list = client.services().inNamespace(namespace).withLabel(key, serviceName).list();
+                    io.fabric8.kubernetes.api.model.ServiceList list = client.services().inNamespace(namespace).withLabel(key, serviceName).list();
                     if (list != null && list.getItems() != null && !list.getItems().isEmpty()) {
                         svc = list.getItems().get(0);
                         break;
@@ -103,22 +103,22 @@ public class KubernetesService implements AutoCloseable {
                 return -1;
             }
             // 选择端口
-            var ports = svc.getSpec().getPorts();
+            java.util.List<io.fabric8.kubernetes.api.model.ServicePort> ports = svc.getSpec().getPorts();
             // 优先 name 包含 http 的端口
-            for (var p : ports) {
+            for (io.fabric8.kubernetes.api.model.ServicePort p : ports) {
                 String n = p.getName();
                 if (n != null && n.toLowerCase().contains("http") && (p.getPort() != null && p.getPort() > 0)) {
                     return p.getPort();
                 }
             }
             // 否则取第一个 TCP 端口
-            for (var p : ports) {
+            for (io.fabric8.kubernetes.api.model.ServicePort p : ports) {
                 if (p.getPort() != null && p.getPort() > 0 && (p.getProtocol() == null || "TCP".equalsIgnoreCase(p.getProtocol()))) {
                     return p.getPort();
                 }
             }
             // 兜底：第一个定义的端口
-            var p0 = ports.get(0);
+            io.fabric8.kubernetes.api.model.ServicePort p0 = ports.get(0);
             return (p0.getPort() != null && p0.getPort() > 0) ? p0.getPort() : -1;
         } catch (Exception e) {
             log.warn("Failed to get service port for ns={}, svc={}: {}", namespace, serviceName, e.toString());
@@ -130,10 +130,10 @@ public class KubernetesService implements AutoCloseable {
      */
     private String resolveServiceName(String namespace, String serviceName) {
         try {
-            var direct = client.services().inNamespace(namespace).withName(serviceName).get();
+            io.fabric8.kubernetes.api.model.Service direct = client.services().inNamespace(namespace).withName(serviceName).get();
             if (direct != null) return serviceName;
             for (String key : props.getLabelKeys()) {
-                var list = client.services().inNamespace(namespace).withLabel(key, serviceName).list();
+                io.fabric8.kubernetes.api.model.ServiceList list = client.services().inNamespace(namespace).withLabel(key, serviceName).list();
                 if (list != null && list.getItems() != null && !list.getItems().isEmpty()) {
                     return list.getItems().get(0).getMetadata().getName();
                 }
@@ -156,7 +156,7 @@ public class KubernetesService implements AutoCloseable {
         try {
             while (System.currentTimeMillis() < deadline) {
                 boolean podsReady = false;
-                var pods = client.pods().inNamespace(namespace).withLabel("app", serviceName).list().getItems();
+                java.util.List<io.fabric8.kubernetes.api.model.Pod> pods = client.pods().inNamespace(namespace).withLabel("app", serviceName).list().getItems();
                 if (pods == null || pods.isEmpty()) {
                     // 尝试其它 label key
                     log.debug("[K8s] No pods found by label 'app', try keys: {}", props.getLabelKeys());
@@ -173,7 +173,7 @@ public class KubernetesService implements AutoCloseable {
                     lastTotalPods = pods.size();
                     readyCnt = (int) pods.stream().filter(p -> {
                         try {
-                            var st = p.getStatus();
+                            io.fabric8.kubernetes.api.model.PodStatus st = p.getStatus();
                             if (st == null) return false;
                             boolean condReady = st.getConditions() != null && st.getConditions().stream().anyMatch(c ->
                                     "Ready".equalsIgnoreCase(c.getType()) && "True".equalsIgnoreCase(c.getStatus()));
@@ -193,7 +193,7 @@ public class KubernetesService implements AutoCloseable {
                     if (resolvedSvcName == null) {
                         log.warn("[K8s] No Service found for ns={}, svc={} by name or label keys {}", namespace, serviceName, props.getLabelKeys());
                     } else {
-                        var ep = client.endpoints().inNamespace(namespace).withName(resolvedSvcName).get();
+                        io.fabric8.kubernetes.api.model.Endpoints ep = client.endpoints().inNamespace(namespace).withName(resolvedSvcName).get();
                         if (ep != null && ep.getSubsets() != null) {
                             epReady = ep.getSubsets().stream().anyMatch(ss -> ss.getAddresses() != null && !ss.getAddresses().isEmpty());
                         } else {

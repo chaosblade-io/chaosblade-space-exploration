@@ -15,7 +15,7 @@ public class KubernetesProperties {
     // async executor
     private Integer threadPoolSize = 6;
     // label keys to try for selecting pods by service name
-    private java.util.List<String> labelKeys = java.util.List.of("app", "app.kubernetes.io/name");
+    private java.util.List<String> labelKeys = java.util.Arrays.asList("app", "app.kubernetes.io/name");
     // cache ttl seconds
     private Integer cacheTtlSeconds = 30;
 

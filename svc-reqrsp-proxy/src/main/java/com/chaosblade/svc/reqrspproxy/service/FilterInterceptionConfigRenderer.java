@@ -90,7 +90,7 @@ public class FilterInterceptionConfigRenderer {
         m.put("pathSanitized", sanitizePath(item.getPath()));
 
         // baggageTokens: 任一匹配即命中。优先采用 safe_regex（OR）。如只一个，亦可 contains。
-        List<String> tokens = Optional.ofNullable(item.getBaggageTokens()).orElse(List.of());
+        List<String> tokens = Optional.ofNullable(item.getBaggageTokens()).orElse(java.util.Collections.emptyList());
         if (tokens.size() == 1) {
             m.put("baggageContains", escapeYamlString(tokens.get(0)));
         } else if (!tokens.isEmpty()) {

@@ -178,8 +178,10 @@ public class K8sTapManager {
                         .withMountPath(recordingConfig.getEnvoy().getTapDir())
                         .build())
                 .withResources(new ResourceRequirementsBuilder()
-                        .addToRequests(Map.of("cpu", new Quantity("50m"), "memory", new Quantity("128Mi")))
-                        .addToLimits(Map.of("cpu", new Quantity("1"), "memory", new Quantity("512Mi")))
+                        .addToRequests("cpu", new Quantity("50m"))
+                        .addToRequests("memory", new Quantity("128Mi"))
+                        .addToLimits("cpu", new Quantity("1"))
+                        .addToLimits("memory", new Quantity("512Mi"))
                         .build())
                 .build();
     }

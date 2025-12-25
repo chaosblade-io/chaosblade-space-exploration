@@ -38,7 +38,10 @@ public class LlmClient {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("model", model);
         List<Map<String,Object>> messages = new ArrayList<>();
-        messages.add(Map.of("role","user","content", userContent));
+        Map<String,Object> userMsg = new LinkedHashMap<>();
+        userMsg.put("role", "user");
+        userMsg.put("content", userContent);
+        messages.add(userMsg);
         payload.put("messages", messages);
 
         HttpHeaders headers = new HttpHeaders();

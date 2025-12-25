@@ -75,10 +75,10 @@ public class FixtureController {
         logger.info("DELETE /api/fixtures/record/{} - recordId: {}", recordId, recordId);
         try {
             fixtureService.deleteByRecordId(recordId);
-            return ResponseEntity.ok(Map.of(
-                    "deleted", true,
-                    "recordId", recordId
-            ));
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("deleted", true);
+            result.put("recordId", recordId);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.error("Failed to delete interception by recordId: {}", recordId, e);
             return ResponseEntity.internalServerError().build();
@@ -94,10 +94,10 @@ public class FixtureController {
      */
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> health() {
-        return ResponseEntity.ok(Map.of(
-                "status", "UP",
-                "service", "FixtureController",
-                "timestamp", System.currentTimeMillis()
-        ));
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("status", "UP");
+        result.put("service", "FixtureController");
+        result.put("timestamp", System.currentTimeMillis());
+        return ResponseEntity.ok(result);
     }
 }

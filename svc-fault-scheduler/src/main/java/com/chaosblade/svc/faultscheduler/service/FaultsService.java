@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -72,11 +73,10 @@ public class FaultsService {
             }
             
             // 创建标签
-            Map<String, String> labels = Map.of(
-                    "fault-id", faultId,
-                    "owner", "faults-api",
-                    "created-by", "svc-fault-scheduler"
-            );
+            Map<String, String> labels = new java.util.LinkedHashMap<>();
+            labels.put("fault-id", faultId);
+            labels.put("owner", "faults-api");
+            labels.put("created-by", "svc-fault-scheduler");
             
             // 规范化 CR 并验证
             Map<String, Object> normalized = normalizer.normalize(faultJson, bladeName, labels);
@@ -104,14 +104,13 @@ public class FaultsService {
             long ttl = calculateTtl(durationSec);
             
             // 保存到 Redis
-            Map<String, String> faultData = Map.of(
-                    "faultId", faultId,
-                    "bladeName", bladeName,
-                    "createdAt", Instant.now().toString(),
-                    "specYaml", yaml,
-                    "status", "Created",
-                    "ttlSec", String.valueOf(ttl)
-            );
+            Map<String, String> faultData = new java.util.LinkedHashMap<>();
+            faultData.put("faultId", faultId);
+            faultData.put("bladeName", bladeName);
+            faultData.put("createdAt", Instant.now().toString());
+            faultData.put("specYaml", yaml);
+            faultData.put("status", "Created");
+            faultData.put("ttlSec", String.valueOf(ttl));
             
             repo.save(bladeName, faultData, ttl);
             logger.debug("Saved fault data to Redis for bladeName: {}", bladeName);
@@ -124,7 +123,10 @@ public class FaultsService {
             logger.info("Successfully executed fault: faultId={}, bladeName={}, ttl={}s", 
                        faultId, bladeName, ttl);
             
-            return Map.of("faultId", faultId, "bladeName", bladeName);
+            Map<String, String> result = new java.util.LinkedHashMap<>();
+            result.put("faultId", faultId);
+            result.put("bladeName", bladeName);
+            return result;
             
         } catch (Exception e) {
             logger.error("Failed to execute fault", e);
@@ -153,7 +155,7 @@ public class FaultsService {
             String phase = String.valueOf(status.getOrDefault("phase", "Unknown"));
             
             // 获取事件
-            var events = bladeApi.eventsForBlade(bladeName, eventsLimit);
+            List<Map<String, Object>> events = bladeApi.eventsForBlade(bladeName, eventsLimit);
             
             // 更新 Redis 中的状态
             try {
@@ -163,13 +165,12 @@ public class FaultsService {
             }
             
             // 构建响应
-            Map<String, Object> result = Map.of(
-                    "bladeName", bladeName,
-                    "phase", phase,
-                    "status", status,
-                    "events", events,
-                    "eventsCount", events.size()
-            );
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("bladeName", bladeName);
+            result.put("phase", phase);
+            result.put("status", status);
+            result.put("events", events);
+            result.put("eventsCount", events.size());
             
             logger.debug("Successfully retrieved status for bladeName: {}, phase: {}, events: {}", 
                         bladeName, phase, events.size());

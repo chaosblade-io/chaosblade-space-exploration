@@ -74,7 +74,8 @@ public class GlobalExceptionHandler {
         String detail = e.getMessage();
         String pathStr = null;
         String targetType = null;
-        if (cause instanceof MismatchedInputException mie) {
+        if (cause instanceof MismatchedInputException) {
+            MismatchedInputException mie = (MismatchedInputException) cause;
             // 解析出错字段路径，如: items[0].respBody
             if (mie.getPath() != null && !mie.getPath().isEmpty()) {
                 pathStr = mie.getPath().stream()
@@ -83,7 +84,8 @@ public class GlobalExceptionHandler {
                         .collect(Collectors.joining("."));
             }
             targetType = mie.getTargetType() != null ? mie.getTargetType().getTypeName() : null;
-        } else if (cause instanceof InvalidFormatException ife) {
+        } else if (cause instanceof InvalidFormatException) {
+            InvalidFormatException ife = (InvalidFormatException) cause;
             if (ife.getPath() != null && !ife.getPath().isEmpty()) {
                 pathStr = ife.getPath().stream()
                         .map(ref -> ref.getFieldName() != null ? ref.getFieldName()

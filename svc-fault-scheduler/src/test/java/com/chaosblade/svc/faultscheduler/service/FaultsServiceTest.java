@@ -12,6 +12,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -53,30 +56,17 @@ class FaultsServiceTest {
     @Test
     void testExecuteSuccess() {
         // 准备测试数据
-        Map<String, Object> faultJson = Map.of(
-                "spec", Map.of(
-                        "experiments", List.of(
-                                Map.of(
-                                        "scope", "container",
-                                        "target", "network",
-                                        "action", "delay"
-                                )
-                        )
-                )
-        );
-        
+        Map<String, Object> experiment = createExperiment("container", "network", "delay");
+        Map<String, Object> spec = createSpec(Collections.singletonList(experiment));
+        Map<String, Object> faultJson = createFaultJson(spec);
+
         String name = "test-fault";
         Integer durationSec = 60;
-        
+
         // Mock 行为
         when(bladeApi.exists(name)).thenReturn(false);
-        
-        Map<String, Object> normalized = Map.of(
-                "apiVersion", "chaosblade.io/v1alpha1",
-                "kind", "ChaosBlade",
-                "metadata", Map.of("name", name),
-                "spec", faultJson.get("spec")
-        );
+
+        Map<String, Object> normalized = createNormalized(name, faultJson.get("spec"));
         when(normalizer.normalize(eq(faultJson), eq(name), any())).thenReturn(normalized);
         when(normalizer.validateSpec(any())).thenReturn(true);
         try {
@@ -111,27 +101,14 @@ class FaultsServiceTest {
     @Test
     void testExecuteWithGeneratedName() {
         // 准备测试数据
-        Map<String, Object> faultJson = Map.of(
-                "spec", Map.of(
-                        "experiments", List.of(
-                                Map.of(
-                                        "scope", "container",
-                                        "target", "network",
-                                        "action", "delay"
-                                )
-                        )
-                )
-        );
-        
+        Map<String, Object> experiment = createExperiment("container", "network", "delay");
+        Map<String, Object> spec = createSpec(Collections.singletonList(experiment));
+        Map<String, Object> faultJson = createFaultJson(spec);
+
         // Mock 行为
         when(bladeApi.exists(anyString())).thenReturn(false);
-        
-        Map<String, Object> normalized = Map.of(
-                "apiVersion", "chaosblade.io/v1alpha1",
-                "kind", "ChaosBlade",
-                "metadata", Map.of("name", "generated-name"),
-                "spec", faultJson.get("spec")
-        );
+
+        Map<String, Object> normalized = createNormalized("generated-name", faultJson.get("spec"));
         when(normalizer.normalize(eq(faultJson), anyString(), any())).thenReturn(normalized);
         when(normalizer.validateSpec(any())).thenReturn(true);
         try {
@@ -163,40 +140,39 @@ class FaultsServiceTest {
     @Test
     void testExecuteAlreadyExists() {
         // 准备测试数据
-        Map<String, Object> faultJson = Map.of("spec", Map.of("experiments", List.of()));
+        Map<String, Object> spec = createSpec(Collections.emptyList());
+        Map<String, Object> faultJson = createFaultJson(spec);
         String name = "existing-fault";
-        
+
         // Mock 行为
         when(bladeApi.exists(name)).thenReturn(true);
-        
+
         // 执行测试并验证异常
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             faultsService.execute(faultJson, name, null);
         });
-        
+
         assertTrue(exception.getMessage().contains("already exists"));
-        
+
         // 验证调用
         verify(bladeApi).exists(name);
         verify(normalizer, never()).normalize(any(), any(), any());
         verify(bladeApi, never()).create(any(), any(), any());
     }
-    
+
     @Test
     void testExecuteInvalidSpec() {
         // 准备测试数据
-        Map<String, Object> faultJson = Map.of("spec", Map.of("invalid", "spec"));
+        Map<String, Object> invalidSpec = new HashMap<>();
+        invalidSpec.put("invalid", "spec");
+        Map<String, Object> faultJson = new HashMap<>();
+        faultJson.put("spec", invalidSpec);
         String name = "test-fault";
-        
+
         // Mock 行为
         when(bladeApi.exists(name)).thenReturn(false);
-        
-        Map<String, Object> normalized = Map.of(
-                "apiVersion", "chaosblade.io/v1alpha1",
-                "kind", "ChaosBlade",
-                "metadata", Map.of("name", name),
-                "spec", faultJson.get("spec")
-        );
+
+        Map<String, Object> normalized = createNormalized(name, faultJson.get("spec"));
         when(normalizer.normalize(eq(faultJson), eq(name), any())).thenReturn(normalized);
         when(normalizer.validateSpec(any())).thenReturn(false); // 验证失败
         
@@ -221,11 +197,11 @@ class FaultsServiceTest {
                 .withApiVersion("chaosblade.io/v1alpha1")
                 .withKind("ChaosBlade")
                 .build();
-        mockBlade.setAdditionalProperty("status", Map.of("phase", "Running"));
-        
-        Map<String, Object> status = Map.of("phase", "Running");
-        List<Map<String, Object>> events = List.of(
-                Map.of("type", "Normal", "reason", "Created", "message", "Fault created")
+        mockBlade.setAdditionalProperty("status", createStatus("Running"));
+
+        Map<String, Object> status = createStatus("Running");
+        List<Map<String, Object>> events = Collections.singletonList(
+                createEvent("Normal", "Created", "Fault created")
         );
         
         // Mock 行为
@@ -313,7 +289,7 @@ class FaultsServiceTest {
     @Test
     void testListAllFaults() {
         // 准备测试数据
-        java.util.Set<String> faultNames = java.util.Set.of("fault1", "fault2", "fault3");
+        java.util.Set<String> faultNames = new java.util.HashSet<>(Arrays.asList("fault1", "fault2", "fault3"));
         
         // Mock 行为
         when(repo.getAllFaultNames()).thenReturn(faultNames);
@@ -344,5 +320,56 @@ class FaultsServiceTest {
         
         // 验证调用
         verify(bladeApi).exists(bladeName);
+    }
+
+    // 辅助方法：创建实验配置 Map
+    private Map<String, Object> createExperiment(String scope, String target, String action) {
+        Map<String, Object> experiment = new HashMap<>();
+        experiment.put("scope", scope);
+        experiment.put("target", target);
+        experiment.put("action", action);
+        return experiment;
+    }
+
+    // 辅助方法：创建 spec Map
+    private Map<String, Object> createSpec(List<Map<String, Object>> experiments) {
+        Map<String, Object> spec = new HashMap<>();
+        spec.put("experiments", experiments);
+        return spec;
+    }
+
+    // 辅助方法：创建 faultJson Map
+    private Map<String, Object> createFaultJson(Map<String, Object> spec) {
+        Map<String, Object> faultJson = new HashMap<>();
+        faultJson.put("spec", spec);
+        return faultJson;
+    }
+
+    // 辅助方法：创建标准化后的 CR
+    private Map<String, Object> createNormalized(String name, Object spec) {
+        Map<String, Object> normalized = new HashMap<>();
+        normalized.put("apiVersion", "chaosblade.io/v1alpha1");
+        normalized.put("kind", "ChaosBlade");
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("name", name);
+        normalized.put("metadata", metadata);
+        normalized.put("spec", spec);
+        return normalized;
+    }
+
+    // 辅助方法：创建状态 Map
+    private Map<String, Object> createStatus(String phase) {
+        Map<String, Object> status = new HashMap<>();
+        status.put("phase", phase);
+        return status;
+    }
+
+    // 辅助方法：创建事件 Map
+    private Map<String, Object> createEvent(String type, String reason, String message) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", type);
+        event.put("reason", reason);
+        event.put("message", message);
+        return event;
     }
 }

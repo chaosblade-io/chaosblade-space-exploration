@@ -53,8 +53,9 @@ public class ExecFixturesPayloadDumpMain {
             payload.put("items", items);
 
             String json = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
-            Files.writeString(Path.of(outPath), json, StandardCharsets.UTF_8);
-            System.out.println("[Dump] Wrote payload to: " + Path.of(outPath).toAbsolutePath());
+            java.nio.file.Path p = java.nio.file.Paths.get(outPath);
+            Files.write(p, json.getBytes(StandardCharsets.UTF_8));
+            System.out.println("[Dump] Wrote payload to: " + p.toAbsolutePath());
             System.out.println("[Dump] Items count: " + items.size());
         }
     }

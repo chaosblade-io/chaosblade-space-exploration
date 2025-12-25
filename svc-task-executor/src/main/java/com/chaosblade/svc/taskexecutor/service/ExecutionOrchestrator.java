@@ -79,7 +79,7 @@ public class ExecutionOrchestrator {
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public TaskExecution createOrFailIfRunning(Long taskId, boolean force) {
-        var running = taskExecutionRepository.findRunningByTaskId(taskId);
+        java.util.List<TaskExecution> running = taskExecutionRepository.findRunningByTaskId(taskId);
         if (!running.isEmpty() && !force) {
             throw new BusinessException("EXECUTION_ALREADY_RUNNING","已有执行在进行中，taskId="+taskId);
         }
@@ -110,7 +110,7 @@ public class ExecutionOrchestrator {
             // 阶段1：触发分析（不提前生成用例，避免 Pod 名称过期）
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO, "[Stage1] Start analyzing patterns");
             List<String> svcListForAnalyze = faultConfigQueryService.getFaultConfigsByTaskId(te.getTaskId())
-                    .stream().map(ServiceFaultConfig::getServiceName).distinct().toList();
+                    .stream().map(ServiceFaultConfig::getServiceName).distinct().collect(java.util.stream.Collectors.toList());
             te.setStatus("ANALYZING_PATTERNS");
             taskExecutionRepository.save(te);
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
@@ -119,17 +119,17 @@ public class ExecutionOrchestrator {
             // 阶段2：触发分析 + 轮询（增加 executionId）
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                     "[Stage2] Analyze request: reqDefId="+te.getReqDefId()+", ns="+te.getNamespace()+", services="+svcListForAnalyze.size()+", durationSec=600, reqCount=1");
-            Map<String,Object> analyzeResp = proxyClient.analyze(new LinkedHashMap<>(Map.of(
-                    "reqDefId", te.getReqDefId(),
-                    "namespace", te.getNamespace(),
-                    "serviceList", svcListForAnalyze,
-                    "durationSec", 600,
-                    "autoTriggerRequest", true,
-                    "requestDelaySeconds", 30,
-                    "requestCount", 1,
-                    "requestTimeoutSeconds", 120,
-                    "excution_id", executionId
-            )));
+            Map<String,Object> analyzeParams = new LinkedHashMap<>();
+            analyzeParams.put("reqDefId", te.getReqDefId());
+            analyzeParams.put("namespace", te.getNamespace());
+            analyzeParams.put("serviceList", svcListForAnalyze);
+            analyzeParams.put("durationSec", 600);
+            analyzeParams.put("autoTriggerRequest", true);
+            analyzeParams.put("requestDelaySeconds", 30);
+            analyzeParams.put("requestCount", 1);
+            analyzeParams.put("requestTimeoutSeconds", 120);
+            analyzeParams.put("excution_id", executionId);
+            Map<String,Object> analyzeResp = proxyClient.analyze(analyzeParams);
             String analyzeTaskId = asString(((Map<?,?>)analyzeResp.getOrDefault("data", analyzeResp)).get("taskId"));
             Long recordId = asLong(((Map<?,?>)analyzeResp.getOrDefault("data", analyzeResp)).get("recordId"));
             te.setAnalyzeTaskId(analyzeTaskId);
@@ -185,8 +185,8 @@ public class ExecutionOrchestrator {
 
             // 阶段3：移除录制阶段（不再调用 startRecording）
             // 阶段3：在服务稳定之后再生成用例，避免 Pod 名称过期
-            var cases = generateAllServiceCases(te.getTaskId());
-            var caseIdMap = persistGeneratedCases(te.getTaskId(), executionId, cases);
+            List<EnhancedSimplifiedTestCaseDTO> cases = generateAllServiceCases(te.getTaskId());
+            Map<String, Long> caseIdMap = persistGeneratedCases(te.getTaskId(), executionId, cases);
             writeBaggageMap(te.getTaskId(), executionId, cases);
             {
                 int totalCases = (cases==null?0:cases.size());
@@ -230,9 +230,13 @@ public class ExecutionOrchestrator {
                         @SuppressWarnings("unchecked")
                         Map<String,Object> full = (Map<String,Object>) (Map<?,?>) ft.getFaultDefinition();
                         Object specObj = full.get("spec");
-                        Map<String,Object> payload = (specObj instanceof Map)
-                                ? new LinkedHashMap<>(Map.of("spec", specObj))
-                                : full;
+                        Map<String,Object> payload;
+                        if (specObj instanceof Map) {
+                            payload = new LinkedHashMap<>();
+                            payload.put("spec", specObj);
+                        } else {
+                            payload = full;
+                        }
                         HttpHeaders fh = new HttpHeaders();
                         fh.setContentType(MediaType.APPLICATION_JSON);
                         HttpEntity<Map<String,Object>> fReq = new HttpEntity<>(payload, fh);
@@ -316,7 +320,7 @@ public class ExecutionOrchestrator {
                         taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                                 "[Stage4] Replay verified: service="+svc+", status="+rr.getResponseStatus());
 
-                        return Map.entry(svc, bladeName);
+                        return new java.util.AbstractMap.SimpleEntry<>(svc, bladeName);
                     } catch (Exception e) {
                         log.error("[Stage4] Fault inject/replay failed for service {}: {}", svc, e.getMessage());
                         taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.ERROR,
@@ -504,33 +508,49 @@ public class ExecutionOrchestrator {
         java.util.function.Function<ServiceFaultConfig, EnhancedFaultTargetDTO> buildOne = (sfc) -> {
             String ns = sfc.getNamespace();
             String svc = sfc.getServiceName();
-            java.util.List<String> containerValues = (sfc.getContainerNames()!=null)? sfc.getContainerNames() : java.util.List.of();
-            java.util.List<String> podValues = (sfc.getNames()!=null)? sfc.getNames() : java.util.List.of();
+            java.util.List<String> containerValues = (sfc.getContainerNames()!=null)? sfc.getContainerNames() : java.util.Collections.emptyList();
+            java.util.List<String> podValues = (sfc.getNames()!=null)? sfc.getNames() : java.util.Collections.emptyList();
             java.util.Map<String, Object> def = new java.util.LinkedHashMap<>();
             java.util.Map<String, Object> exp = new java.util.LinkedHashMap<>();
             exp.put("scope", "container"); exp.put("target", "container"); exp.put("action", "remove");
             java.util.List<java.util.Map<String,Object>> matchers = new java.util.ArrayList<>();
-            if (!podValues.isEmpty()) matchers.add(java.util.Map.of("name","names","value", podValues));
-            matchers.add(java.util.Map.of("name","namespace","value", java.util.List.of(ns)));
-            if (!containerValues.isEmpty()) matchers.add(java.util.Map.of("name","container-names","value", containerValues));
-            matchers.add(java.util.Map.of("name","force","value", java.util.List.of("true")));
+            if (!podValues.isEmpty()) {
+                java.util.Map<String,Object> m1 = new java.util.LinkedHashMap<>();
+                m1.put("name", "names");
+                m1.put("value", podValues);
+                matchers.add(m1);
+            }
+            java.util.Map<String,Object> m2 = new java.util.LinkedHashMap<>();
+            m2.put("name", "namespace");
+            m2.put("value", java.util.Collections.singletonList(ns));
+            matchers.add(m2);
+            if (!containerValues.isEmpty()) {
+                java.util.Map<String,Object> m3 = new java.util.LinkedHashMap<>();
+                m3.put("name", "container-names");
+                m3.put("value", containerValues);
+                matchers.add(m3);
+            }
+            java.util.Map<String,Object> m4 = new java.util.LinkedHashMap<>();
+            m4.put("name", "force");
+            m4.put("value", java.util.Collections.singletonList("true"));
+            matchers.add(m4);
             java.util.Map<String, Object> expObj = new java.util.LinkedHashMap<>();
             expObj.putAll(exp); expObj.put("matchers", matchers);
             java.util.Map<String, Object> spec = new java.util.LinkedHashMap<>();
-            spec.put("experiments", java.util.List.of(expObj));
+            spec.put("experiments", java.util.Collections.singletonList(expObj));
             def.put("spec", spec);
             return new EnhancedFaultTargetDTO(ns, svc, def);
         };
         List<String> services = new ArrayList<>(svcMap.keySet());
         List<EnhancedSimplifiedTestCaseDTO> out = new ArrayList<>();
-        out.add(new EnhancedSimplifiedTestCaseDTO(java.util.List.of())); // baseline
-        for (String s : services) out.add(new EnhancedSimplifiedTestCaseDTO(java.util.List.of(buildOne.apply(svcMap.get(s)))));
+        out.add(new EnhancedSimplifiedTestCaseDTO(java.util.Collections.emptyList())); // baseline
+        for (String s : services) out.add(new EnhancedSimplifiedTestCaseDTO(java.util.Collections.singletonList(buildOne.apply(svcMap.get(s)))));
         for (int i=0;i<services.size();i++) {
             for (int j=i+1;j<services.size();j++) {
-                out.add(new EnhancedSimplifiedTestCaseDTO(java.util.List.of(
-                        buildOne.apply(svcMap.get(services.get(i))),
-                        buildOne.apply(svcMap.get(services.get(j)))
-                )));
+                java.util.List<EnhancedFaultTargetDTO> dualFaults = new java.util.ArrayList<>();
+                dualFaults.add(buildOne.apply(svcMap.get(services.get(i))));
+                dualFaults.add(buildOne.apply(svcMap.get(services.get(j))));
+                out.add(new EnhancedSimplifiedTestCaseDTO(dualFaults));
             }
         }
         return out;
@@ -539,14 +559,14 @@ public class ExecutionOrchestrator {
 
     private String buildCaseId(EnhancedSimplifiedTestCaseDTO c) {
         if (c.getFaults()==null || c.getFaults().isEmpty()) return "baseline";
-        List<String> svcs = c.getFaults().stream().map(EnhancedFaultTargetDTO::getServiceName).sorted().toList();
+        List<String> svcs = c.getFaults().stream().map(EnhancedFaultTargetDTO::getServiceName).sorted().collect(java.util.stream.Collectors.toList());
         return String.join("+", svcs);
     }
 
     private String buildBaggageHeader(EnhancedSimplifiedTestCaseDTO c, Long executionId) {
         if (c.getFaults()==null || c.getFaults().isEmpty()) return null;
         // 从 baggage_map 获取每个服务的 token 值并拼接
-        List<String> services = c.getFaults().stream().map(EnhancedFaultTargetDTO::getServiceName).distinct().toList();
+        List<String> services = c.getFaults().stream().map(EnhancedFaultTargetDTO::getServiceName).distinct().collect(java.util.stream.Collectors.toList());
         List<BaggageMap> maps = baggageMapRepository.findByExecutionId(executionId);
         Map<String,String> svcToken = new LinkedHashMap<>();
         for (BaggageMap bm : maps) svcToken.put(bm.getServiceName(), bm.getValue());
@@ -699,19 +719,19 @@ public class ExecutionOrchestrator {
     }
 
     private List<Map<String,Object>> buildInterceptorItems(Long executionId) {
-        List<BaggageMap> bms = baggageMapRepository.findByExecutionId(executionId).stream().toList();
-        List<InterceptReplayResult> rrs = interceptReplayResultRepository.findByExecutionId(executionId).stream().toList();
+        List<BaggageMap> bms = baggageMapRepository.findByExecutionId(executionId).stream().collect(java.util.stream.Collectors.toList());
+        List<InterceptReplayResult> rrs = interceptReplayResultRepository.findByExecutionId(executionId).stream().collect(java.util.stream.Collectors.toList());
         Map<String, String> svcBaggage = new LinkedHashMap<>();
         for (BaggageMap bm : bms) svcBaggage.put(bm.getServiceName(), bm.getValue());
         Map<String, Map<String,Object>> svcTemplate = new LinkedHashMap<>();
         for (InterceptReplayResult r : rrs) {
-            svcTemplate.put(r.getServiceName(), new LinkedHashMap<>(Map.of(
-                    "path", safePath(r.getRequestUrl()),
-                    "method", r.getRequestMethod(),
-                    "status", r.getResponseStatus(),
-                    "headers", tryParseJson(r.getResponseHeaders()),
-                    "body", r.getResponseBody()
-            )));
+            Map<String,Object> templateMap = new LinkedHashMap<>();
+            templateMap.put("path", safePath(r.getRequestUrl()));
+            templateMap.put("method", r.getRequestMethod());
+            templateMap.put("status", r.getResponseStatus());
+            templateMap.put("headers", tryParseJson(r.getResponseHeaders()));
+            templateMap.put("body", r.getResponseBody());
+            svcTemplate.put(r.getServiceName(), templateMap);
         }
         List<Map<String,Object>> items = new ArrayList<>();
         for (Map.Entry<String, Map<String,Object>> e : svcTemplate.entrySet()) {
@@ -746,13 +766,19 @@ public class ExecutionOrchestrator {
             tc.setTaskId(taskId);
             tc.setExecutionId(executionId);
             switch (cnt) {
-                case 0 -> tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.BASELINE);
-                case 1 -> tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.SINGLE);
-                default -> tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.DUAL);
+                case 0:
+                    tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.BASELINE);
+                    break;
+                case 1:
+                    tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.SINGLE);
+                    break;
+                default:
+                    tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.DUAL);
+                    break;
             }
             tc.setTargetCount(cnt);
             try {
-                String json = om.writeValueAsString(c.getFaults()==null? java.util.List.of() : c.getFaults());
+                String json = om.writeValueAsString(c.getFaults()==null? java.util.Collections.emptyList() : c.getFaults());
                 tc.setFaultsJson(json);
             } catch (Exception ex) {
                 throw new BusinessException("JSON_WRITE_ERROR","faults_json 序列化失败", ex);
@@ -768,7 +794,8 @@ public class ExecutionOrchestrator {
     private Map<String,Object> normalizeHeaders(Object obj) {
         if (obj == null) return null;
         if (obj instanceof Map) return (Map<String,Object>) obj;
-        if (obj instanceof String s) {
+        if (obj instanceof String) {
+            String s = (String) obj;
             Object parsed = tryParseJson(s);
             if (parsed instanceof Map) return (Map<String,Object>) parsed;
         }
@@ -793,12 +820,24 @@ public class ExecutionOrchestrator {
     }
 
     private List<Map<String,Object>> defaultRules() {
-        return List.of(
-                Map.of("path", "/api", "method", "GET"),
-                Map.of("path", "/api", "method", "POST"),
-                Map.of("path", "/api", "method", "PUT"),
-                Map.of("path", "/api", "method", "DELETE")
-        );
+        List<Map<String,Object>> rules = new ArrayList<>();
+        Map<String,Object> r1 = new LinkedHashMap<>();
+        r1.put("path", "/api");
+        r1.put("method", "GET");
+        rules.add(r1);
+        Map<String,Object> r2 = new LinkedHashMap<>();
+        r2.put("path", "/api");
+        r2.put("method", "POST");
+        rules.add(r2);
+        Map<String,Object> r3 = new LinkedHashMap<>();
+        r3.put("path", "/api");
+        r3.put("method", "PUT");
+        rules.add(r3);
+        Map<String,Object> r4 = new LinkedHashMap<>();
+        r4.put("path", "/api");
+        r4.put("method", "DELETE");
+        rules.add(r4);
+        return rules;
     }
 
     public java.util.Optional<TaskExecution> getExecution(Long executionId) {

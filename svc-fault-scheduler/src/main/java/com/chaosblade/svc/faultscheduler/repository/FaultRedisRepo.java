@@ -143,7 +143,7 @@ public class FaultRedisRepo {
             
             if (faultNames == null) {
                 logger.debug("No fault names found in index");
-                return Set.of();
+                return java.util.Collections.emptySet();
             }
             
             logger.debug("Retrieved {} fault names from index", faultNames.size());

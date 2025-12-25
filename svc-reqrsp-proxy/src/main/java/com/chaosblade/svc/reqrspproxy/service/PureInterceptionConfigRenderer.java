@@ -84,71 +84,68 @@ public class PureInterceptionConfigRenderer {
     }
     
     // ==================== 模板定义 ====================
-    
-    private static final String PURE_INTERCEPTION_TEMPLATE = """
-            admin:
-              address:
-                socket_address: { address: 0.0.0.0, port_value: 9901 }
 
-            static_resources:
-              listeners:
-              - name: inbound
-                address:
-                  socket_address: { address: 0.0.0.0, port_value: 15006 }
-                filter_chains:
-                - filters:
-                  - name: envoy.filters.network.http_connection_manager
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                      stat_prefix: ingress_http
-                      http2_protocol_options: {}
-                      
-                      route_config:
-                        name: local_route
-                        virtual_hosts:
-                        - name: local_service
-                          domains: ["*"]
-                          routes:
-            %s
-                          - match: { prefix: "/" }
-                            route: { cluster: local_app }
-                      
-                      http_filters:
-                      - name: envoy.filters.http.router
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+    private static final String PURE_INTERCEPTION_TEMPLATE =
+            "admin:\n" +
+            "  address:\n" +
+            "    socket_address: { address: 0.0.0.0, port_value: 9901 }\n" +
+            "\n" +
+            "static_resources:\n" +
+            "  listeners:\n" +
+            "  - name: inbound\n" +
+            "    address:\n" +
+            "      socket_address: { address: 0.0.0.0, port_value: 15006 }\n" +
+            "    filter_chains:\n" +
+            "    - filters:\n" +
+            "      - name: envoy.filters.network.http_connection_manager\n" +
+            "        typed_config:\n" +
+            "          \"@type\": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager\n" +
+            "          stat_prefix: ingress_http\n" +
+            "          http2_protocol_options: {}\n" +
+            "          \n" +
+            "          route_config:\n" +
+            "            name: local_route\n" +
+            "            virtual_hosts:\n" +
+            "            - name: local_service\n" +
+            "              domains: [\"*\"]\n" +
+            "              routes:\n" +
+            "%s\n" +
+            "              - match: { prefix: \"/\" }\n" +
+            "                route: { cluster: local_app }\n" +
+            "          \n" +
+            "          http_filters:\n" +
+            "          - name: envoy.filters.http.router\n" +
+            "            typed_config:\n" +
+            "              \"@type\": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router\n" +
+            "\n" +
+            "  clusters:\n" +
+            "  - name: local_app\n" +
+            "    connect_timeout: 1s\n" +
+            "    type: STATIC\n" +
+            "    load_assignment:\n" +
+            "      cluster_name: local_app\n" +
+            "      endpoints:\n" +
+            "      - lb_endpoints:\n" +
+            "        - endpoint:\n" +
+            "            address:\n" +
+            "              socket_address:\n" +
+            "                address: 127.0.0.1\n" +
+            "                port_value: %d\n";
 
-              clusters:
-              - name: local_app
-                connect_timeout: 1s
-                type: STATIC
-                load_assignment:
-                  cluster_name: local_app
-                  endpoints:
-                  - lb_endpoints:
-                    - endpoint:
-                        address:
-                          socket_address:
-                            address: 127.0.0.1
-                            port_value: %d
-            """;
-    
-    private static final String INTERCEPT_ROUTE_TEMPLATE = """
-                          - name: %s
-                            match:
-                              path: "%s"
-                              headers:
-                              - name: ":method"
-                                exact_match: "%s"
-                            direct_response:
-                              status: %d
-                              body:
-                                inline_string: "%s"
-                            response_headers_to_add:
-            %s
-            """;
-    
-    private static final String RESPONSE_HEADER_TEMPLATE = """
-                                - header: { key: "%s", value: "%s" }
-            """;
+    private static final String INTERCEPT_ROUTE_TEMPLATE =
+            "              - name: %s\n" +
+            "                match:\n" +
+            "                  path: \"%s\"\n" +
+            "                  headers:\n" +
+            "                  - name: \":method\"\n" +
+            "                    exact_match: \"%s\"\n" +
+            "                direct_response:\n" +
+            "                  status: %d\n" +
+            "                  body:\n" +
+            "                    inline_string: \"%s\"\n" +
+            "                response_headers_to_add:\n" +
+            "%s\n";
+
+    private static final String RESPONSE_HEADER_TEMPLATE =
+            "                    - header: { key: \"%s\", value: \"%s\" }\n";
 }

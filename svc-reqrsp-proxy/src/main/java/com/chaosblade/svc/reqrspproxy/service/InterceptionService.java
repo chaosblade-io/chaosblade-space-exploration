@@ -157,7 +157,7 @@ public class InterceptionService {
                 envoyYaml = hybridRenderer.renderHybridConfig(appPort, recordingRules, request.getInterceptionRules());
             } else {
                 // 纯拦截模式：不包含录制功能
-                recordingRules = List.of(); // 空的录制规则
+                recordingRules = java.util.Collections.emptyList(); // 空的录制规则
                 envoyYaml = pureInterceptionRenderer.renderPureInterceptionConfig(appPort, request.getInterceptionRules());
             }
             

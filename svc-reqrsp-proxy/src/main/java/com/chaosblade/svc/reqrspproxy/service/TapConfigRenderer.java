@@ -60,73 +60,71 @@ public class TapConfigRenderer {
                 rule.getMethod().toUpperCase());
     }
     
-    private static final String PREFIX_MATCH_RULE_TEMPLATE = """
-                                  - http_request_headers_match:
-                                      headers:
-                                      - name: ":path"
-                                        string_match: { prefix: "%s" }
-                                      - name: ":method"
-                                        string_match: { exact: "%s" }
-            """;
-    
-    private static final String ENVOY_CONFIG_TEMPLATE = """
-            admin:
-              address:
-                socket_address: { address: 0.0.0.0, port_value: %d }
-            
-            static_resources:
-              listeners:
-              - name: inbound
-                address:
-                  socket_address: { address: 0.0.0.0, port_value: %d }
-                filter_chains:
-                - filters:
-                  - name: envoy.filters.network.http_connection_manager
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                      stat_prefix: ingress_http
-                      http2_protocol_options: {}
-                      route_config:
-                        name: local_route
-                        virtual_hosts:
-                        - name: local_service
-                          domains: ["*"]
-                          routes:
-                          - match: { prefix: "/" }
-                            route: { cluster: local_app }
-                      http_filters:
-                      - name: envoy.filters.http.tap
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.tap.v3.Tap
-                          common_config:
-                            static_config:
-                              match_config:
-                                or_match:
-                                  rules:
-            %s
-                              output_config:
-                                sinks:
-                                - format: JSON_BODY_AS_STRING
-                                  file_per_tap:
-                                    path_prefix: %s/rec-
-                                max_buffered_rx_bytes: %d
-                                max_buffered_tx_bytes: %d
-                      - name: envoy.filters.http.router
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            
-              clusters:
-              - name: local_app
-                connect_timeout: 1s
-                type: STATIC
-                load_assignment:
-                  cluster_name: local_app
-                  endpoints:
-                  - lb_endpoints:
-                    - endpoint:
-                        address:
-                          socket_address:
-                            address: 127.0.0.1
-                            port_value: %d
-            """;
+    private static final String PREFIX_MATCH_RULE_TEMPLATE =
+            "                      - http_request_headers_match:\n" +
+            "                          headers:\n" +
+            "                          - name: \":path\"\n" +
+            "                            string_match: { prefix: \"%s\" }\n" +
+            "                          - name: \":method\"\n" +
+            "                            string_match: { exact: \"%s\" }\n";
+
+    private static final String ENVOY_CONFIG_TEMPLATE =
+            "admin:\n" +
+            "  address:\n" +
+            "    socket_address: { address: 0.0.0.0, port_value: %d }\n" +
+            "\n" +
+            "static_resources:\n" +
+            "  listeners:\n" +
+            "  - name: inbound\n" +
+            "    address:\n" +
+            "      socket_address: { address: 0.0.0.0, port_value: %d }\n" +
+            "    filter_chains:\n" +
+            "    - filters:\n" +
+            "      - name: envoy.filters.network.http_connection_manager\n" +
+            "        typed_config:\n" +
+            "          \"@type\": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager\n" +
+            "          stat_prefix: ingress_http\n" +
+            "          http2_protocol_options: {}\n" +
+            "          route_config:\n" +
+            "            name: local_route\n" +
+            "            virtual_hosts:\n" +
+            "            - name: local_service\n" +
+            "              domains: [\"*\"]\n" +
+            "              routes:\n" +
+            "              - match: { prefix: \"/\" }\n" +
+            "                route: { cluster: local_app }\n" +
+            "          http_filters:\n" +
+            "          - name: envoy.filters.http.tap\n" +
+            "            typed_config:\n" +
+            "              \"@type\": type.googleapis.com/envoy.extensions.filters.http.tap.v3.Tap\n" +
+            "              common_config:\n" +
+            "                static_config:\n" +
+            "                  match_config:\n" +
+            "                    or_match:\n" +
+            "                      rules:\n" +
+            "%s\n" +
+            "                  output_config:\n" +
+            "                    sinks:\n" +
+            "                    - format: JSON_BODY_AS_STRING\n" +
+            "                      file_per_tap:\n" +
+            "                        path_prefix: %s/rec-\n" +
+            "                    max_buffered_rx_bytes: %d\n" +
+            "                    max_buffered_tx_bytes: %d\n" +
+            "          - name: envoy.filters.http.router\n" +
+            "            typed_config:\n" +
+            "              \"@type\": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router\n" +
+            "\n" +
+            "  clusters:\n" +
+            "  - name: local_app\n" +
+            "    connect_timeout: 1s\n" +
+            "    type: STATIC\n" +
+            "    load_assignment:\n" +
+            "      cluster_name: local_app\n" +
+            "      endpoints:\n" +
+            "      - lb_endpoints:\n" +
+            "        - endpoint:\n" +
+            "            address:\n" +
+            "              socket_address:\n" +
+            "                address: 127.0.0.1\n" +
+            "                port_value: %d\n";
 }

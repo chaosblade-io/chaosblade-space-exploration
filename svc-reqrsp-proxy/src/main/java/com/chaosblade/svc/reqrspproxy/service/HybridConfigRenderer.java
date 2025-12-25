@@ -141,107 +141,102 @@ public class HybridConfigRenderer {
     }
     
     // === 配置模板 ===
-    
-    private static final String HYBRID_ENVOY_TEMPLATE = """
-            admin:
-              address:
-                socket_address: { address: 0.0.0.0, port_value: %d }
-            
-            static_resources:
-              listeners:
-              - name: inbound
-                address:
-                  socket_address: { address: 0.0.0.0, port_value: %d }
-                filter_chains:
-                - filters:
-                  - name: envoy.filters.network.http_connection_manager
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                      stat_prefix: ingress_http
-                      http2_protocol_options: {}
-                      
-                      route_config:
-                        name: local_route
-                        virtual_hosts:
-                        - name: local_service
-                          domains: ["*"]
-                          routes:
-            %s
-                          - match: { prefix: "/" }
-                            route: { cluster: local_app }
-            
-                      http_filters:
-                      - name: envoy.filters.http.tap
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.tap.v3.Tap
-                          common_config:
-                            static_config:
-                              match_config:
-            %s
-                              output_config:
-                                sinks:
-                                - format: JSON_BODY_AS_STRING
-                                  file_per_tap:
-                                    path_prefix: %s/rec-
-                                max_buffered_rx_bytes: %d
-                                max_buffered_tx_bytes: %d
-                      - name: envoy.filters.http.router
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            
-              clusters:
-              - name: local_app
-                connect_timeout: 1s
-                type: STATIC
-                load_assignment:
-                  cluster_name: local_app
-                  endpoints:
-                  - lb_endpoints:
-                    - endpoint:
-                        address:
-                          socket_address:
-                            address: 127.0.0.1
-                            port_value: %d
-            """;
-    
-    private static final String INTERCEPT_ROUTE_TEMPLATE = """
-                          - name: %s
-                            match:
-                              path: "%s"
-                              headers:
-                              - name: ":method"
-                                exact_match: "%s"
-                            direct_response:
-                              status: %d
-                              body:
-                                inline_string: "%s"
-                            response_headers_to_add:
-            %s
-            """;
-    
-    private static final String TAP_MATCH_TEMPLATE = """
-                                  - http_request_headers_match:
-                                      headers:
-                                      - name: :path
-                                        exact_match: "%s"
-                                      - name: :method
-                                        exact_match: "%s"
-            """;
+
+    private static final String HYBRID_ENVOY_TEMPLATE =
+            "admin:\n" +
+            "  address:\n" +
+            "    socket_address: { address: 0.0.0.0, port_value: %d }\n" +
+            "\n" +
+            "static_resources:\n" +
+            "  listeners:\n" +
+            "  - name: inbound\n" +
+            "    address:\n" +
+            "      socket_address: { address: 0.0.0.0, port_value: %d }\n" +
+            "    filter_chains:\n" +
+            "    - filters:\n" +
+            "      - name: envoy.filters.network.http_connection_manager\n" +
+            "        typed_config:\n" +
+            "          \"@type\": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager\n" +
+            "          stat_prefix: ingress_http\n" +
+            "          http2_protocol_options: {}\n" +
+            "          \n" +
+            "          route_config:\n" +
+            "            name: local_route\n" +
+            "            virtual_hosts:\n" +
+            "            - name: local_service\n" +
+            "              domains: [\"*\"]\n" +
+            "              routes:\n" +
+            "%s\n" +
+            "              - match: { prefix: \"/\" }\n" +
+            "                route: { cluster: local_app }\n" +
+            "\n" +
+            "          http_filters:\n" +
+            "          - name: envoy.filters.http.tap\n" +
+            "            typed_config:\n" +
+            "              \"@type\": type.googleapis.com/envoy.extensions.filters.http.tap.v3.Tap\n" +
+            "              common_config:\n" +
+            "                static_config:\n" +
+            "                  match_config:\n" +
+            "%s\n" +
+            "                  output_config:\n" +
+            "                    sinks:\n" +
+            "                    - format: JSON_BODY_AS_STRING\n" +
+            "                      file_per_tap:\n" +
+            "                        path_prefix: %s/rec-\n" +
+            "                    max_buffered_rx_bytes: %d\n" +
+            "                    max_buffered_tx_bytes: %d\n" +
+            "          - name: envoy.filters.http.router\n" +
+            "            typed_config:\n" +
+            "              \"@type\": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router\n" +
+            "\n" +
+            "  clusters:\n" +
+            "  - name: local_app\n" +
+            "    connect_timeout: 1s\n" +
+            "    type: STATIC\n" +
+            "    load_assignment:\n" +
+            "      cluster_name: local_app\n" +
+            "      endpoints:\n" +
+            "      - lb_endpoints:\n" +
+            "        - endpoint:\n" +
+            "            address:\n" +
+            "              socket_address:\n" +
+            "                address: 127.0.0.1\n" +
+            "                port_value: %d\n";
+
+    private static final String INTERCEPT_ROUTE_TEMPLATE =
+            "              - name: %s\n" +
+            "                match:\n" +
+            "                  path: \"%s\"\n" +
+            "                  headers:\n" +
+            "                  - name: \":method\"\n" +
+            "                    exact_match: \"%s\"\n" +
+            "                direct_response:\n" +
+            "                  status: %d\n" +
+            "                  body:\n" +
+            "                    inline_string: \"%s\"\n" +
+            "                response_headers_to_add:\n" +
+            "%s\n";
+
+    private static final String TAP_MATCH_TEMPLATE =
+            "                      - http_request_headers_match:\n" +
+            "                          headers:\n" +
+            "                          - name: :path\n" +
+            "                            exact_match: \"%s\"\n" +
+            "                          - name: :method\n" +
+            "                            exact_match: \"%s\"\n";
 
     // 单个规则的 Tap 匹配模板
-    private static final String SINGLE_TAP_MATCH_TEMPLATE = """
-                                http_request_headers_match:
-                                  headers:
-                                  - name: :path
-                                    exact_match: "%s"
-                                  - name: :method
-                                    exact_match: "%s"
-            """;
+    private static final String SINGLE_TAP_MATCH_TEMPLATE =
+            "                    http_request_headers_match:\n" +
+            "                      headers:\n" +
+            "                      - name: :path\n" +
+            "                        exact_match: \"%s\"\n" +
+            "                      - name: :method\n" +
+            "                        exact_match: \"%s\"\n";
 
     // 多个规则的 or_match 模板
-    private static final String OR_MATCH_TAP_TEMPLATE = """
-                                or_match:
-                                  rules:
-            %s
-            """;
+    private static final String OR_MATCH_TAP_TEMPLATE =
+            "                    or_match:\n" +
+            "                      rules:\n" +
+            "%s\n";
 }

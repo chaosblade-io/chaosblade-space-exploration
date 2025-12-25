@@ -1,4 +1,5 @@
 package com.chaosblade.svc.taskexecutor.service;
+import java.util.stream.Collectors;
 
 import com.chaosblade.common.core.exception.BusinessException;
 import com.chaosblade.svc.taskexecutor.dto.EnhancedSimplifiedTestCaseDTO;
@@ -140,13 +141,13 @@ public class TestExecutionService {
 
     // 启动请求模式分析：选择叶子节点，组装 payload 并调用 svc-reqrsp-proxy
     public PatternAnalysisResult startPatternAnalysis(Long taskId) {
-        var task = detectionTaskRepository.findById(taskId)
+        DetectionTask task = detectionTaskRepository.findById(taskId)
                 .orElseThrow(() -> new BusinessException("DETECTION_TASK_NOT_FOUND","任务不存在: "+taskId));
         // 获取拓扑
         ApiTopology topo = apiTopologyRepository.findBySystemIdAndApiId(task.getSystemId(), task.getApiId())
                 .orElseThrow(() -> new BusinessException("TOPOLOGY_NOT_FOUND","未找到拓扑: system="+task.getSystemId()+", api="+task.getApiId()));
-        var nodes = apiTopologyNodeRepository.findByTopologyId(topo.getId());
-        var edges = apiTopologyEdgeRepository.findByTopologyId(topo.getId());
+        List<ApiTopologyNode> nodes = apiTopologyNodeRepository.findByTopologyId(topo.getId());
+        List<ApiTopologyEdge> edges = apiTopologyEdgeRepository.findByTopologyId(topo.getId());
         if (nodes.isEmpty()) throw new BusinessException("NO_TOPOLOGY_NODES","拓扑无节点");
         // 选叶子：无出边
         java.util.Set<Long> fromSet = new java.util.HashSet<>();
@@ -161,7 +162,7 @@ public class TestExecutionService {
         // reqDefId 使用 detection_tasks.api_definition_id
         Long reqDefId = (task.getApiDefinitionId()!=null) ? task.getApiDefinitionId().longValue() : task.getApiId();
         // serviceList
-        java.util.List<String> serviceList = nodes.stream().map(ApiTopologyNode::getName).toList();
+        java.util.List<String> serviceList = nodes.stream().map(ApiTopologyNode::getName).collect(Collectors.toList());
         // 构造 payload
         java.util.Map<String,Object> payload = new java.util.LinkedHashMap<>();
         payload.put("reqDefId", reqDefId);
@@ -210,18 +211,18 @@ public class TestExecutionService {
                     r.proxyResponse = resp.getBody();
                     r.status = "COMPLETED";
                 } catch (Exception retryEx) {
-                    r.proxyResponse = java.util.Map.of(
-                            "status", ex.getStatusCode().value(),
-                            "body", ex.getResponseBodyAsString()
-                    );
+                    java.util.Map<String,Object> errMap = new java.util.LinkedHashMap<>();
+                    errMap.put("status", ex.getStatusCode().value());
+                    errMap.put("body", ex.getResponseBodyAsString());
+                    r.proxyResponse = errMap;
                     r.status = "FAILED";
                     r.error = "Authentication failed after retry: " + retryEx.getMessage();
                 }
             } else {
-                r.proxyResponse = java.util.Map.of(
-                        "status", ex.getStatusCode().value(),
-                        "body", ex.getResponseBodyAsString()
-                );
+                java.util.Map<String,Object> errMap2 = new java.util.LinkedHashMap<>();
+                errMap2.put("status", ex.getStatusCode().value());
+                errMap2.put("body", ex.getResponseBodyAsString());
+                r.proxyResponse = errMap2;
                 r.status = "FAILED";
                 r.error = ex.getMessage();
             }
@@ -408,7 +409,7 @@ public class TestExecutionService {
         r.status = "COMPLETED";
         r.testCase = picked;
         r.targetService = picked.getFaults().isEmpty()? null : picked.getFaults().get(0).getServiceName();
-        r.targetServices = picked.getFaults().stream().map(EnhancedFaultTargetDTO::getServiceName).toList();
+        r.targetServices = picked.getFaults().stream().map(EnhancedFaultTargetDTO::getServiceName).collect(Collectors.toList());
         r.requestMethod = def.getMethod().name();
         r.requestUrl = url;
         r.faultResponse = lastFaultResp;
@@ -577,7 +578,7 @@ public class TestExecutionService {
                 .map(EnhancedFaultTargetDTO::getServiceName)
                 .filter(Objects::nonNull)
                 .distinct()
-                .toList();
+                .collect(Collectors.toList());
 
         // 通过 task->system 获取 namespace，使用 apiDefinitionId 作为 reqDefId
         DetectionTask task = detectionTaskRepository.findById(taskId)
@@ -644,20 +645,22 @@ public class TestExecutionService {
                     );
                     analysisResponse = resp.getBody();
                 } catch (Exception retryEx) {
-                    analysisResponse = new LinkedHashMap<>(Map.of(
-                            "status", ex.getStatusCode().value(),
-                            "body", ex.getResponseBodyAsString(),
-                            "retryError", retryEx.getMessage()
-                    ));
+                    Map<String,Object> retryMap = new LinkedHashMap<>();
+                    retryMap.put("status", ex.getStatusCode().value());
+                    retryMap.put("body", ex.getResponseBodyAsString());
+                    retryMap.put("retryError", retryEx.getMessage());
+                    analysisResponse = retryMap;
                 }
             } else {
-                analysisResponse = new LinkedHashMap<>(Map.of(
-                        "status", ex.getStatusCode().value(),
-                        "body", ex.getResponseBodyAsString()
-                ));
+                Map<String,Object> errMap = new LinkedHashMap<>();
+                errMap.put("status", ex.getStatusCode().value());
+                errMap.put("body", ex.getResponseBodyAsString());
+                analysisResponse = errMap;
             }
         } catch (Exception ex) {
-            analysisResponse = new LinkedHashMap<>(Map.of("error", ex.getMessage()));
+            Map<String,Object> errMap2 = new LinkedHashMap<>();
+            errMap2.put("error", ex.getMessage());
+            analysisResponse = errMap2;
         }
         cr.analysisResponse = analysisResponse;
 
@@ -665,12 +668,11 @@ public class TestExecutionService {
         java.util.Map<String,Object> recordedEntriesByService = new LinkedHashMap<>();
 
         // 若分析未返回具体规则，则使用 /api 前缀的通用规则兜底
-        java.util.List<Map<String,Object>> defaultRules = java.util.List.of(
-                java.util.Map.of("path","/api", "method","GET"),
-                java.util.Map.of("path","/api", "method","POST"),
-                java.util.Map.of("path","/api", "method","PUT"),
-                java.util.Map.of("path","/api", "method","DELETE")
-        );
+        java.util.List<Map<String,Object>> defaultRules = new ArrayList<>();
+        Map<String,Object> rule1 = new LinkedHashMap<>(); rule1.put("path", "/api"); rule1.put("method", "GET"); defaultRules.add(rule1);
+        Map<String,Object> rule2 = new LinkedHashMap<>(); rule2.put("path", "/api"); rule2.put("method", "POST"); defaultRules.add(rule2);
+        Map<String,Object> rule3 = new LinkedHashMap<>(); rule3.put("path", "/api"); rule3.put("method", "PUT"); defaultRules.add(rule3);
+        Map<String,Object> rule4 = new LinkedHashMap<>(); rule4.put("path", "/api"); rule4.put("method", "DELETE"); defaultRules.add(rule4);
 
         // 为每个服务启动录制
         for (String svcName : cr.serviceList) {
@@ -713,22 +715,25 @@ public class TestExecutionService {
                         );
                         recordingStartResults.add(resp.getBody());
                     } catch (Exception retryEx) {
-                        recordingStartResults.add(java.util.Map.of(
-                                "service", svcName,
-                                "status", ex.getStatusCode().value(),
-                                "body", ex.getResponseBodyAsString(),
-                                "retryError", retryEx.getMessage()
-                        ));
+                        java.util.Map<String,Object> retryMap = new java.util.LinkedHashMap<>();
+                        retryMap.put("service", svcName);
+                        retryMap.put("status", ex.getStatusCode().value());
+                        retryMap.put("body", ex.getResponseBodyAsString());
+                        retryMap.put("retryError", retryEx.getMessage());
+                        recordingStartResults.add(retryMap);
                     }
                 } else {
-                    recordingStartResults.add(java.util.Map.of(
-                            "service", svcName,
-                            "status", ex.getStatusCode().value(),
-                            "body", ex.getResponseBodyAsString()
-                    ));
+                    java.util.Map<String,Object> errMap = new java.util.LinkedHashMap<>();
+                    errMap.put("service", svcName);
+                    errMap.put("status", ex.getStatusCode().value());
+                    errMap.put("body", ex.getResponseBodyAsString());
+                    recordingStartResults.add(errMap);
                 }
             } catch (Exception ex) {
-                recordingStartResults.add(java.util.Map.of("service", svcName, "error", ex.getMessage()));
+                java.util.Map<String, Object> errMap = new java.util.LinkedHashMap<>();
+                errMap.put("service", svcName);
+                errMap.put("error", ex.getMessage());
+                recordingStartResults.add(errMap);
             }
         }
 
@@ -768,17 +773,17 @@ public class TestExecutionService {
                         );
                         recordedEntriesByService.put(svcName, tap.getBody());
                     } catch (Exception retryEx) {
-                        recordedEntriesByService.put(svcName, new LinkedHashMap<>(java.util.Map.of(
-                                "status", ex.getStatusCode().value(),
-                                "body", ex.getResponseBodyAsString(),
-                                "retryError", retryEx.getMessage()
-                        )));
+                        java.util.Map<String,Object> retryMap = new LinkedHashMap<>();
+                        retryMap.put("status", ex.getStatusCode().value());
+                        retryMap.put("body", ex.getResponseBodyAsString());
+                        retryMap.put("retryError", retryEx.getMessage());
+                        recordedEntriesByService.put(svcName, retryMap);
                     }
                 } else {
-                    recordedEntriesByService.put(svcName, new LinkedHashMap<>(java.util.Map.of(
-                            "status", ex.getStatusCode().value(),
-                            "body", ex.getResponseBodyAsString()
-                    )));
+                    java.util.Map<String,Object> errMap = new LinkedHashMap<>();
+                    errMap.put("status", ex.getStatusCode().value());
+                    errMap.put("body", ex.getResponseBodyAsString());
+                    recordedEntriesByService.put(svcName, errMap);
                 }
             } catch (Exception ex) {
                 java.util.Map<String,Object> err = new LinkedHashMap<>();

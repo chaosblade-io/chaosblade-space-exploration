@@ -3,6 +3,7 @@ package com.chaosblade.svc.taskexecutor.service;
 import com.chaosblade.svc.taskexecutor.entity.InterceptReplayResult;
 import com.chaosblade.svc.taskexecutor.entity.TaskExecution;
 import com.chaosblade.svc.taskexecutor.entity.TaskConclusion;
+import com.chaosblade.svc.taskexecutor.entity.TestResult;
 import com.chaosblade.svc.taskexecutor.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,11 +52,11 @@ public class SummaryService {
 
         TaskExecution exec = taskExecutionRepository.findById(executionId).orElse(null);
         int totalCases = testCaseRepository.findByExecutionId(executionId).size();
-        var results = testResultRepository.findByExecutionId(executionId);
+        List<TestResult> results = testResultRepository.findByExecutionId(executionId);
         int failedCases = 0;
         double avgErrRate = 0.0;
         if (results != null && !results.isEmpty()) {
-            for (var r : results) {
+            for (TestResult r : results) {
                 double er = (r.getErrRate()==null) ? 0.0 : r.getErrRate().doubleValue();
                 if (er > 0.0) failedCases++;
                 avgErrRate += er;
@@ -65,7 +66,7 @@ public class SummaryService {
         // 故障类型与影响服务
         Map<String, Set<String>> serviceToTypes = new LinkedHashMap<>();
         List<InterceptReplayResult> rrs = interceptReplayResultRepository.findByExecutionId(executionId);
-        for (var r : rrs) {
+        for (InterceptReplayResult r : rrs) {
             String svc = r.getServiceName();
             String type = r.getFaultType();
             if (svc == null || svc.trim().isEmpty()) continue;
@@ -74,7 +75,7 @@ public class SummaryService {
         }
         int affectedServices = serviceToTypes.size();
         Set<String> allTypes = new LinkedHashSet<>();
-        for (var e : serviceToTypes.values()) allTypes.addAll(e);
+        for (Set<String> e : serviceToTypes.values()) allTypes.addAll(e);
 
         String prompt = buildPrompt(exec, totalCases, failedCases, avgErrRate, affectedServices, allTypes, serviceToTypes);
         String content = null;

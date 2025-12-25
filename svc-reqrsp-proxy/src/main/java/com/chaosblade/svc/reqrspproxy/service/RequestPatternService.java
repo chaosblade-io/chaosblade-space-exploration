@@ -620,72 +620,72 @@ public class RequestPatternService {
      */
     private String generateEnvoyConfig(String serviceName) {
         // 生成基础的 Envoy 配置，启用 HTTP tap 功能
-        return String.format("""
-            admin:
-              address:
-                socket_address:
-                  address: 127.0.0.1
-                  port_value: 9901
-
-            static_resources:
-              listeners:
-              - name: listener_0
-                address:
-                  socket_address:
-                    address: 0.0.0.0
-                    port_value: 8080
-                filter_chains:
-                - filters:
-                  - name: envoy.filters.network.http_connection_manager
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                      stat_prefix: ingress_http
-                      access_log:
-                      - name: envoy.access_loggers.stdout
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
-                      http_filters:
-                      - name: envoy.filters.http.tap
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.tap.v3.Tap
-                          common_config:
-                            static_config:
-                              match_config:
-                                any_match: true
-                              output_config:
-                                sinks:
-                                - format: JSON_BODY_AS_BYTES
-                                  file_per_tap:
-                                    path_prefix: /tmp/envoy_tap_%s
-                      - name: envoy.filters.http.router
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-                      route_config:
-                        name: local_route
-                        virtual_hosts:
-                        - name: local_service
-                          domains: ["*"]
-                          routes:
-                          - match:
-                              prefix: "/"
-                            route:
-                              cluster: %s_cluster
-
-              clusters:
-              - name: %s_cluster
-                connect_timeout: 30s
-                type: LOGICAL_DNS
-                dns_lookup_family: V4_ONLY
-                load_assignment:
-                  cluster_name: %s_cluster
-                  endpoints:
-                  - lb_endpoints:
-                    - endpoint:
-                        address:
-                          socket_address:
-                            address: 127.0.0.1
-                            port_value: 8080
-            """, serviceName, serviceName, serviceName, serviceName);
+        return String.format(
+            "admin:\n" +
+            "  address:\n" +
+            "    socket_address:\n" +
+            "      address: 127.0.0.1\n" +
+            "      port_value: 9901\n" +
+            "\n" +
+            "static_resources:\n" +
+            "  listeners:\n" +
+            "  - name: listener_0\n" +
+            "    address:\n" +
+            "      socket_address:\n" +
+            "        address: 0.0.0.0\n" +
+            "        port_value: 8080\n" +
+            "    filter_chains:\n" +
+            "    - filters:\n" +
+            "      - name: envoy.filters.network.http_connection_manager\n" +
+            "        typed_config:\n" +
+            "          \"@type\": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager\n" +
+            "          stat_prefix: ingress_http\n" +
+            "          access_log:\n" +
+            "          - name: envoy.access_loggers.stdout\n" +
+            "            typed_config:\n" +
+            "              \"@type\": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog\n" +
+            "          http_filters:\n" +
+            "          - name: envoy.filters.http.tap\n" +
+            "            typed_config:\n" +
+            "              \"@type\": type.googleapis.com/envoy.extensions.filters.http.tap.v3.Tap\n" +
+            "              common_config:\n" +
+            "                static_config:\n" +
+            "                  match_config:\n" +
+            "                    any_match: true\n" +
+            "                  output_config:\n" +
+            "                    sinks:\n" +
+            "                    - format: JSON_BODY_AS_BYTES\n" +
+            "                      file_per_tap:\n" +
+            "                        path_prefix: /tmp/envoy_tap_%s\n" +
+            "          - name: envoy.filters.http.router\n" +
+            "            typed_config:\n" +
+            "              \"@type\": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router\n" +
+            "          route_config:\n" +
+            "            name: local_route\n" +
+            "            virtual_hosts:\n" +
+            "            - name: local_service\n" +
+            "              domains: [\"*\"]\n" +
+            "              routes:\n" +
+            "              - match:\n" +
+            "                  prefix: \"/\"\n" +
+            "                route:\n" +
+            "                  cluster: %s_cluster\n" +
+            "\n" +
+            "  clusters:\n" +
+            "  - name: %s_cluster\n" +
+            "    connect_timeout: 30s\n" +
+            "    type: LOGICAL_DNS\n" +
+            "    dns_lookup_family: V4_ONLY\n" +
+            "    load_assignment:\n" +
+            "      cluster_name: %s_cluster\n" +
+            "      endpoints:\n" +
+            "      - lb_endpoints:\n" +
+            "        - endpoint:\n" +
+            "            address:\n" +
+            "              socket_address:\n" +
+            "                address: 127.0.0.1\n" +
+            "                port_value: 8080\n",
+            serviceName, serviceName, serviceName, serviceName);
     }
 
     /**

@@ -209,7 +209,7 @@ public class HttpRequestExecutor {
 
         // 确保有 Accept
         if (!headers.containsKey(HttpHeaders.ACCEPT)) {
-            headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
+            headers.setAccept(java.util.Collections.singletonList(MediaType.APPLICATION_JSON));
         }
 
         return headers;
@@ -343,7 +343,7 @@ public class HttpRequestExecutor {
                         }
                         // 确保有 Accept
                         if (!httpHeaders.containsKey(HttpHeaders.ACCEPT)) {
-                            httpHeaders.setAccept(java.util.List.of(MediaType.APPLICATION_JSON, MediaType.ALL));
+                            httpHeaders.setAccept(java.util.Arrays.asList(MediaType.APPLICATION_JSON, MediaType.ALL));
                         }
                     });
 

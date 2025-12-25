@@ -38,8 +38,8 @@ public class ReplayService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     // HTTP/2 伪头部前缀，需过滤
-    private static final Set<String> H2_PSEUDO_HEADERS = Set.of(
-            ":method", ":scheme", ":authority", ":path"
+    private static final Set<String> H2_PSEUDO_HEADERS = new java.util.HashSet<>(
+            java.util.Arrays.asList(":method", ":scheme", ":authority", ":path")
     );
 
     /**
@@ -146,7 +146,7 @@ public class ReplayService {
             // 调试日志
             try {
                 String ct = Optional.ofNullable(ctType).map(MediaType::toString).orElse("unknown");
-                String te = String.join(",", resp.getHeaders().getOrDefault("Transfer-Encoding", List.of()));
+                String te = String.join(",", resp.getHeaders().getOrDefault("Transfer-Encoding", java.util.Collections.emptyList()));
                 String preview = respBody.length() > 256 ? respBody.substring(0, 256) + "...(truncated)" : respBody;
                 logger.info("Replay debug: status={}, content-type={}, transfer-encoding={}, body-bytes={}, tookMs={}, preview={}",
                         result.getStatusCode(), ct, te, respBytes.length, (t1 - t0), preview);
