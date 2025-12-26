@@ -86,5 +86,18 @@ public class SpanInfo {
     public void setEvents(List<SpanEvent> events) { this.events = events; }
     public List<SpanInfo> getChildren() { return children; }
     public void setChildren(List<SpanInfo> children) { this.children = children; }
+
+    @Override
+    public String toString() {
+        return "SpanInfo{" +
+                "spanId='" + spanId + '\'' +
+                ", parentSpanId='" + parentSpanId + '\'' +
+                ", operationName='" + operationName + '\'' +
+                ", serviceName='" + serviceName + '\'' +
+                ", duration=" + duration +
+                ", spanKind='" + spanKind + '\'' +
+                ", children=" + (children != null ? children.size() : 0) +
+                '}';
+    }
 }
 

@@ -34,30 +34,22 @@ public class TraceService {
     }
     
     /**
-     * 获取 Trace 详情（不需要时间范围，traceId 唯一标识 trace）
+     * 获取 Trace 详情（返回原始数据）
      */
-    public TraceInfo getTraceDetail(String traceId) {
+    public Object getTraceDetailRaw(String traceId) {
         logger.info("Getting trace detail for traceId: {}", traceId);
 
-        JsonNode traceArray = apiClient.getTraceDetail(traceId);
+        JsonNode spansArray = apiClient.getTraceDetail(traceId);
 
-        if (traceArray.isArray() && traceArray.size() > 0) {
-            TraceInfo trace = parseTraceNode(traceArray.get(0));
-            // 解析 spans 并构建树形结构
-            trace.setSpans(parseSpans(traceArray.get(0)));
-            return trace;
+        if (spansArray == null || spansArray.isMissingNode() ||
+            (spansArray.isArray() && spansArray.size() == 0)) {
+            return null;
         }
 
-        return null;
+        return spansArray;
     }
 
-    /**
-     * 获取 Trace 详情（带时间范围，向后兼容）
-     */
-    public TraceInfo getTraceDetail(String traceId, long fromMs, long toMs) {
-        return getTraceDetail(traceId);
-    }
-    
+
     /**
      * 解析 Trace 列表
      */
@@ -108,73 +100,7 @@ public class TraceService {
 
         return trace;
     }
-    
-    /**
-     * 解析 Spans
-     */
-    private List<SpanInfo> parseSpans(JsonNode traceNode) {
-        List<SpanInfo> spans = new ArrayList<>();
-        
-        JsonNode spansNode = traceNode.path("spans");
-        if (spansNode.isMissingNode()) {
-            spansNode = traceNode.path("Spans");
-        }
-        
-        if (spansNode.isArray()) {
-            for (JsonNode spanNode : spansNode) {
-                spans.add(parseSpanNode(spanNode));
-            }
-        }
-        
-        // 构建树形结构
-        return buildSpanTree(spans);
-    }
-    
-    /**
-     * 解析单个 Span 节点
-     */
-    private SpanInfo parseSpanNode(JsonNode node) {
-        SpanInfo span = new SpanInfo();
-        
-        span.setSpanId(getTextValue(node, "spanId", "span_id", "SpanId"));
-        span.setParentSpanId(getTextValue(node, "parentSpanId", "parent_span_id", "ParentSpanId"));
-        span.setTraceId(getTextValue(node, "traceId", "trace_id", "TraceId"));
-        span.setOperationName(getTextValue(node, "operationName", "operation_name", "OperationName", "name"));
-        span.setServiceName(getTextValue(node, "serviceName", "service_name", "ServiceName"));
-        span.setStartTime(getLongValue(node, "startTime", "start_time", "StartTime"));
-        span.setEndTime(getLongValue(node, "endTime", "end_time", "EndTime"));
-        span.setDuration(getLongValue(node, "duration", "Duration"));
-        span.setStatusCode(getIntValue(node, "statusCode", "status_code", "StatusCode"));
-        span.setStatusMessage(getTextValue(node, "statusMessage", "status_message", "StatusMessage"));
-        span.setSpanKind(getTextValue(node, "spanKind", "span_kind", "SpanKind", "kind"));
-        
-        return span;
-    }
-    
-    /**
-     * 构建 Span 树形结构
-     */
-    private List<SpanInfo> buildSpanTree(List<SpanInfo> spans) {
-        Map<String, SpanInfo> spanMap = new HashMap<>();
-        List<SpanInfo> roots = new ArrayList<>();
-        
-        for (SpanInfo span : spans) {
-            spanMap.put(span.getSpanId(), span);
-            span.setChildren(new ArrayList<>());
-        }
-        
-        for (SpanInfo span : spans) {
-            String parentId = span.getParentSpanId();
-            if (parentId == null || parentId.isEmpty() || !spanMap.containsKey(parentId)) {
-                roots.add(span);
-            } else {
-                spanMap.get(parentId).getChildren().add(span);
-            }
-        }
-        
-        return roots;
-    }
-    
+
     // 辅助方法
     private String getTextValue(JsonNode node, String... keys) {
         for (String key : keys) {

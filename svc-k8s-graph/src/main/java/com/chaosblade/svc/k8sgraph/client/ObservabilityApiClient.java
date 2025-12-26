@@ -1,5 +1,7 @@
 package com.chaosblade.svc.k8sgraph.client;
 
+import com.chaosblade.svc.k8sgraph.domain.trace.TraceRequestFilter;
+import com.chaosblade.svc.k8sgraph.domain.trace.TraceRequestQuery;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -11,10 +13,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.annotation.PostConstruct;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collections;
 
 /**
  * 可观测性 API 客户端
@@ -31,7 +33,7 @@ public class ObservabilityApiClient {
     @Value("${observability.api.project-id:f21z1y9i}")
     private String projectId;
 
-    @Value("${observability.api.cookie:st-device-id=74e953f4-42f0-4700-822f-eb560a7cd086; _lfa=LF1.1.9c9770d065654d55.1754920867795; _ga=GA1.1.303269026.1759975533; st-session-id=76c7afb6-adc7-4a3f-b020-f1bf80b3276d; _ga_K4F9D90KG7=GS2.1.s1766632212$o1$g1$t1766632874$j56$l0$h0}")
+    @Value("${observability.api.cookie:sid=ab46c3ac87b2e6b30a0eba82d0be33f3; coroot_session=eyJpZCI6MX0=.L4mM7jLoBFBkvEE7K27aKr_F8eGhGd2l5pJMZyjr2Rk=}")
     private String authCookie;
 
     private RestTemplate restTemplate;
@@ -55,12 +57,21 @@ public class ObservabilityApiClient {
     }
 
     /**
-     * 发送 GET 请求
+     * 发送 GET 请求（使用 URL 字符串）
      */
     private ResponseEntity<String> doGet(String url) {
         HttpHeaders headers = createHeaders();
         HttpEntity<String> entity = new HttpEntity<>(headers);
         return restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+    }
+
+    /**
+     * 发送 GET 请求（使用 URI 对象，避免二次编码）
+     */
+    private ResponseEntity<String> doGetWithUri(URI uri) {
+        HttpHeaders headers = createHeaders();
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        return restTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
     }
     
     /**
@@ -93,36 +104,48 @@ public class ObservabilityApiClient {
      * 获取服务的 Trace 列表
      */
     public JsonNode getTraceList(String serviceName, long fromMs, long toMs) {
-        String url = String.format("%s/api/project/%s/overview/traces", baseUrl, projectId);
+        String baseApiUrl = String.format("%s/api/project/%s/overview/traces", baseUrl, projectId);
 
         try {
-            // 构建 query 参数
-            Map<String, Object> query = new HashMap<>();
-            query.put("view", "traces");
+            // 使用 TraceRequestQuery 构建请求
+            TraceRequestQuery traceRequestQuery = new TraceRequestQuery();
+            traceRequestQuery.setView("traces");
 
-            // 构建 filter 对象
-            Map<String, String> filter = new HashMap<>();
-            filter.put("field", "ServiceName");
-            filter.put("op", "=");
-            filter.put("value", serviceName);
-            query.put("filters", new Object[]{ filter });
+            TraceRequestFilter filter = new TraceRequestFilter("ServiceName", "=", serviceName);
+            traceRequestQuery.setFilters(Collections.singletonList(filter));
 
-            String queryJson = objectMapper.writeValueAsString(query);
+            String queryJson = objectMapper.writeValueAsString(traceRequestQuery);
             String encodedQuery = URLEncoder.encode(queryJson, StandardCharsets.UTF_8.toString());
 
-            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(url)
-                    .queryParam("query", encodedQuery)
-                    .queryParam("from", fromMs)
-                    .queryParam("to", toMs);
+            // 直接拼接 URL，避免 UriComponentsBuilder 的二次编码
+            String requestUrl = baseApiUrl + "?query=" + encodedQuery + "&from=" + fromMs + "&to=" + toMs;
 
             logger.info("Fetching trace list for service {}: from={}, to={}", serviceName, fromMs, toMs);
+            logger.info("Request URL: {}", requestUrl);
+            logger.info("Query JSON (before encoding): {}", queryJson);
 
-            ResponseEntity<String> response = doGet(builder.toUriString());
+            // 使用 URI 对象发起请求，避免再次编码
+            ResponseEntity<String> response = doGetWithUri(new URI(requestUrl));
+
+            logger.info("Response status: {}", response.getStatusCode());
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-                // 返回 data.traces.trace
-                return root.path("data").path("traces").path("trace");
+
+                // 调试：输出 data.traces 下的所有字段
+                JsonNode tracesNode = root.path("data").path("traces");
+                if (!tracesNode.isMissingNode()) {
+                    StringBuilder fields = new StringBuilder();
+                    tracesNode.fieldNames().forEachRemaining(f -> fields.append(f).append(", "));
+                    logger.info("data.traces fields: {}", fields.toString());
+                }
+
+                // 根据参考代码，可能是 data.traces.traces
+                JsonNode traceListNode = root.path("data").path("traces").path("traces");
+                logger.info("Found traces at: data.traces.traces, isArray: {}, size: {}",
+                    traceListNode.isArray(), traceListNode.size());
+
+                return traceListNode;
             }
         } catch (Exception e) {
             logger.error("Failed to fetch trace list for service {}: {}", serviceName, e.getMessage(), e);
@@ -131,51 +154,40 @@ public class ObservabilityApiClient {
     }
 
     /**
-     * 获取 Trace 详情（不需要时间范围）
-     * traceId 已经唯一标识了特定的 trace
+     * 获取 Trace 详情
+     * @param traceId trace ID
+     * @return trace 详情的 span 数组
      */
     public JsonNode getTraceDetail(String traceId) {
-        String url = String.format("%s/api/project/%s/overview/traces", baseUrl, projectId);
+        String baseApiUrl = String.format("%s/api/project/%s/overview/traces", baseUrl, projectId);
 
         try {
-            // 构建 query 参数，包含 trace_id
-            Map<String, Object> query = new HashMap<>();
-            query.put("view", "traces");
-            query.put("filters", new Object[]{});
-            query.put("trace_id", traceId);
+            TraceRequestQuery traceRequestQuery = new TraceRequestQuery();
+            traceRequestQuery.setView("traces");
+            traceRequestQuery.setFilters(Collections.emptyList());
+            traceRequestQuery.setTraceId(traceId);
 
-            String queryJson = objectMapper.writeValueAsString(query);
+            String queryJson = objectMapper.writeValueAsString(traceRequestQuery);
             String encodedQuery = URLEncoder.encode(queryJson, StandardCharsets.UTF_8.toString());
 
-            // 使用一个较大的时间范围（最近30天）
-            long now = System.currentTimeMillis();
-            long thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000;
+            String requestUrl = baseApiUrl + "?query=" + encodedQuery;
 
-            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(url)
-                    .queryParam("query", encodedQuery)
-                    .queryParam("from", thirtyDaysAgo)
-                    .queryParam("to", now);
+            logger.info("Fetching trace detail for traceId: {}", traceId);
+            logger.info("Request URL: {}", requestUrl);
 
-            logger.info("Fetching trace detail for traceId {}", traceId);
-
-            ResponseEntity<String> response = doGet(builder.toUriString());
+            ResponseEntity<String> response = doGetWithUri(new URI(requestUrl));
+            logger.info("Response status: {}", response.getStatusCode());
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-                // 返回 data.traces.trace
-                return root.path("data").path("traces").path("trace");
+                JsonNode traceNode = root.path("data").path("traces").path("trace");
+                logger.info("Found trace detail at: data.traces.trace, isArray: {}, size: {}",
+                    traceNode.isArray(), traceNode.size());
+                return traceNode;
             }
         } catch (Exception e) {
             logger.error("Failed to fetch trace detail for traceId {}: {}", traceId, e.getMessage(), e);
         }
         return objectMapper.createArrayNode();
     }
-
-    /**
-     * 获取 Trace 详情（带时间范围，向后兼容）
-     */
-    public JsonNode getTraceDetail(String traceId, long fromMs, long toMs) {
-        return getTraceDetail(traceId);
-    }
 }
-

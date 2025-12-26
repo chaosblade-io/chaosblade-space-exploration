@@ -76,5 +76,23 @@ public class TraceInfo {
     public void setSpans(List<SpanInfo> spans) { this.spans = spans; }
     public Map<String, Object> getAttributes() { return attributes; }
     public void setAttributes(Map<String, Object> attributes) { this.attributes = attributes; }
+
+    @Override
+    public String toString() {
+        return "TraceInfo{" +
+                "traceId='" + traceId + '\'' +
+                ", duration=" + duration +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
+                ", statusCode=" + statusCode +
+                ", serviceName='" + serviceName + '\'' +
+                ", operationName='" + operationName + '\'' +
+                ", spanCount=" + spanCount +
+                ", hasError=" + hasError +
+                ", httpMethod='" + httpMethod + '\'' +
+                ", httpUrl='" + httpUrl + '\'' +
+                ", spans=" + (spans != null ? spans.size() + " spans" : "null") +
+                '}';
+    }
 }
 

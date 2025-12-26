@@ -2,13 +2,14 @@ package com.chaosblade.svc.k8sgraph.controller;
 
 import com.chaosblade.common.core.ApiResponse;
 import com.chaosblade.svc.k8sgraph.domain.GraphData;
-import com.chaosblade.svc.k8sgraph.domain.service.ServiceDetail;
+import com.chaosblade.svc.k8sgraph.domain.ResourceDetail;
+import com.chaosblade.svc.k8sgraph.domain.ResourceRelations;
 import com.chaosblade.svc.k8sgraph.domain.service.ServiceMapData;
 import com.chaosblade.svc.k8sgraph.domain.service.ServiceMetrics;
-import com.chaosblade.svc.k8sgraph.domain.service.ServiceRelations;
-import com.chaosblade.svc.k8sgraph.domain.trace.TraceInfo;
 import com.chaosblade.svc.k8sgraph.domain.trace.TraceListResponse;
 import com.chaosblade.svc.k8sgraph.service.K8sGraphService;
+import com.chaosblade.svc.k8sgraph.service.K8sResourceDetailService;
+import com.chaosblade.svc.k8sgraph.service.K8sResourceRelationService;
 import com.chaosblade.svc.k8sgraph.service.ServiceDetailService;
 import com.chaosblade.svc.k8sgraph.service.ServiceMapService;
 import com.chaosblade.svc.k8sgraph.service.TraceService;
@@ -39,6 +40,12 @@ public class K8sGraphController {
 
     @Autowired
     private TraceService traceService;
+
+    @Autowired
+    private K8sResourceRelationService k8sResourceRelationService;
+
+    @Autowired
+    private K8sResourceDetailService k8sResourceDetailService;
     
     /**
      * 获取完整的K8s资源拓扑图
@@ -47,7 +54,6 @@ public class K8sGraphController {
     @GetMapping("/full")
     public ApiResponse<GraphData> getFullGraph() {
         logger.info("GET /api/k8s-graph/full - Fetching full K8s resource graph");
-        
         try {
             GraphData graphData = graphService.getFullGraph();
             logger.info("Graph fetched successfully: {} nodes, {} edges", 
@@ -164,24 +170,27 @@ public class K8sGraphController {
         }
     }
 
-    // ========== 服务详情相关接口 ==========
+    // ========== 资源详情相关接口 ==========
 
     /**
-     * 获取服务基本详情
-     * GET /api/k8s-graph/service/{namespace}/{serviceName}
+     * 获取 K8s 资源基本详情
+     * GET /api/k8s-graph/{resourceType}/{resourceName}?namespace={namespace}
+     * 支持的资源类型：service, pod, deployment, statefulset, daemonset, node, ingress
+     * namespace 参数对于 node 类型可选，其他类型必需
      */
-    @GetMapping("/service/{namespace}/{serviceName}")
-    public ApiResponse<ServiceDetail> getServiceDetail(
-            @PathVariable String namespace,
-            @PathVariable String serviceName) {
-        logger.info("GET /api/k8s-graph/service/{}/{}", namespace, serviceName);
+    @GetMapping("/{resourceType}/{resourceName}")
+    public ApiResponse<ResourceDetail> getResourceDetail(
+            @PathVariable String resourceType,
+            @PathVariable String resourceName,
+            @RequestParam(required = false, defaultValue = "default") String namespace) {
+        logger.info("GET /api/k8s-graph/{}/{}?namespace={}", resourceType, resourceName, namespace);
 
         try {
-            ServiceDetail detail = serviceDetailService.getServiceDetail(serviceName, namespace);
+            ResourceDetail detail = k8sResourceDetailService.getResourceDetail(resourceType, resourceName, namespace);
             return ApiResponse.success(detail);
         } catch (Exception e) {
-            logger.error("Failed to fetch service detail: {}", e.getMessage(), e);
-            return ApiResponse.error("500", "Failed to fetch service detail: " + e.getMessage());
+            logger.error("Failed to fetch resource detail: {}", e.getMessage(), e);
+            return ApiResponse.error("500", "Failed to fetch resource detail: " + e.getMessage());
         }
     }
 
@@ -205,22 +214,24 @@ public class K8sGraphController {
     }
 
     /**
-     * 获取服务关系（技术层面 + 业务层面）
-     * GET /api/k8s-graph/service/{namespace}/{serviceName}/relations
-     * 不需要时间参数，K8s 资源关系相对稳定，业务关系使用默认时间范围
+     * 获取 K8s 资源关系（技术层面）
+     * GET /api/k8s-graph/{resourceType}/{resourceName}/relations?namespace={namespace}
+     * 支持的资源类型：service, pod, deployment, statefulset, daemonset, node, ingress
+     * namespace 参数对于 node 类型可选，其他类型必需
      */
-    @GetMapping("/service/{namespace}/{serviceName}/relations")
-    public ApiResponse<ServiceRelations> getServiceRelations(
-            @PathVariable String namespace,
-            @PathVariable String serviceName) {
-        logger.info("GET /api/k8s-graph/service/{}/{}/relations", namespace, serviceName);
+    @GetMapping("/{resourceType}/{resourceName}/relations")
+    public ApiResponse<ResourceRelations> getResourceRelations(
+            @PathVariable String resourceType,
+            @PathVariable String resourceName,
+            @RequestParam(required = false, defaultValue = "default") String namespace) {
+        logger.info("GET /api/k8s-graph/{}/{}/relations?namespace={}", resourceType, resourceName, namespace);
 
         try {
-            ServiceRelations relations = serviceDetailService.getServiceRelations(serviceName, namespace);
+            ResourceRelations relations = k8sResourceRelationService.getResourceRelations(resourceType, resourceName, namespace);
             return ApiResponse.success(relations);
         } catch (Exception e) {
-            logger.error("Failed to fetch service relations: {}", e.getMessage(), e);
-            return ApiResponse.error("500", "Failed to fetch service relations: " + e.getMessage());
+            logger.error("Failed to fetch resource relations: {}", e.getMessage(), e);
+            return ApiResponse.error("500", "Failed to fetch resource relations: " + e.getMessage());
         }
     }
 
@@ -267,16 +278,15 @@ public class K8sGraphController {
     }
 
     /**
-     * 获取 Trace 详情
+     * 获取 Trace 详情（返回原始数据）
      * GET /api/k8s-graph/traces/{traceId}
-     * traceId 已经唯一标识了特定的 trace，不需要时间范围参数
      */
     @GetMapping("/traces/{traceId}")
-    public ApiResponse<TraceInfo> getTraceDetail(@PathVariable String traceId) {
+    public ApiResponse<Object> getTraceDetail(@PathVariable String traceId) {
         logger.info("GET /api/k8s-graph/traces/{}", traceId);
 
         try {
-            TraceInfo trace = traceService.getTraceDetail(traceId);
+            Object trace = traceService.getTraceDetailRaw(traceId);
             if (trace == null) {
                 return ApiResponse.error("404", "Trace not found: " + traceId);
             }

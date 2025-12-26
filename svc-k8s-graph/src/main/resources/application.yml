@@ -19,12 +19,12 @@ kubernetes:
   token: "eyJhbGciOiJSUzI1NiIsImtpZCI6ImctR3o3S2JGU2RQWUN6bzZac2tvOVcxb0lNWHkzOGdnR29jTWZtRjB3aWcifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzczNDE2NzExLCJpYXQiOjE3NDE4ODA3MTEsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0Iiwic2VydmljZWFjY291bnQiOnsibmFtZSI6ImFjY291bnQtY2x1c3Rlci1tYW5hZ2VyLWRwcmd6IiwidWlkIjoiZjcwYjJhODEtMjNmNy00Y2YyLWJhNjMtNjk1NDBhN2I2Yzk0In19LCJuYmYiOjE3NDE4ODA3MTEsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkZWZhdWx0OmFjY291bnQtY2x1c3Rlci1tYW5hZ2VyLWRwcmd6In0.gqryPjgClH5K6EecX6Gx8J6tLnkuPgZanqFsZGoDQxPJp4AzuTjKYtp5xWsw-2dU7G54f_qL7sLraXhmu2mCS-Sbyzo9CpGifZBpZmouA0v4wk28-HMMPkxJnM_UV3kH1PGrcSVd8L_OgJ4Oq1d-yqY7cGdqB-DgOf-G7JQB9IfcjKw6no5NVE4j8i_DGhNIJ5IsXu6Qyo10SvP7rTzC9ke71ma3ujqxvov1V0INsmog5eVwgynlNRoz389YoUM3-iGCYE-R23VwmAkXCDZCBXuR6d3zH0iNionCjLQStWBEhqRZK8DFQ78r9eSZ5Y5gt3mDmZxqoG_EWFRaIGvp3w"
   verify-ssl: false
 
-# Observability API configuration
+# Observability API configuration (Coroot)
 observability:
   api:
     base-url: "http://1.94.151.57:8003"
     project-id: "f21z1y9i"
-    cookie: "st-device-id=74e953f4-42f0-4700-822f-eb560a7cd086; _lfa=LF1.1.9c9770d065654d55.1754920867795; _ga=GA1.1.303269026.1759975533; st-session-id=76c7afb6-adc7-4a3f-b020-f1bf80b3276d; _ga_K4F9D90KG7=GS2.1.s1766632212$o1$g1$t1766632874$j56$l0$h0"
+    cookie: "sid=ab46c3ac87b2e6b30a0eba82d0be33f3; coroot_session=eyJpZCI6MX0=.L4mM7jLoBFBkvEE7K27aKr_F8eGhGd2l5pJMZyjr2Rk="
 
 # Logging configuration
 logging:
