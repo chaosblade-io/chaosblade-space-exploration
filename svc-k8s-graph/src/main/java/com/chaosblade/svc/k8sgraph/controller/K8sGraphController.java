@@ -10,6 +10,7 @@ import com.chaosblade.svc.k8sgraph.domain.trace.TraceListResponse;
 import com.chaosblade.svc.k8sgraph.service.K8sGraphService;
 import com.chaosblade.svc.k8sgraph.service.K8sResourceDetailService;
 import com.chaosblade.svc.k8sgraph.service.K8sResourceRelationService;
+import com.chaosblade.svc.k8sgraph.service.K8sResourceYamlService;
 import com.chaosblade.svc.k8sgraph.service.ServiceDetailService;
 import com.chaosblade.svc.k8sgraph.service.ServiceMapService;
 import com.chaosblade.svc.k8sgraph.service.TraceService;
@@ -46,7 +47,10 @@ public class K8sGraphController {
 
     @Autowired
     private K8sResourceDetailService k8sResourceDetailService;
-    
+
+    @Autowired
+    private K8sResourceYamlService k8sResourceYamlService;
+
     /**
      * 获取完整的K8s资源拓扑图
      * GET /api/k8s-graph/full
@@ -195,17 +199,83 @@ public class K8sGraphController {
     }
 
     /**
-     * 获取服务 YAML 定义
+     * 获取 K8s 资源 YAML 定义（通用接口）
+     * GET /api/k8s-graph/resource/{resourceType}/{resourceName}/yaml?namespace={namespace}
+     *
+     * 支持的资源类型（使用 Type 标识或简写）：
+     *
+     * 基础设施（集群级，namespace 可选）:
+     * - k8s.infra.namespace / namespace
+     * - k8s.infra.node / node
+     * - k8s.infra.persistentvolume / persistentvolume / pv
+     * - k8s.infra.storageclass / storageclass / sc
+     * - k8s.infra.clusterrole / clusterrole
+     * - k8s.infra.clusterrolebinding / clusterrolebinding
+     *
+     * 工作负载（命名空间级）:
+     * - k8s.workload.deployment / deployment
+     * - k8s.workload.replicaset / replicaset / rs
+     * - k8s.workload.statefulset / statefulset / sts
+     * - k8s.workload.daemonset / daemonset / ds
+     * - k8s.workload.job / job
+     * - k8s.workload.cronjob / cronjob / cj
+     * - k8s.workload.pod / pod / po
+     * - k8s.workload.replicationcontroller / replicationcontroller / rc
+     *
+     * 网络:
+     * - k8s.network.service / service / svc
+     * - k8s.network.ingress / ingress / ing
+     * - k8s.network.ingressclass / ingressclass（集群级）
+     * - k8s.network.networkpolicy / networkpolicy / netpol
+     * - k8s.network.endpoints / endpoints / ep
+     * - k8s.network.endpointslice / endpointslice
+     *
+     * 配置与安全:
+     * - k8s.config.configmap / configmap / cm
+     * - k8s.config.secret / secret
+     * - k8s.config.persistentvolumeclaim / persistentvolumeclaim / pvc
+     * - k8s.config.serviceaccount / serviceaccount / sa
+     * - k8s.config.role / role
+     * - k8s.config.rolebinding / rolebinding
+     * - k8s.config.limitrange / limitrange / limits
+     * - k8s.config.resourcequota / resourcequota / quota
+     * - k8s.config.horizontalpodautoscaler / horizontalpodautoscaler / hpa
+     */
+    @GetMapping("/resource/{resourceType}/{resourceName}/yaml")
+    public ApiResponse<String> getResourceYaml(
+            @PathVariable String resourceType,
+            @PathVariable String resourceName,
+            @RequestParam(required = false) String namespace) {
+        logger.info("GET /api/k8s-graph/resource/{}/{}/yaml?namespace={}", resourceType, resourceName, namespace);
+
+        try {
+            String yaml = k8sResourceYamlService.getResourceYaml(resourceType, resourceName, namespace);
+            if (yaml == null) {
+                return ApiResponse.error("404", "Resource not found: " + resourceType + "/" + resourceName);
+            }
+            return ApiResponse.success(yaml);
+        } catch (Exception e) {
+            logger.error("Failed to fetch resource YAML: {}", e.getMessage(), e);
+            return ApiResponse.error("500", "Failed to fetch resource YAML: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取服务 YAML 定义（保留向后兼容）
      * GET /api/k8s-graph/service/{namespace}/{serviceName}/yaml
+     * @deprecated 推荐使用通用接口 /api/k8s-graph/resource/{resourceType}/{resourceName}/yaml
      */
     @GetMapping("/service/{namespace}/{serviceName}/yaml")
     public ApiResponse<String> getServiceYaml(
             @PathVariable String namespace,
             @PathVariable String serviceName) {
-        logger.info("GET /api/k8s-graph/service/{}/{}/yaml", namespace, serviceName);
+        logger.info("GET /api/k8s-graph/service/{}/{}/yaml (deprecated)", namespace, serviceName);
 
         try {
-            String yaml = serviceDetailService.getServiceYaml(serviceName, namespace);
+            String yaml = k8sResourceYamlService.getResourceYaml("service", serviceName, namespace);
+            if (yaml == null) {
+                return ApiResponse.error("404", "Service not found: " + namespace + "/" + serviceName);
+            }
             return ApiResponse.success(yaml);
         } catch (Exception e) {
             logger.error("Failed to fetch service YAML: {}", e.getMessage(), e);

@@ -80,27 +80,30 @@ public class K8sGraphService {
      */
     public GraphData getGraphByNamespace(String namespace) {
         logger.info("Building K8s resource graph for namespace: {}", namespace);
-        
+
         GraphData graphData = new GraphData();
-        
+
         graphData.addDomain(Domain.infra());
         graphData.addDomain(Domain.workload());
         graphData.addDomain(Domain.network());
         graphData.addDomain(Domain.config());
-        
+
         Map<String, GraphNode> nodeMap = new HashMap<>();
-        
+
         // 添加命名空间节点
         collectNamespaceNode(graphData, nodeMap, namespace);
-        
+
         // 采集该命名空间下的资源
         collectWorkloadResourcesByNamespace(graphData, nodeMap, namespace);
         collectNetworkResourcesByNamespace(graphData, nodeMap, namespace);
         collectConfigResourcesByNamespace(graphData, nodeMap, namespace);
-        
+
+        // 收集与该命名空间 Pod 关联的 Node 资源
+        collectRelatedNodes(graphData, nodeMap, namespace);
+
         // 建立边关系
         buildEdges(graphData, nodeMap);
-        
+
         graphData.calculateStats();
 
         return graphData;
@@ -200,6 +203,9 @@ public class K8sGraphService {
 
         // 收集该命名空间下的配置资源
         collectNamespaceConfigResources(graphData, nodeMap, namespace);
+
+        // 收集与该命名空间 Pod 关联的 Node 资源
+        collectRelatedNodes(graphData, nodeMap, namespace);
     }
 
     private void collectNamespaceWorkloads(GraphData graphData, Map<String, GraphNode> nodeMap, String namespace) {
@@ -677,6 +683,44 @@ public class K8sGraphService {
             }
         } catch (Exception e) {
             logger.warn("Failed to collect namespace {}: {}", namespace, e.getMessage());
+        }
+    }
+
+    /**
+     * 收集与指定命名空间 Pod 关联的 Node 资源
+     * 用于在按命名空间查询时，也能看到 Pod 运行所在的 Node
+     */
+    private void collectRelatedNodes(GraphData graphData, Map<String, GraphNode> nodeMap, String namespace) {
+        try {
+            // 获取该命名空间下所有 Pod 所在的 Node 名称
+            Set<String> nodeNames = new HashSet<>();
+            List<Pod> pods = kubernetesClient.pods().inNamespace(namespace).list().getItems();
+            for (Pod pod : pods) {
+                if (pod.getSpec() != null && pod.getSpec().getNodeName() != null) {
+                    nodeNames.add(pod.getSpec().getNodeName());
+                }
+            }
+
+            // 收集这些 Node 资源
+            for (String nodeName : nodeNames) {
+                String nodeId = GraphNode.generateId(ResourceType.NODE, null, nodeName);
+                if (!nodeMap.containsKey(nodeId)) {
+                    try {
+                        Node n = kubernetesClient.nodes().withName(nodeName).get();
+                        if (n != null) {
+                            GraphNode node = createK8sNodeNode(n);
+                            graphData.addNode(node);
+                            nodeMap.put(node.getId(), node);
+                        }
+                    } catch (Exception e) {
+                        logger.warn("Failed to get node {}: {}", nodeName, e.getMessage());
+                    }
+                }
+            }
+
+            logger.debug("Collected {} related nodes for namespace {}", nodeNames.size(), namespace);
+        } catch (Exception e) {
+            logger.warn("Failed to collect related nodes for namespace {}: {}", namespace, e.getMessage());
         }
     }
 
