@@ -43,6 +43,13 @@ risk-analysis:
   debug:
     show-prompt: true  # 开启后在响应中显示发送给LLM的prompt
 
+# Pipeline风险分析配置
+risk:
+  pipeline:
+    top-n-services: 5  # Phase 4 Trace分析的Top N服务数量
+  trace:
+    max-apis-per-service: 5  # 每个服务最多分析的API数量
+
 # Logging configuration
 logging:
   level:

@@ -31,19 +31,31 @@ public class PipelineResult {
     
     /** Phase 3结果：RiskRank排名 */
     private RiskRankResult phase3Result;
-    
+
+    /** Phase 4结果：Trace分析（针对Top N服务） */
+    private Map<String, TraceAnalysisResult> phase4Results;
+
+    /** Phase 5结果：综合分析与故障场景生成 */
+    private ComprehensiveAnalysisResult phase5Result;
+
     /** 执行摘要 */
     private PipelineSummary summary;
-    
+
     /** Phase 1耗时(ms) */
     private long phase1TimeMs;
-    
+
     /** Phase 2耗时(ms) */
     private long phase2TimeMs;
-    
+
     /** Phase 3耗时(ms) */
     private long phase3TimeMs;
-    
+
+    /** Phase 4耗时(ms) */
+    private long phase4TimeMs;
+
+    /** Phase 5耗时(ms) */
+    private long phase5TimeMs;
+
     /** 总耗时(ms) */
     private long totalTimeMs;
     
@@ -52,6 +64,7 @@ public class PipelineResult {
     
     public PipelineResult() {
         this.phase1Results = new HashMap<>();
+        this.phase4Results = new HashMap<>();
         this.summary = new PipelineSummary();
         this.executionTime = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     }
@@ -79,19 +92,31 @@ public class PipelineResult {
     
     public RiskRankResult getPhase3Result() { return phase3Result; }
     public void setPhase3Result(RiskRankResult phase3Result) { this.phase3Result = phase3Result; }
-    
+
+    public Map<String, TraceAnalysisResult> getPhase4Results() { return phase4Results; }
+    public void setPhase4Results(Map<String, TraceAnalysisResult> phase4Results) { this.phase4Results = phase4Results; }
+
+    public ComprehensiveAnalysisResult getPhase5Result() { return phase5Result; }
+    public void setPhase5Result(ComprehensiveAnalysisResult phase5Result) { this.phase5Result = phase5Result; }
+
     public PipelineSummary getSummary() { return summary; }
     public void setSummary(PipelineSummary summary) { this.summary = summary; }
-    
+
     public long getPhase1TimeMs() { return phase1TimeMs; }
     public void setPhase1TimeMs(long phase1TimeMs) { this.phase1TimeMs = phase1TimeMs; }
-    
+
     public long getPhase2TimeMs() { return phase2TimeMs; }
     public void setPhase2TimeMs(long phase2TimeMs) { this.phase2TimeMs = phase2TimeMs; }
-    
+
     public long getPhase3TimeMs() { return phase3TimeMs; }
     public void setPhase3TimeMs(long phase3TimeMs) { this.phase3TimeMs = phase3TimeMs; }
-    
+
+    public long getPhase4TimeMs() { return phase4TimeMs; }
+    public void setPhase4TimeMs(long phase4TimeMs) { this.phase4TimeMs = phase4TimeMs; }
+
+    public long getPhase5TimeMs() { return phase5TimeMs; }
+    public void setPhase5TimeMs(long phase5TimeMs) { this.phase5TimeMs = phase5TimeMs; }
+
     public long getTotalTimeMs() { return totalTimeMs; }
     public void setTotalTimeMs(long totalTimeMs) { this.totalTimeMs = totalTimeMs; }
     

@@ -124,34 +124,104 @@ public class ObservabilityApiClient {
             String requestUrl = baseApiUrl + "?query=" + encodedQuery + "&from=" + fromMs + "&to=" + toMs;
 
             logger.info("Fetching trace list for service {}: from={}, to={}", serviceName, fromMs, toMs);
-            logger.info("Request URL: {}", requestUrl);
-            logger.info("Query JSON (before encoding): {}", queryJson);
+            logger.debug("Request URL: {}", requestUrl);
 
             // 使用 URI 对象发起请求，避免再次编码
             ResponseEntity<String> response = doGetWithUri(new URI(requestUrl));
 
-            logger.info("Response status: {}", response.getStatusCode());
-
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-
-                // 调试：输出 data.traces 下的所有字段
-                JsonNode tracesNode = root.path("data").path("traces");
-                if (!tracesNode.isMissingNode()) {
-                    StringBuilder fields = new StringBuilder();
-                    tracesNode.fieldNames().forEachRemaining(f -> fields.append(f).append(", "));
-                    logger.info("data.traces fields: {}", fields.toString());
-                }
-
-                // 根据参考代码，可能是 data.traces.traces
                 JsonNode traceListNode = root.path("data").path("traces").path("traces");
-                logger.info("Found traces at: data.traces.traces, isArray: {}, size: {}",
-                    traceListNode.isArray(), traceListNode.size());
-
+                logger.info("Found {} traces for service {}",
+                    traceListNode.isArray() ? traceListNode.size() : 0, serviceName);
                 return traceListNode;
             }
         } catch (Exception e) {
             logger.error("Failed to fetch trace list for service {}: {}", serviceName, e.getMessage(), e);
+        }
+        return objectMapper.createArrayNode();
+    }
+
+    /**
+     * 获取指定服务的Trace统计摘要
+     * 返回各API的请求率、错误率、延迟分位数等统计信息
+     *
+     * @param serviceName 服务名
+     * @param fromMs 开始时间戳
+     * @param toMs 结束时间戳
+     * @return data.traces.summary.stats 节点
+     */
+    public JsonNode getTraceSummary(String serviceName, long fromMs, long toMs) {
+        String baseApiUrl = String.format("%s/api/project/%s/overview/traces", baseUrl, projectId);
+
+        try {
+            TraceRequestQuery query = new TraceRequestQuery();
+            query.setView("overview");
+            query.setFilters(Collections.singletonList(
+                new TraceRequestFilter("ServiceName", "=", serviceName)
+            ));
+
+            String queryJson = objectMapper.writeValueAsString(query);
+            String encodedQuery = URLEncoder.encode(queryJson, StandardCharsets.UTF_8.toString());
+            String requestUrl = baseApiUrl + "?query=" + encodedQuery + "&from=" + fromMs + "&to=" + toMs;
+
+            logger.info("Fetching trace summary for service {}: from={}, to={}", serviceName, fromMs, toMs);
+            logger.debug("Request URL: {}", requestUrl);
+
+            ResponseEntity<String> response = doGetWithUri(new URI(requestUrl));
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode statsNode = root.path("data").path("traces").path("summary").path("stats");
+                logger.info("Found {} API stats for service {}",
+                    statsNode.isArray() ? statsNode.size() : 0, serviceName);
+                return statsNode;
+            }
+        } catch (Exception e) {
+            logger.error("Failed to fetch trace summary for service {}: {}", serviceName, e.getMessage(), e);
+        }
+        return objectMapper.createArrayNode();
+    }
+
+    /**
+     * 获取指定服务和API的具体Trace列表
+     *
+     * @param serviceName 服务名
+     * @param spanName API名称（span名称）
+     * @param fromMs 开始时间戳
+     * @param toMs 结束时间戳
+     * @return data.traces.traces 节点
+     */
+    public JsonNode getTraceItemList(String serviceName, String spanName, long fromMs, long toMs) {
+        String baseApiUrl = String.format("%s/api/project/%s/overview/traces", baseUrl, projectId);
+
+        try {
+            TraceRequestQuery query = new TraceRequestQuery();
+            query.setView("traces");
+            query.setFilters(java.util.Arrays.asList(
+                new TraceRequestFilter("ServiceName", "=", serviceName),
+                new TraceRequestFilter("SpanName", "=", spanName)
+            ));
+
+            String queryJson = objectMapper.writeValueAsString(query);
+            String encodedQuery = URLEncoder.encode(queryJson, StandardCharsets.UTF_8.toString());
+            String requestUrl = baseApiUrl + "?query=" + encodedQuery + "&from=" + fromMs + "&to=" + toMs;
+
+            logger.info("Fetching trace items for service={}, spanName={}", serviceName, spanName);
+            logger.debug("Request URL: {}", requestUrl);
+
+            ResponseEntity<String> response = doGetWithUri(new URI(requestUrl));
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode tracesNode = root.path("data").path("traces").path("traces");
+                logger.info("Found {} traces for service={}, spanName={}",
+                    tracesNode.isArray() ? tracesNode.size() : 0, serviceName, spanName);
+                return tracesNode;
+            }
+        } catch (Exception e) {
+            logger.error("Failed to fetch trace items for service={}, spanName={}: {}",
+                serviceName, spanName, e.getMessage(), e);
         }
         return objectMapper.createArrayNode();
     }

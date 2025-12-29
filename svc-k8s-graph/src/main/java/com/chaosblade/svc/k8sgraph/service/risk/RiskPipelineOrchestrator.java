@@ -9,14 +9,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 风险分析Pipeline编排服务
  *
- * 编排三阶段风险分析流程：
+ * 编排五阶段风险分析流程：
  * Phase 1: 规则扫描 -> ServiceRiskProfile
  * Phase 2: 拓扑LLM分析 -> TopologyRiskResult
  * Phase 3: RiskRank计算 -> RiskRankResult
+ * Phase 4: Trace深度分析 -> TraceAnalysisResult
+ * Phase 5: 综合分析与故障场景生成 -> ComprehensiveAnalysisResult
  *
  * 最终输出: PipelineResult
  */
@@ -24,6 +27,10 @@ import java.util.*;
 public class RiskPipelineOrchestrator {
 
     private static final Logger logger = LoggerFactory.getLogger(RiskPipelineOrchestrator.class);
+
+    /** Phase 4分析的Top N服务数量（可通过配置覆盖） */
+    @org.springframework.beans.factory.annotation.Value("${risk.pipeline.top-n-services:3}")
+    private int topNServicesForTrace;
 
     @Autowired
     private RiskRuleEngineService riskRuleEngineService;
@@ -36,7 +43,13 @@ public class RiskPipelineOrchestrator {
 
     @Autowired
     private ServiceMapService serviceMapService;
-    
+
+    @Autowired
+    private TraceAnalysisService traceAnalysisService;
+
+    @Autowired
+    private ComprehensiveAnalysisService comprehensiveAnalysisService;
+
     /**
      * 执行完整的风险分析Pipeline
      * 
@@ -79,10 +92,29 @@ public class RiskPipelineOrchestrator {
             result.setPhase3Result(phase3Result);
             result.setPhase3TimeMs(System.currentTimeMillis() - phase3Start);
             logger.info("Phase 3 completed: {} services ranked", phase3Result.getRankedServices().size());
-            
+
+            // Phase 4: Trace深度分析（针对Top N高风险服务）
+            long phase4Start = System.currentTimeMillis();
+            logger.info("Phase 4: Starting trace analysis for top {} services...", topNServicesForTrace);
+            Map<String, TraceAnalysisResult> phase4Results = executePhase4(phase3Result);
+            result.setPhase4Results(phase4Results);
+            result.setPhase4TimeMs(System.currentTimeMillis() - phase4Start);
+            logger.info("Phase 4 completed: {} services analyzed", phase4Results.size());
+
+            // Phase 5: 综合分析与故障场景生成
+            long phase5Start = System.currentTimeMillis();
+            logger.info("Phase 5: Starting comprehensive analysis and chaos scenario generation...");
+            ComprehensiveAnalysisResult phase5Result = executePhase5(
+                namespace, phase1Results, phase2Result, phase3Result, phase4Results);
+            result.setPhase5Result(phase5Result);
+            result.setPhase5TimeMs(System.currentTimeMillis() - phase5Start);
+            logger.info("Phase 5 completed: {} services comprehensively analyzed, {} chaos scenarios generated",
+                phase5Result.getServiceAnalyses().size(),
+                phase5Result.getGlobalSummary() != null ? phase5Result.getGlobalSummary().getTotalScenariosGenerated() : 0);
+
             // 生成最终摘要
             generateSummary(result);
-            
+
             result.setSuccess(true);
             
         } catch (Exception e) {
@@ -188,6 +220,55 @@ public class RiskPipelineOrchestrator {
         }
 
         summary.setTotalServicesAnalyzed(result.getPhase1Results().size());
+    }
+
+    /**
+     * Phase 4: Trace深度分析
+     * 对Top N高风险服务进行详细的Trace分析
+     */
+    private Map<String, TraceAnalysisResult> executePhase4(RiskRankResult phase3Result) {
+        Map<String, TraceAnalysisResult> results = new HashMap<>();
+
+        // 获取Top N服务
+        List<RiskRankResult.RankedService> topServices = phase3Result.getRankedServices()
+            .stream()
+            .limit(topNServicesForTrace)
+            .collect(Collectors.toList());
+
+        for (RiskRankResult.RankedService rankedService : topServices) {
+            String serviceName = rankedService.getServiceName();
+            logger.info("Phase 4: Analyzing traces for service: {} (rank={})",
+                serviceName, rankedService.getRank());
+
+            try {
+                TraceAnalysisResult traceResult = traceAnalysisService.analyzeServiceTraces(serviceName);
+                results.put(serviceName, traceResult);
+
+                logger.info("Trace analysis for {}: {} APIs, {} selected traces",
+                    serviceName,
+                    traceResult.getApiSummaries().size(),
+                    traceResult.getSelectedTraces().size());
+            } catch (Exception e) {
+                logger.error("Failed to analyze traces for service {}: {}", serviceName, e.getMessage(), e);
+                // 继续处理下一个服务，不中断整个流程
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Phase 5: 综合分析与故障场景生成
+     */
+    private ComprehensiveAnalysisResult executePhase5(
+            String namespace,
+            Map<String, ServiceRiskProfile> phase1Results,
+            TopologyRiskResult phase2Result,
+            RiskRankResult phase3Result,
+            Map<String, TraceAnalysisResult> phase4Results) {
+
+        return comprehensiveAnalysisService.analyze(
+            namespace, phase1Results, phase2Result, phase3Result, phase4Results);
     }
 }
 
