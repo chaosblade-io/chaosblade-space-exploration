@@ -8,135 +8,174 @@ import com.chaosblade.svc.k8sgraph.domain.service.ServiceMapData;
 import com.chaosblade.svc.k8sgraph.domain.service.ServiceMapEdge;
 import com.chaosblade.svc.k8sgraph.domain.service.ServiceMapNode;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 风险分析 Prompt 构建器
+ *
+ * 设计原则：
+ * 1. 数据完整性 > 数据可读性（使用JSON，不省略关键数据）
+ * 2. 提供统计摘要 + 原始数据（让模型既能宏观又能微观）
+ * 3. 分析框架作为参考而非约束
+ * 4. 输出格式允许扩展
  */
 @Component
 public class RiskAnalysisPromptBuilder {
-    
-    /** 通用的系统提示 */
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** 通用的系统提示 - 开放式分析框架 */
     public static final String SYSTEM_PROMPT =
-        "你是一位专业的 Kubernetes 运维专家和混沌工程师。你的任务是分析 K8s 资源配置和系统拓扑，识别潜在风险点，并提供针对性的故障注入建议。\n\n" +
-        "## 风险分类体系\n" +
-        "- SINGLE_POINT_FAILURE: 单点故障 - 缺少冗余配置\n" +
-        "- RESOURCE_BOTTLENECK: 资源瓶颈 - 资源限制不当\n" +
-        "- DEPENDENCY_RISK: 依赖风险 - 依赖关系过于复杂\n" +
-        "- PERFORMANCE_DEGRADATION: 性能退化 - 潜在性能问题\n" +
-        "- AVAILABILITY_RISK: 可用性风险 - 影响系统可用性\n\n" +
+        "你是一位资深的 Kubernetes 运维专家和混沌工程师。\n\n" +
+        "## 你的职责\n" +
+        "基于提供的数据，独立发现和识别系统中的潜在风险点。不要局限于预设的分析框架，而是根据数据本身的特征进行深入分析。\n\n" +
+        "## 风险分类参考（不限于此）\n" +
+        "以下是常见的风险类别，但你可以根据实际发现定义新的类别：\n" +
+        "- SINGLE_POINT_FAILURE: 单点故障\n" +
+        "- RESOURCE_BOTTLENECK: 资源瓶颈\n" +
+        "- DEPENDENCY_RISK: 依赖风险\n" +
+        "- PERFORMANCE_DEGRADATION: 性能退化\n" +
+        "- AVAILABILITY_RISK: 可用性风险\n" +
+        "- CONFIGURATION_RISK: 配置风险\n" +
+        "- SECURITY_RISK: 安全风险\n" +
+        "- DATA_CONSISTENCY_RISK: 数据一致性风险\n" +
+        "- CASCADING_FAILURE_RISK: 级联故障风险\n" +
+        "- 其他你发现的风险类别...\n\n" +
         "## 严重等级\n" +
-        "- CRITICAL: 严重（影响核心业务）\n" +
-        "- HIGH: 高（影响重要功能）\n" +
-        "- MEDIUM: 中等（影响次要功能）\n" +
-        "- LOW: 低（轻微影响）\n\n" +
-        "## 支持的故障类型（ChaosBlade）\n" +
-        "- chaosblade.k8s.container-cpu: CPU满载\n" +
-        "- chaosblade.k8s.container-memory: 内存满载\n" +
-        "- chaosblade.k8s.container-disk: 磁盘负载提升\n" +
+        "- CRITICAL: 严重（可能导致核心业务中断）\n" +
+        "- HIGH: 高（显著影响业务功能）\n" +
+        "- MEDIUM: 中等（部分功能受影响）\n" +
+        "- LOW: 低（轻微影响或预防性建议）\n\n" +
+        "## 可用的故障注入类型（ChaosBlade）\n" +
+        "- chaosblade.k8s.container-cpu: CPU负载注入\n" +
+        "- chaosblade.k8s.container-memory: 内存负载注入\n" +
+        "- chaosblade.k8s.container-disk: 磁盘IO负载\n" +
         "- chaosblade.k8s.container-network-delay: 网络延迟\n" +
         "- chaosblade.k8s.container-network-loss: 网络丢包\n" +
-        "- chaosblade.k8s.container-network-corrupt: 网络损坏\n" +
-        "- chaosblade.k8s.container-network-occupy: 网络占用\n" +
-        "- chaosblade.k8s.container-network-dns: DNS异常\n" +
-        "- chaosblade.k8s.container-process-stop: 进程停滞\n" +
-        "- chaosblade.k8s.pod-kill: Pod删除\n" +
+        "- chaosblade.k8s.container-network-corrupt: 网络包损坏\n" +
+        "- chaosblade.k8s.container-network-dns: DNS故障\n" +
+        "- chaosblade.k8s.container-process-stop: 进程停止\n" +
+        "- chaosblade.k8s.pod-kill: Pod终止\n" +
         "- chaosblade.k8s.container-remove: 容器移除\n\n" +
-        "请严格按照 JSON 格式输出分析结果。";
+        "## 分析原则\n" +
+        "1. 基于数据说话：每个风险结论都应有数据支撑\n" +
+        "2. 量化影响：尽可能用具体数值描述风险影响\n" +
+        "3. 优先级排序：按实际业务影响排序风险\n" +
+        "4. 可操作性：每个风险都应有对应的验证方案\n\n" +
+        "请严格按照指定的 JSON 格式输出分析结果。";
 
     /**
      * 构建 K8s 资源配置风险分析的 Prompt
      */
-    public String buildResourceRiskPrompt(String resourceType, String resourceName, 
+    public String buildResourceRiskPrompt(String resourceType, String resourceName,
                                           String namespace, ResourceDetail detail) {
         StringBuilder sb = new StringBuilder();
         sb.append("## 任务：K8s 资源配置风险分析\n\n");
-        sb.append("请分析以下 K8s 资源的配置风险点：\n\n");
-        sb.append("### 资源信息\n");
-        sb.append("- 资源类型: ").append(resourceType).append("\n");
-        sb.append("- 资源名称: ").append(resourceName).append("\n");
-        sb.append("- 命名空间: ").append(namespace).append("\n\n");
-        
-        if (detail != null) {
-            sb.append("### 资源详情\n```json\n");
-            sb.append(formatDetail(detail));
-            sb.append("\n```\n\n");
-        }
-        
-        sb.append(getResourceAnalysisInstructions(resourceType));
+        sb.append("请基于以下资源的完整配置数据，独立发现潜在风险点。\n\n");
+
+        // 使用结构化JSON传递数据
+        sb.append("### 资源配置数据\n```json\n");
+        sb.append(formatResourceDetailAsJson(resourceType, resourceName, namespace, detail));
+        sb.append("\n```\n\n");
+
+        sb.append("### 分析参考维度（不限于此）\n");
+        sb.append("- 高可用性：副本数、PDB配置、反亲和性\n");
+        sb.append("- 资源管理：requests/limits配置、QoS等级\n");
+        sb.append("- 健康检查：探针配置及参数合理性\n");
+        sb.append("- 安全配置：权限、网络策略、敏感信息\n");
+        sb.append("- 更新策略：滚动更新参数、回滚能力\n");
+        sb.append("- 其他你发现的风险维度...\n\n");
+
         sb.append(getOutputFormat());
-        
         return sb.toString();
     }
-    
-    private String getResourceAnalysisInstructions(String resourceType) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("### 分析要点\n");
-        
-        switch (resourceType.toLowerCase()) {
-            case "deployment":
-                sb.append("1. 副本数是否足够（replicas >= 2 为高可用）\n");
-                sb.append("2. 是否配置了资源限制（requests/limits）\n");
-                sb.append("3. 是否配置了健康检查（readinessProbe/livenessProbe）\n");
-                sb.append("4. 更新策略是否合理\n");
-                sb.append("5. Pod 反亲和性配置\n");
-                break;
-            case "pod":
-                sb.append("1. 资源请求和限制是否合理\n");
-                sb.append("2. 是否配置了健康检查\n");
-                sb.append("3. 容器重启策略\n");
-                sb.append("4. 是否挂载了敏感配置\n");
-                break;
-            case "service":
-                sb.append("1. Service 类型是否合适\n");
-                sb.append("2. 端口配置是否正确\n");
-                sb.append("3. 是否有足够的后端 Pod\n");
-                sb.append("4. 会话亲和性配置\n");
-                break;
-            default:
-                sb.append("1. 资源配置是否完整\n");
-                sb.append("2. 是否存在单点故障风险\n");
-                sb.append("3. 是否有资源限制配置\n");
+
+    /**
+     * 将资源详情格式化为完整的JSON
+     */
+    private String formatResourceDetailAsJson(String resourceType, String resourceName,
+                                               String namespace, ResourceDetail detail) {
+        try {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("resourceType", resourceType);
+            data.put("resourceName", resourceName);
+            data.put("namespace", namespace);
+
+            if (detail != null) {
+                data.put("status", detail.getStatus());
+                data.put("creationTimestamp", detail.getCreationTimestamp());
+                data.put("labels", detail.getLabels());
+
+                // 完整的properties，不做截断
+                Map<String, Object> properties = detail.getProperties();
+                if (properties != null && !properties.isEmpty()) {
+                    data.put("spec", properties);
+                }
+
+                // 提取关键配置缺失信息
+                Map<String, Object> configAnalysis = new LinkedHashMap<>();
+                configAnalysis.put("hasResourceLimits", properties != null && properties.containsKey("resources"));
+                configAnalysis.put("hasReadinessProbe", properties != null && properties.containsKey("readinessProbe"));
+                configAnalysis.put("hasLivenessProbe", properties != null && properties.containsKey("livenessProbe"));
+                configAnalysis.put("hasPDB", properties != null && properties.containsKey("pdb"));
+                configAnalysis.put("hasHPA", properties != null && properties.containsKey("hpa"));
+                data.put("configAnalysis", configAnalysis);
+            }
+
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+        } catch (Exception e) {
+            // 回退到简单格式
+            return formatDetailFallback(resourceType, resourceName, namespace, detail);
         }
-        sb.append("\n");
-        return sb.toString();
     }
-    
-    private String formatDetail(ResourceDetail detail) {
+
+    private String formatDetailFallback(String resourceType, String resourceName,
+                                        String namespace, ResourceDetail detail) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
-        sb.append("  \"resourceType\": \"").append(detail.getResourceType()).append("\",\n");
-        sb.append("  \"resourceName\": \"").append(detail.getResourceName()).append("\",\n");
-        sb.append("  \"namespace\": \"").append(detail.getNamespace()).append("\",\n");
-        sb.append("  \"status\": \"").append(detail.getStatus()).append("\",\n");
-        sb.append("  \"labels\": ").append(detail.getLabels()).append(",\n");
-        sb.append("  \"properties\": ").append(detail.getProperties()).append("\n");
+        sb.append("  \"resourceType\": \"").append(resourceType).append("\",\n");
+        sb.append("  \"resourceName\": \"").append(resourceName).append("\",\n");
+        sb.append("  \"namespace\": \"").append(namespace).append("\",\n");
+        if (detail != null) {
+            sb.append("  \"status\": \"").append(detail.getStatus()).append("\",\n");
+            sb.append("  \"properties\": ").append(detail.getProperties()).append("\n");
+        }
         sb.append("}");
         return sb.toString();
     }
-    
+
+    /**
+     * 通用输出格式 - 更灵活的JSON结构
+     */
     private String getOutputFormat() {
-        return "\n### 输出格式要求\n" +
+        return "### 输出格式要求\n" +
             "请严格按照以下 JSON 格式输出（只输出 JSON，不要其他内容）：\n" +
             "```json\n" +
             "{\n" +
+            "  \"analysisContext\": {\n" +
+            "    \"dataCompleteness\": \"数据完整度评估（complete/partial/insufficient）\",\n" +
+            "    \"confidenceLevel\": \"分析置信度（high/medium/low）\",\n" +
+            "    \"limitations\": [\"数据局限性说明\"]\n" +
+            "  },\n" +
             "  \"risks\": [\n" +
             "    {\n" +
             "      \"name\": \"风险名称\",\n" +
-            "      \"description\": \"风险详细描述\",\n" +
-            "      \"category\": \"SINGLE_POINT_FAILURE|RESOURCE_BOTTLENECK|DEPENDENCY_RISK|PERFORMANCE_DEGRADATION|AVAILABILITY_RISK\",\n" +
+            "      \"description\": \"风险详细描述，包含具体数据依据\",\n" +
+            "      \"category\": \"风险类别（可自定义）\",\n" +
             "      \"severity\": \"CRITICAL|HIGH|MEDIUM|LOW\",\n" +
+            "      \"evidence\": \"支撑该风险结论的具体数据\",\n" +
             "      \"impactScope\": \"影响范围描述\",\n" +
+            "      \"affectedResources\": [\"受影响的资源列表\"],\n" +
             "      \"recommendedFaults\": [\n" +
             "        {\n" +
             "          \"faultCode\": \"chaosblade.k8s.xxx\",\n" +
             "          \"faultName\": \"故障名称\",\n" +
             "          \"description\": \"故障描述和验证目标\",\n" +
             "          \"priority\": 1,\n" +
-            "          \"parameters\": {\"timeout\": \"60\", \"cpu-percent\": \"80\"}\n" +
+            "          \"parameters\": {}\n" +
             "        }\n" +
             "      ]\n" +
             "    }\n" +
@@ -151,70 +190,137 @@ public class RiskAnalysisPromptBuilder {
     public String buildTopologyRiskPrompt(String namespace, GraphData graphData) {
         StringBuilder sb = new StringBuilder();
         sb.append("## 任务：K8s 拓扑风险分析\n\n");
-        sb.append("请分析以下命名空间的资源拓扑依赖风险：\n\n");
-        sb.append("### 命名空间: ").append(namespace).append("\n\n");
+        sb.append("请基于以下命名空间的完整资源拓扑数据，独立发现依赖关系中的风险点。\n\n");
 
-        if (graphData != null) {
-            sb.append("### 资源统计\n");
-            sb.append("- 节点数量: ").append(graphData.getNodes().size()).append("\n");
-            sb.append("- 边关系数量: ").append(graphData.getEdges().size()).append("\n\n");
+        sb.append("### 拓扑数据\n```json\n");
+        sb.append(formatTopologyAsJson(namespace, graphData));
+        sb.append("\n```\n\n");
 
-            sb.append("### 核心资源列表\n");
-            sb.append(formatTopologyNodes(graphData));
-            sb.append("\n");
-
-            sb.append("### 资源关系\n");
-            sb.append(formatTopologyEdges(graphData));
-            sb.append("\n");
-        }
-
-        sb.append("### 分析要点\n");
-        sb.append("1. 识别单点故障（只有单个实例的关键服务）\n");
-        sb.append("2. 识别资源瓶颈（被多个服务依赖的资源）\n");
-        sb.append("3. 识别依赖链过长的情况\n");
-        sb.append("4. 识别孤立资源\n");
-        sb.append("5. 识别关键路径上的风险点\n\n");
+        sb.append("### 分析参考维度（不限于此）\n");
+        sb.append("- 单点故障：关键服务缺少冗余\n");
+        sb.append("- 依赖瓶颈：高入度节点（被多个服务依赖）\n");
+        sb.append("- 级联风险：依赖链过长可能导致故障传播\n");
+        sb.append("- 孤立资源：未被使用或缺乏监控\n");
+        sb.append("- 循环依赖：可能导致死锁或启动问题\n");
+        sb.append("- 其他你发现的拓扑风险...\n\n");
 
         sb.append(getOutputFormat());
         return sb.toString();
     }
 
-    private String formatTopologyNodes(GraphData graphData) {
-        StringBuilder sb = new StringBuilder();
-        int count = 0;
-        for (GraphNode node : graphData.getNodes()) {
-            if (count >= 50) {
-                sb.append("... (省略更多节点)\n");
-                break;
-            }
-            String type = node.getType();
-            // 只显示核心资源
-            if (type.contains("deployment") || type.contains("service") ||
-                type.contains("pod") || type.contains("statefulset")) {
-                sb.append("- [").append(type).append("] ").append(node.getName());
-                if (node.getProperties().containsKey("replicas")) {
-                    sb.append(" (replicas: ").append(node.getProperties().get("replicas")).append(")");
-                }
-                sb.append("\n");
-                count++;
-            }
-        }
-        return sb.toString();
-    }
+    /**
+     * 将拓扑数据格式化为结构化JSON，包含统计摘要
+     */
+    private String formatTopologyAsJson(String namespace, GraphData graphData) {
+        try {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("namespace", namespace);
 
-    private String formatTopologyEdges(GraphData graphData) {
-        StringBuilder sb = new StringBuilder();
-        int count = 0;
-        for (GraphEdge edge : graphData.getEdges()) {
-            if (count >= 30) {
-                sb.append("... (省略更多关系)\n");
-                break;
+            if (graphData == null) {
+                data.put("error", "无法获取拓扑数据");
+                return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
             }
-            sb.append("- ").append(edge.getSource()).append(" --[")
-              .append(edge.getType()).append("]--> ").append(edge.getTarget()).append("\n");
-            count++;
+
+            // 统计摘要
+            Map<String, Object> summary = new LinkedHashMap<>();
+            summary.put("totalNodes", graphData.getNodes().size());
+            summary.put("totalEdges", graphData.getEdges().size());
+
+            // 按类型统计节点
+            Map<String, Integer> nodeTypeCount = new LinkedHashMap<>();
+            Map<String, Integer> inDegree = new HashMap<>();  // 入度统计
+            Map<String, Integer> outDegree = new HashMap<>(); // 出度统计
+
+            for (GraphNode node : graphData.getNodes()) {
+                String type = node.getType();
+                nodeTypeCount.merge(type, 1, Integer::sum);
+                inDegree.put(node.getId(), 0);
+                outDegree.put(node.getId(), 0);
+            }
+            summary.put("nodeTypeDistribution", nodeTypeCount);
+
+            // 计算入度和出度
+            Map<String, List<String>> edgeTypeCount = new LinkedHashMap<>();
+            for (GraphEdge edge : graphData.getEdges()) {
+                inDegree.merge(edge.getTarget(), 1, Integer::sum);
+                outDegree.merge(edge.getSource(), 1, Integer::sum);
+                String edgeTypeName = edge.getType() != null ? edge.getType().name() : "UNKNOWN";
+                edgeTypeCount.computeIfAbsent(edgeTypeName, k -> new ArrayList<>())
+                    .add(edge.getSource() + " -> " + edge.getTarget());
+            }
+            summary.put("edgeTypeDistribution", edgeTypeCount.entrySet().stream()
+                .collect(LinkedHashMap::new,
+                    (m, e) -> m.put(e.getKey(), e.getValue().size()),
+                    Map::putAll));
+
+            // 高入度节点（潜在瓶颈）
+            List<Map<String, Object>> highInDegreeNodes = new ArrayList<>();
+            inDegree.entrySet().stream()
+                .filter(e -> e.getValue() >= 3)
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .limit(10)
+                .forEach(e -> {
+                    Map<String, Object> node = new LinkedHashMap<>();
+                    node.put("nodeId", e.getKey());
+                    node.put("inDegree", e.getValue());
+                    highInDegreeNodes.add(node);
+                });
+            summary.put("highInDegreeNodes", highInDegreeNodes);
+
+            // 单副本工作负载（潜在单点故障）
+            List<Map<String, Object>> singleReplicaWorkloads = new ArrayList<>();
+            for (GraphNode node : graphData.getNodes()) {
+                String type = node.getType();
+                if (type.contains("deployment") || type.contains("statefulset")) {
+                    Object replicas = node.getProperties().get("replicas");
+                    if (replicas != null && "1".equals(replicas.toString())) {
+                        Map<String, Object> workload = new LinkedHashMap<>();
+                        workload.put("name", node.getName());
+                        workload.put("type", type);
+                        workload.put("replicas", 1);
+                        singleReplicaWorkloads.add(workload);
+                    }
+                }
+            }
+            summary.put("singleReplicaWorkloads", singleReplicaWorkloads);
+
+            data.put("summary", summary);
+
+            // 完整节点列表（工作负载和服务）
+            List<Map<String, Object>> nodes = new ArrayList<>();
+            for (GraphNode node : graphData.getNodes()) {
+                String type = node.getType();
+                if (type.contains("deployment") || type.contains("service") ||
+                    type.contains("statefulset") || type.contains("daemonset")) {
+                    Map<String, Object> nodeData = new LinkedHashMap<>();
+                    nodeData.put("id", node.getId());
+                    nodeData.put("name", node.getName());
+                    nodeData.put("type", type);
+                    nodeData.put("inDegree", inDegree.getOrDefault(node.getId(), 0));
+                    nodeData.put("outDegree", outDegree.getOrDefault(node.getId(), 0));
+                    if (!node.getProperties().isEmpty()) {
+                        nodeData.put("properties", node.getProperties());
+                    }
+                    nodes.add(nodeData);
+                }
+            }
+            data.put("nodes", nodes);
+
+            // 完整边列表
+            List<Map<String, Object>> edges = new ArrayList<>();
+            for (GraphEdge edge : graphData.getEdges()) {
+                Map<String, Object> edgeData = new LinkedHashMap<>();
+                edgeData.put("source", edge.getSource());
+                edgeData.put("target", edge.getTarget());
+                edgeData.put("type", edge.getType());
+                edges.add(edgeData);
+            }
+            data.put("edges", edges);
+
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+        } catch (Exception e) {
+            return "{\"error\": \"格式化拓扑数据失败: " + e.getMessage() + "\"}";
         }
-        return sb.toString();
     }
 
     /**
@@ -223,34 +329,98 @@ public class RiskAnalysisPromptBuilder {
     public String buildServiceTopologyRiskPrompt(String namespace, ServiceMapData serviceMap) {
         StringBuilder sb = new StringBuilder();
         sb.append("## 任务：服务拓扑风险分析\n\n");
-        sb.append("请分析以下服务调用拓扑的风险点：\n\n");
-        sb.append("### 命名空间: ").append(namespace).append("\n\n");
+        sb.append("请基于以下服务调用拓扑数据，独立发现服务间调用关系中的风险点。\n\n");
 
-        if (serviceMap != null && !serviceMap.getNodes().isEmpty()) {
+        sb.append("### 服务拓扑数据\n```json\n");
+        sb.append(formatServiceMapAsJson(namespace, serviceMap));
+        sb.append("\n```\n\n");
+
+        sb.append("### 分析参考维度（不限于此）\n");
+        sb.append("- 关键路径：高入度服务可能是系统瓶颈\n");
+        sb.append("- 错误传播：高错误率调用链可能导致级联故障\n");
+        sb.append("- 延迟敏感：高延迟调用影响用户体验\n");
+        sb.append("- 服务健康：异常状态服务需要关注\n");
+        sb.append("- 循环依赖：可能导致死锁或资源耗尽\n");
+        sb.append("- 其他你发现的服务拓扑风险...\n\n");
+
+        sb.append(getOutputFormat());
+        return sb.toString();
+    }
+
+    /**
+     * 将服务拓扑数据格式化为结构化JSON
+     */
+    private String formatServiceMapAsJson(String namespace, ServiceMapData serviceMap) {
+        try {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("namespace", namespace);
+
+            if (serviceMap == null || serviceMap.getNodes().isEmpty()) {
+                data.put("error", "未获取到服务拓扑数据");
+                return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+            }
+
             // 按命名空间过滤节点
             List<ServiceMapNode> filteredNodes = serviceMap.getNodes().stream()
                 .filter(node -> namespace == null || namespace.isEmpty()
                     || namespace.equals(node.getNamespace()))
                 .collect(java.util.stream.Collectors.toList());
 
-            sb.append("### 服务列表 (共 ").append(filteredNodes.size()).append(" 个)\n");
-            int nodeCount = 0;
+            // 统计摘要
+            Map<String, Object> summary = new LinkedHashMap<>();
+            summary.put("totalServices", filteredNodes.size());
+
+            // 状态分布
+            Map<String, Integer> statusDistribution = new LinkedHashMap<>();
+            long totalRequests = 0;
+            double totalErrorRate = 0;
+            int errorRateCount = 0;
+
             for (ServiceMapNode node : filteredNodes) {
-                if (nodeCount >= 50) {
-                    sb.append("... (省略更多服务)\n");
-                    break;
+                String status = node.getStatus() != null ? node.getStatus() : "unknown";
+                statusDistribution.merge(status, 1, Integer::sum);
+                if (node.getRequestCount() != null) {
+                    totalRequests += node.getRequestCount();
                 }
-                sb.append("- ").append(node.getServiceName());
-                if (node.getStatus() != null && !"ok".equals(node.getStatus())) {
-                    sb.append(" [状态: ").append(node.getStatus()).append("]");
+                if (node.getErrorRate() != null) {
+                    totalErrorRate += node.getErrorRate();
+                    errorRateCount++;
                 }
-                if (node.getRequestCount() != null && node.getRequestCount() > 0) {
-                    sb.append(" (请求数: ").append(node.getRequestCount()).append(")");
-                }
-                sb.append("\n");
-                nodeCount++;
             }
-            sb.append("\n");
+            summary.put("statusDistribution", statusDistribution);
+            summary.put("totalRequests", totalRequests);
+            summary.put("avgErrorRate", errorRateCount > 0 ? totalErrorRate / errorRateCount : 0);
+
+            // 异常服务列表
+            List<Map<String, Object>> abnormalServices = new ArrayList<>();
+            for (ServiceMapNode node : filteredNodes) {
+                if (node.getStatus() != null && !"ok".equals(node.getStatus())) {
+                    Map<String, Object> svc = new LinkedHashMap<>();
+                    svc.put("serviceName", node.getServiceName());
+                    svc.put("status", node.getStatus());
+                    svc.put("errorRate", node.getErrorRate());
+                    svc.put("requestCount", node.getRequestCount());
+                    abnormalServices.add(svc);
+                }
+            }
+            summary.put("abnormalServices", abnormalServices);
+
+            data.put("summary", summary);
+
+            // 完整服务列表
+            List<Map<String, Object>> services = new ArrayList<>();
+            for (ServiceMapNode node : filteredNodes) {
+                Map<String, Object> svc = new LinkedHashMap<>();
+                svc.put("serviceName", node.getServiceName());
+                svc.put("namespace", node.getNamespace());
+                svc.put("status", node.getStatus());
+                svc.put("requestCount", node.getRequestCount());
+                svc.put("errorRate", node.getErrorRate());
+                svc.put("avgLatency", node.getAvgLatency());
+                svc.put("p99Latency", node.getP99Latency());
+                services.add(svc);
+            }
+            data.put("services", services);
 
             // 过滤涉及该命名空间服务的边
             Set<String> filteredServiceNames = filteredNodes.stream()
@@ -262,41 +432,46 @@ public class RiskAnalysisPromptBuilder {
                     || filteredServiceNames.contains(edge.getTargetService()))
                 .collect(java.util.stream.Collectors.toList());
 
-            sb.append("### 服务调用关系 (共 ").append(filteredEdges.size()).append(" 条)\n");
-            int edgeCount = 0;
+            // 调用关系统计
+            Map<String, Integer> inDegree = new HashMap<>();
+            Map<String, Integer> outDegree = new HashMap<>();
             for (ServiceMapEdge edge : filteredEdges) {
-                if (edgeCount >= 50) {
-                    sb.append("... (省略更多关系)\n");
-                    break;
-                }
-                sb.append("- ").append(edge.getSourceService()).append(" -> ").append(edge.getTargetService());
-                if (edge.getCallCount() != null && edge.getCallCount() > 0) {
-                    sb.append(" (调用数: ").append(edge.getCallCount()).append(")");
-                }
-                if (edge.getAvgLatency() != null && edge.getAvgLatency() > 0) {
-                    sb.append(" (延迟: ").append(String.format("%.1f", edge.getAvgLatency())).append("ms)");
-                }
-                if (edge.getErrorRate() != null && edge.getErrorRate() > 0) {
-                    sb.append(" [错误率: ").append(String.format("%.2f%%", edge.getErrorRate())).append("]");
-                }
-                sb.append("\n");
-                edgeCount++;
+                inDegree.merge(edge.getTargetService(), 1, Integer::sum);
+                outDegree.merge(edge.getSourceService(), 1, Integer::sum);
             }
-            sb.append("\n");
-        } else {
-            sb.append("### 注意：未获取到服务拓扑数据\n\n");
+
+            // 高入度服务（潜在瓶颈）
+            List<Map<String, Object>> highInDegreeServices = new ArrayList<>();
+            inDegree.entrySet().stream()
+                .filter(e -> e.getValue() >= 3)
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .limit(10)
+                .forEach(e -> {
+                    Map<String, Object> svc = new LinkedHashMap<>();
+                    svc.put("serviceName", e.getKey());
+                    svc.put("inDegree", e.getValue());
+                    highInDegreeServices.add(svc);
+                });
+            summary.put("highInDegreeServices", highInDegreeServices);
+
+            // 完整调用关系
+            List<Map<String, Object>> calls = new ArrayList<>();
+            for (ServiceMapEdge edge : filteredEdges) {
+                Map<String, Object> call = new LinkedHashMap<>();
+                call.put("source", edge.getSourceService());
+                call.put("target", edge.getTargetService());
+                call.put("callCount", edge.getCallCount());
+                call.put("avgLatency", edge.getAvgLatency());
+                call.put("p99Latency", edge.getP99Latency());
+                call.put("errorRate", edge.getErrorRate());
+                calls.add(call);
+            }
+            data.put("calls", calls);
+
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+        } catch (Exception e) {
+            return "{\"error\": \"格式化服务拓扑数据失败: " + e.getMessage() + "\"}";
         }
-
-        sb.append("### 分析要点\n");
-        sb.append("1. 识别关键路径上的服务（被多个服务调用）\n");
-        sb.append("2. 识别循环依赖\n");
-        sb.append("3. 识别服务孤岛（没有调用关系的服务）\n");
-        sb.append("4. 识别高错误率的调用链路\n");
-        sb.append("5. 识别调用链过长的情况\n");
-        sb.append("6. 识别状态异常的服务（critical/warning）\n\n");
-
-        sb.append(getOutputFormat());
-        return sb.toString();
     }
 
     /**
@@ -305,54 +480,130 @@ public class RiskAnalysisPromptBuilder {
     public String buildTraceRiskPrompt(String traceId, JsonNode traceData) {
         StringBuilder sb = new StringBuilder();
         sb.append("## 任务：链路风险分析\n\n");
-        sb.append("请分析以下链路追踪数据的风险点：\n\n");
-        sb.append("### TraceId: ").append(traceId).append("\n\n");
+        sb.append("请基于以下链路追踪数据，独立发现调用链中的风险点。\n\n");
 
-        if (traceData != null && traceData.isArray() && traceData.size() > 0) {
-            sb.append("### Span 列表\n");
-            int count = 0;
-            for (JsonNode span : traceData) {
-                if (count >= 30) {
-                    sb.append("... (省略更多 span)\n");
-                    break;
-                }
-                // 支持两种字段格式: Coroot格式和标准格式
-                String serviceName = getSpanField(span, "service", "ServiceName", "serviceName");
-                String name = getSpanField(span, "name", "Name", "operationName");
-                double duration = span.path("duration").asDouble(span.path("Duration").asDouble(0));
-                String statusStr = getSpanField(span, "status", "StatusCode", "statusCode");
-                boolean hasError = span.path("status").path("error").asBoolean(false);
+        sb.append("### 链路数据\n```json\n");
+        sb.append(formatTraceAsJson(traceId, traceData));
+        sb.append("\n```\n\n");
 
-                // 显示所有span，不过滤
-                sb.append("- [").append(serviceName).append("] ").append(name);
-                if (duration > 0) {
-                    // duration 可能是毫秒或微秒，根据值大小判断
-                    double durationMs = duration > 10000 ? duration / 1000.0 : duration;
-                    sb.append(" (耗时: ").append(String.format("%.2f", durationMs)).append("ms)");
-                }
-                if (hasError) {
-                    sb.append(" [错误]");
-                } else if (!statusStr.isEmpty()) {
-                    sb.append(" [状态: ").append(statusStr).append("]");
-                }
-                sb.append("\n");
-                count++;
-            }
-            sb.append("\n");
-            sb.append("**共计 ").append(traceData.size()).append(" 个 span**\n\n");
-        } else {
-            sb.append("### 注意：未获取到具体的Span数据\n\n");
-        }
-
-        sb.append("### 分析要点\n");
-        sb.append("1. 识别性能瓶颈（耗时较长的服务）\n");
-        sb.append("2. 识别错误和异常\n");
-        sb.append("3. 识别延迟异常（耗时明显高于平均值）\n");
-        sb.append("4. 识别关键服务节点\n");
-        sb.append("5. 识别潜在故障点\n\n");
+        sb.append("### 分析参考维度（不限于此）\n");
+        sb.append("- 性能瓶颈：耗时异常的span\n");
+        sb.append("- 错误传播：错误span及其影响范围\n");
+        sb.append("- 调用深度：过深的调用链可能导致延迟累积\n");
+        sb.append("- 重试风暴：同一操作的重复调用\n");
+        sb.append("- 资源竞争：并发调用可能导致的问题\n");
+        sb.append("- 其他你发现的链路风险...\n\n");
 
         sb.append(getOutputFormat());
         return sb.toString();
+    }
+
+    /**
+     * 将链路数据格式化为结构化JSON，保留span层级关系
+     */
+    private String formatTraceAsJson(String traceId, JsonNode traceData) {
+        try {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("traceId", traceId);
+
+            if (traceData == null || !traceData.isArray() || traceData.size() == 0) {
+                data.put("error", "未获取到具体的Span数据");
+                return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+            }
+
+            // 统计摘要
+            Map<String, Object> summary = new LinkedHashMap<>();
+            summary.put("totalSpans", traceData.size());
+
+            // 收集所有span信息
+            List<Map<String, Object>> spans = new ArrayList<>();
+            Map<String, Integer> serviceCallCount = new LinkedHashMap<>();
+            int errorCount = 0;
+            double totalDuration = 0;
+            double maxDuration = 0;
+            String slowestSpan = "";
+            List<Map<String, Object>> errorSpans = new ArrayList<>();
+
+            for (JsonNode span : traceData) {
+                String serviceName = getSpanField(span, "service", "ServiceName", "serviceName");
+                String name = getSpanField(span, "name", "Name", "operationName");
+                String spanId = getSpanField(span, "spanId", "SpanId", "span_id");
+                String parentSpanId = getSpanField(span, "parentSpanId", "ParentSpanId", "parent_span_id");
+                double duration = span.path("duration").asDouble(span.path("Duration").asDouble(0));
+                boolean hasError = span.path("status").path("error").asBoolean(false);
+                String statusCode = getSpanField(span, "status", "StatusCode", "statusCode");
+
+                // 统计服务调用次数
+                serviceCallCount.merge(serviceName, 1, Integer::sum);
+
+                // 转换duration为毫秒
+                double durationMs = duration > 10000 ? duration / 1000.0 : duration;
+                totalDuration += durationMs;
+
+                if (durationMs > maxDuration) {
+                    maxDuration = durationMs;
+                    slowestSpan = serviceName + ":" + name;
+                }
+
+                // 构建span数据
+                Map<String, Object> spanData = new LinkedHashMap<>();
+                spanData.put("spanId", spanId);
+                spanData.put("parentSpanId", parentSpanId);
+                spanData.put("serviceName", serviceName);
+                spanData.put("operationName", name);
+                spanData.put("durationMs", durationMs);
+                spanData.put("hasError", hasError);
+
+                if (hasError) {
+                    errorCount++;
+                    spanData.put("statusCode", statusCode);
+                    // 尝试获取错误详情
+                    JsonNode statusNode = span.path("status");
+                    if (statusNode.has("message")) {
+                        spanData.put("errorMessage", statusNode.path("message").asText());
+                    }
+
+                    Map<String, Object> errorSpan = new LinkedHashMap<>();
+                    errorSpan.put("serviceName", serviceName);
+                    errorSpan.put("operationName", name);
+                    errorSpan.put("durationMs", durationMs);
+                    errorSpans.add(errorSpan);
+                }
+
+                spans.add(spanData);
+            }
+
+            summary.put("errorCount", errorCount);
+            summary.put("errorRate", traceData.size() > 0 ? (double) errorCount / traceData.size() * 100 : 0);
+            summary.put("avgDurationMs", traceData.size() > 0 ? totalDuration / traceData.size() : 0);
+            summary.put("maxDurationMs", maxDuration);
+            summary.put("slowestSpan", slowestSpan);
+            summary.put("serviceCallDistribution", serviceCallCount);
+            summary.put("errorSpans", errorSpans);
+
+            // 识别慢span（超过平均值2倍）
+            double avgDuration = traceData.size() > 0 ? totalDuration / traceData.size() : 0;
+            List<Map<String, Object>> slowSpans = new ArrayList<>();
+            for (Map<String, Object> spanData : spans) {
+                double durationMs = (Double) spanData.get("durationMs");
+                if (durationMs > avgDuration * 2 && durationMs > 10) {
+                    Map<String, Object> slowSpan = new LinkedHashMap<>();
+                    slowSpan.put("serviceName", spanData.get("serviceName"));
+                    slowSpan.put("operationName", spanData.get("operationName"));
+                    slowSpan.put("durationMs", durationMs);
+                    slowSpan.put("ratio", durationMs / avgDuration);
+                    slowSpans.add(slowSpan);
+                }
+            }
+            summary.put("slowSpans", slowSpans);
+
+            data.put("summary", summary);
+            data.put("spans", spans);
+
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+        } catch (Exception e) {
+            return "{\"error\": \"格式化链路数据失败: " + e.getMessage() + "\"}";
+        }
     }
 
     /**

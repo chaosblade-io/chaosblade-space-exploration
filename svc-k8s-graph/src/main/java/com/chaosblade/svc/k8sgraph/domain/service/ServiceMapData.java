@@ -7,16 +7,19 @@ import java.util.List;
  * 服务拓扑图数据模型
  */
 public class ServiceMapData {
-    
+
+    /** 命名空间（如果指定了过滤） */
+    private String namespace;
+
     /** 服务节点列表 */
     private List<ServiceMapNode> nodes;
-    
+
     /** 服务调用边列表 */
     private List<ServiceMapEdge> edges;
-    
+
     /** 时间区间开始 (毫秒时间戳) */
     private Long fromTime;
-    
+
     /** 时间区间结束 (毫秒时间戳) */
     private Long toTime;
     
@@ -34,6 +37,8 @@ public class ServiceMapData {
     }
     
     // Getters and Setters
+    public String getNamespace() { return namespace; }
+    public void setNamespace(String namespace) { this.namespace = namespace; }
     public List<ServiceMapNode> getNodes() { return nodes; }
     public void setNodes(List<ServiceMapNode> nodes) { this.nodes = nodes; }
     public List<ServiceMapEdge> getEdges() { return edges; }

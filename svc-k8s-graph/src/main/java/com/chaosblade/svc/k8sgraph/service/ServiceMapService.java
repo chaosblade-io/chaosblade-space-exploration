@@ -22,16 +22,28 @@ public class ServiceMapService {
     private ObservabilityApiClient apiClient;
     
     /**
-     * 获取服务拓扑图数据
+     * 获取服务拓扑图数据（全部命名空间）
      */
     public ServiceMapData getServiceMap(long fromMs, long toMs) {
-        logger.info("Getting service map: from={}, to={}", fromMs, toMs);
-        
+        return getServiceMap(null, fromMs, toMs);
+    }
+
+    /**
+     * 获取指定命名空间的服务拓扑图数据
+     *
+     * @param namespace 命名空间，如果为null则返回全部
+     * @param fromMs 开始时间
+     * @param toMs 结束时间
+     */
+    public ServiceMapData getServiceMap(String namespace, long fromMs, long toMs) {
+        logger.info("Getting service map: namespace={}, from={}, to={}", namespace, fromMs, toMs);
+
         JsonNode mapArray = apiClient.getServiceMap(fromMs, toMs);
-        ServiceMapData mapData = parseServiceMap(mapArray);
+        ServiceMapData mapData = parseServiceMap(mapArray, namespace);
         mapData.setFromTime(fromMs);
         mapData.setToTime(toMs);
-        
+        mapData.setNamespace(namespace);
+
         return mapData;
     }
     
@@ -62,8 +74,11 @@ public class ServiceMapService {
     /**
      * 解析服务拓扑图 - 适配 Coroot API 返回格式
      * Coroot 返回的格式是节点数组，每个节点包含 id, upstreams, downstreams
+     *
+     * @param mapArray Coroot返回的节点数组
+     * @param filterNamespace 要过滤的命名空间，如果为null则不过滤
      */
-    private ServiceMapData parseServiceMap(JsonNode mapArray) {
+    private ServiceMapData parseServiceMap(JsonNode mapArray, String filterNamespace) {
         ServiceMapData mapData = new ServiceMapData();
         Map<String, ServiceMapNode> nodeMap = new HashMap<>();
         Set<String> edgeKeys = new HashSet<>(); // 用于去重边
@@ -73,26 +88,41 @@ public class ServiceMapService {
             return mapData;
         }
 
-        logger.info("Parsing service map with {} nodes", mapArray.size());
+        logger.info("Parsing service map with {} nodes, filterNamespace={}", mapArray.size(), filterNamespace);
 
-        // 第一遍：创建所有节点
+        // 第一遍：创建所有节点（只保留指定命名空间的节点）
         for (JsonNode node : mapArray) {
             String nodeId = node.path("id").asText("");
             if (nodeId.isEmpty()) continue;
+
+            String nodeNamespace = extractNamespace(nodeId);
+
+            // 命名空间过滤：如果指定了filterNamespace，只保留该命名空间的节点
+            if (filterNamespace != null && !filterNamespace.isEmpty()
+                    && !filterNamespace.equals(nodeNamespace)) {
+                continue;
+            }
 
             String serviceName = extractServiceName(nodeId);
             String status = node.path("status").asText("unknown");
-            String namespace = extractNamespace(nodeId);
 
             ServiceMapNode mapNode = nodeMap.computeIfAbsent(serviceName, ServiceMapNode::new);
             mapNode.setStatus(status);
-            mapNode.setNamespace(namespace);
+            mapNode.setNamespace(nodeNamespace);
         }
 
-        // 第二遍：解析边关系（从 upstreams 和 downstreams 中提取）
+        // 第二遍：解析边关系（只保留两端都在指定命名空间内的边）
         for (JsonNode node : mapArray) {
             String nodeId = node.path("id").asText("");
             if (nodeId.isEmpty()) continue;
+
+            String nodeNamespace = extractNamespace(nodeId);
+
+            // 命名空间过滤
+            if (filterNamespace != null && !filterNamespace.isEmpty()
+                    && !filterNamespace.equals(nodeNamespace)) {
+                continue;
+            }
 
             String targetService = extractServiceName(nodeId);
 
@@ -102,6 +132,14 @@ public class ServiceMapService {
                 for (JsonNode upstream : upstreams) {
                     String upstreamId = upstream.path("id").asText("");
                     if (upstreamId.isEmpty()) continue;
+
+                    String upstreamNamespace = extractNamespace(upstreamId);
+
+                    // 只保留同命名空间的边（或不过滤时保留所有）
+                    if (filterNamespace != null && !filterNamespace.isEmpty()
+                            && !filterNamespace.equals(upstreamNamespace)) {
+                        continue;
+                    }
 
                     String sourceService = extractServiceName(upstreamId);
                     String edgeKey = sourceService + "->" + targetService;
@@ -122,6 +160,14 @@ public class ServiceMapService {
                 for (JsonNode downstream : downstreams) {
                     String downstreamId = downstream.path("id").asText("");
                     if (downstreamId.isEmpty()) continue;
+
+                    String downstreamNamespace = extractNamespace(downstreamId);
+
+                    // 只保留同命名空间的边
+                    if (filterNamespace != null && !filterNamespace.isEmpty()
+                            && !filterNamespace.equals(downstreamNamespace)) {
+                        continue;
+                    }
 
                     String targetDownstream = extractServiceName(downstreamId);
                     String edgeKey = targetService + "->" + targetDownstream;
@@ -144,8 +190,8 @@ public class ServiceMapService {
             mapData.addNode(mapNode);
         }
 
-        logger.info("Parsed service map: {} nodes, {} edges",
-            mapData.getNodes().size(), mapData.getEdges().size());
+        logger.info("Parsed service map for namespace '{}': {} nodes, {} edges",
+            filterNamespace, mapData.getNodes().size(), mapData.getEdges().size());
 
         return mapData;
     }
