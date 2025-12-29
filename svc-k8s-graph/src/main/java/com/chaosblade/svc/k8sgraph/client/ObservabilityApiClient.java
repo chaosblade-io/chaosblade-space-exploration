@@ -91,8 +91,11 @@ public class ObservabilityApiClient {
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-                // 返回 data.applications.map
-                return root.path("data").path("applications").path("map");
+                // 返回 data.map (不是 data.applications.map)
+                JsonNode mapNode = root.path("data").path("map");
+                logger.info("Fetched service map, isArray: {}, size: {}",
+                    mapNode.isArray(), mapNode.isArray() ? mapNode.size() : 0);
+                return mapNode;
             }
         } catch (Exception e) {
             logger.error("Failed to fetch service map: {}", e.getMessage(), e);
@@ -170,20 +173,46 @@ public class ObservabilityApiClient {
             String queryJson = objectMapper.writeValueAsString(traceRequestQuery);
             String encodedQuery = URLEncoder.encode(queryJson, StandardCharsets.UTF_8.toString());
 
-            String requestUrl = baseApiUrl + "?query=" + encodedQuery;
+            // 添加时间范围（最近1小时）
+            long toMs = System.currentTimeMillis();
+            long fromMs = toMs - 3600_000;
+            String requestUrl = baseApiUrl + "?query=" + encodedQuery + "&from=" + fromMs + "&to=" + toMs;
 
             logger.info("Fetching trace detail for traceId: {}", traceId);
-            logger.info("Request URL: {}", requestUrl);
+            logger.debug("Request URL: {}", requestUrl);
 
             ResponseEntity<String> response = doGetWithUri(new URI(requestUrl));
             logger.info("Response status: {}", response.getStatusCode());
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode traceNode = root.path("data").path("traces").path("trace");
-                logger.info("Found trace detail at: data.traces.trace, isArray: {}, size: {}",
-                    traceNode.isArray(), traceNode.size());
-                return traceNode;
+                JsonNode tracesNode = root.path("data").path("traces");
+
+                // 优先尝试 trace 字段（单个trace详情）
+                JsonNode traceNode = tracesNode.path("trace");
+                if (traceNode.isArray() && traceNode.size() > 0) {
+                    logger.info("Found trace detail at: data.traces.trace, size: {}", traceNode.size());
+                    return traceNode;
+                }
+
+                // 回退到 traces 字段（trace列表）
+                JsonNode tracesList = tracesNode.path("traces");
+                if (tracesList.isArray() && tracesList.size() > 0) {
+                    logger.info("Found traces at: data.traces.traces, size: {}", tracesList.size());
+                    // 过滤出匹配 traceId 的 traces
+                    if (traceId != null && !traceId.isEmpty()) {
+                        for (JsonNode trace : tracesList) {
+                            String tid = trace.path("trace_id").asText("");
+                            if (traceId.equals(tid)) {
+                                // 找到匹配的trace，返回包含单个trace的数组
+                                return objectMapper.createArrayNode().add(trace);
+                            }
+                        }
+                    }
+                    return tracesList;
+                }
+
+                logger.warn("No trace data found for traceId: {}", traceId);
             }
         } catch (Exception e) {
             logger.error("Failed to fetch trace detail for traceId {}: {}", traceId, e.getMessage(), e);

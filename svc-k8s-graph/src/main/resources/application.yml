@@ -26,6 +26,23 @@ observability:
     project-id: "f21z1y9i"
     cookie: "sid=ab46c3ac87b2e6b30a0eba82d0be33f3; coroot_session=eyJpZCI6MX0=.L4mM7jLoBFBkvEE7K27aKr_F8eGhGd2l5pJMZyjr2Rk="
 
+# LLM configuration (Anthropic Claude)
+llm:
+  api:
+    provider: "anthropic"
+    url: "https://globalai.vip/v1/messages"
+    key: "sk-pCZXYvunizMn7X285OQGBFAJBtNfIbqNMBjmMq7obwhhGNIL"
+    model: "claude-haiku-4-5-20251001"
+    max-tokens: 64000
+  timeout:
+    ms: 120000
+  retries: 3
+
+# 风险分析配置
+risk-analysis:
+  debug:
+    show-prompt: true  # 开启后在响应中显示发送给LLM的prompt
+
 # Logging configuration
 logging:
   level:

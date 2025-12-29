@@ -765,3 +765,395 @@ url = f"http://1.94.151.57:8106/api/k8s-graph/traces?serviceName=ts-travel-servi
 - Node: `k8s.node//node-1`
 - Deployment: `k8s.deployment/default/ts-travel-service`
 
+---
+
+## 六、LLM 大模型测试接口
+
+提供 AI 大模型（Anthropic Claude）的调用测试功能。
+
+### 6.1 获取 LLM 配置信息
+
+获取当前 LLM 配置信息（API Key 脱敏显示）。
+
+**请求**
+
+```
+GET /api/llm/config
+```
+
+**请求示例**
+
+```bash
+curl "http://1.94.151.57:8106/api/llm/config"
+```
+
+**响应示例**
+
+```json
+{
+  "configured": true,
+  "provider": "anthropic",
+  "model": "claude-haiku-4-5-20251001",
+  "url": "https://api.anthropic.com/v1/messages",
+  "maxTokens": 64000,
+  "timeoutMs": 120000,
+  "apiKey": "sk-p****GNIL"
+}
+```
+
+---
+
+### 6.2 简单对话测试
+
+发送简单消息测试 LLM 调用。
+
+**请求**
+
+```
+POST /api/llm/chat
+```
+
+**请求体**
+
+```json
+{
+  "message": "Hello, world"
+}
+```
+
+**请求示例**
+
+```bash
+curl -X POST "http://1.94.151.57:8106/api/llm/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello, world"}'
+```
+
+**响应示例**
+
+```json
+{
+  "request": "Hello, world",
+  "response": "Hello! How can I assist you today?",
+  "success": true,
+  "responseTimeMs": 1234
+}
+```
+
+---
+
+### 6.3 带系统提示的对话测试
+
+发送带系统提示的消息测试 LLM 调用。
+
+**请求**
+
+```
+POST /api/llm/chat-with-system
+```
+
+**请求体**
+
+```json
+{
+  "message": "用户消息内容",
+  "systemPrompt": "系统提示内容"
+}
+```
+
+**请求示例**
+
+```bash
+curl -X POST "http://1.94.151.57:8106/api/llm/chat-with-system" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "分析一下 Kubernetes Deployment 的最佳实践",
+    "systemPrompt": "你是一位专业的 Kubernetes 运维专家，请用中文回答"
+  }'
+```
+
+**响应示例**
+
+```json
+{
+  "request": "分析一下 Kubernetes Deployment 的最佳实践",
+  "systemPrompt": "你是一位专业的 Kubernetes 运维专家，请用中文回答",
+  "response": "Kubernetes Deployment 的最佳实践包括：\n1. 设置适当的资源限制...",
+  "success": true,
+  "responseTimeMs": 3456
+}
+```
+
+---
+
+### 6.4 LLM 健康检查
+
+检查 LLM 配置状态并测试连接。
+
+**请求**
+
+```
+GET /api/llm/health
+```
+
+**请求示例**
+
+```bash
+curl "http://1.94.151.57:8106/api/llm/health"
+```
+
+**响应示例**
+
+```json
+{
+  "configured": true,
+  "provider": "anthropic",
+  "model": "claude-haiku-4-5-20251001",
+  "url": "https://api.anthropic.com/v1/messages",
+  "maxTokens": 64000,
+  "timeoutMs": 120000,
+  "apiKey": "sk-p****GNIL",
+  "connectionTest": "success",
+  "testResponseTimeMs": 1523,
+  "testResponse": "OK"
+}
+```
+
+---
+
+## 七、AI 风险分析接口
+
+提供基于 AI 的 K8s 资源和拓扑风险分析功能，自动识别风险点并推荐故障注入建议。
+
+### 7.1 分析 K8s 资源配置风险
+
+分析指定 K8s 资源的配置风险。
+
+**请求**
+
+```
+POST /api/risk-analysis/resource
+```
+
+**请求体**
+
+```json
+{
+  "resourceType": "deployment",
+  "resourceName": "ts-travel-service",
+  "namespace": "default"
+}
+```
+
+**请求示例**
+
+```bash
+curl -X POST "http://1.94.151.57:8106/api/risk-analysis/resource" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resourceType": "deployment",
+    "resourceName": "ts-travel-service",
+    "namespace": "default"
+  }'
+```
+
+**响应示例**
+
+```json
+{
+  "analysisType": "resource",
+  "analysisTarget": "deployment/ts-travel-service",
+  "analysisTime": "2024-12-29T15:30:00",
+  "analysisTimeMs": 5230,
+  "summary": {
+    "total": 3,
+    "critical": 1,
+    "high": 1,
+    "medium": 1,
+    "low": 0
+  },
+  "risks": [
+    {
+      "id": "risk-a1b2c3d4",
+      "name": "单点故障风险",
+      "description": "Deployment 仅配置了 1 个副本，缺少冗余",
+      "category": "SINGLE_POINT_FAILURE",
+      "severity": "CRITICAL",
+      "impactScope": "服务完全不可用",
+      "relatedResource": "deployment/ts-travel-service",
+      "namespace": "default",
+      "recommendedFaults": [
+        {
+          "faultCode": "chaosblade.k8s.pod-kill",
+          "faultName": "Pod 删除",
+          "description": "验证单副本故障时的服务恢复能力",
+          "priority": 1,
+          "parameters": {
+            "timeout": "60"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### 7.2 分析 K8s 拓扑风险
+
+分析指定命名空间的 K8s 资源拓扑风险。
+
+**请求**
+
+```
+POST /api/risk-analysis/topology
+```
+
+**请求体**
+
+```json
+{
+  "namespace": "default"
+}
+```
+
+**请求示例**
+
+```bash
+curl -X POST "http://1.94.151.57:8106/api/risk-analysis/topology" \
+  -H "Content-Type: application/json" \
+  -d '{"namespace": "default"}'
+```
+
+---
+
+### 7.3 分析服务拓扑风险
+
+基于可观测性数据分析服务调用拓扑的风险。
+
+**请求**
+
+```
+POST /api/risk-analysis/service-topology
+```
+
+**请求体**
+
+```json
+{
+  "namespace": "default"
+}
+```
+
+**请求示例**
+
+```bash
+curl -X POST "http://1.94.151.57:8106/api/risk-analysis/service-topology" \
+  -H "Content-Type: application/json" \
+  -d '{"namespace": "default"}'
+```
+
+---
+
+### 7.4 分析链路风险
+
+分析指定 Trace 链路的风险点。
+
+**请求**
+
+```
+POST /api/risk-analysis/trace
+```
+
+**请求体**
+
+```json
+{
+  "traceId": "abc123def456789"
+}
+```
+
+**请求示例**
+
+```bash
+curl -X POST "http://1.94.151.57:8106/api/risk-analysis/trace" \
+  -H "Content-Type: application/json" \
+  -d '{"traceId": "abc123def456789"}'
+```
+
+---
+
+### 风险分析响应字段说明
+
+**RiskAnalysisResponse 字段**
+
+| 字段 | 类型 | 说明 |
+|-----|------|------|
+| analysisType | string | 分析类型（resource/topology/service-topology/trace） |
+| analysisTarget | string | 分析目标 |
+| analysisTime | string | 分析时间 |
+| analysisTimeMs | long | 分析耗时（毫秒） |
+| summary | object | 风险统计摘要 |
+| risks | array | 风险列表 |
+
+**RiskSummary 字段**
+
+| 字段 | 类型 | 说明 |
+|-----|------|------|
+| total | int | 风险总数 |
+| critical | int | 严重风险数 |
+| high | int | 高风险数 |
+| medium | int | 中等风险数 |
+| low | int | 低风险数 |
+
+**RiskAnalysisResult 字段**
+
+| 字段 | 类型 | 说明 |
+|-----|------|------|
+| id | string | 风险ID |
+| name | string | 风险名称 |
+| description | string | 风险描述 |
+| category | string | 风险分类（见下表） |
+| severity | string | 严重等级（CRITICAL/HIGH/MEDIUM/LOW） |
+| impactScope | string | 影响范围描述 |
+| relatedResource | string | 关联资源 |
+| namespace | string | 命名空间 |
+| recommendedFaults | array | 推荐的故障注入列表 |
+
+**RecommendedFault 字段**
+
+| 字段 | 类型 | 说明 |
+|-----|------|------|
+| faultCode | string | 故障代码（ChaosBlade 故障类型） |
+| faultName | string | 故障名称 |
+| description | string | 故障描述和验证目标 |
+| priority | int | 优先级（1 最高） |
+| parameters | object | 故障参数 |
+
+**风险分类（RiskCategory）**
+
+| 分类 | 说明 |
+|-----|------|
+| SINGLE_POINT_FAILURE | 单点故障 - 缺少冗余配置 |
+| RESOURCE_BOTTLENECK | 资源瓶颈 - 资源限制不当 |
+| DEPENDENCY_RISK | 依赖风险 - 依赖关系过于复杂 |
+| PERFORMANCE_DEGRADATION | 性能退化 - 潜在性能问题 |
+| AVAILABILITY_RISK | 可用性风险 - 影响系统可用性 |
+
+**支持的故障类型（ChaosBlade）**
+
+| 故障代码 | 说明 |
+|---------|------|
+| chaosblade.k8s.container-cpu | CPU 满载 |
+| chaosblade.k8s.container-memory | 内存满载 |
+| chaosblade.k8s.container-disk | 磁盘负载提升 |
+| chaosblade.k8s.container-network-delay | 网络延迟 |
+| chaosblade.k8s.container-network-loss | 网络丢包 |
+| chaosblade.k8s.container-network-corrupt | 网络损坏 |
+| chaosblade.k8s.container-network-occupy | 网络占用 |
+| chaosblade.k8s.container-network-dns | DNS 异常 |
+| chaosblade.k8s.container-process-stop | 进程停滞 |
+| chaosblade.k8s.pod-kill | Pod 删除 |
+| chaosblade.k8s.container-remove | 容器移除 |
+
