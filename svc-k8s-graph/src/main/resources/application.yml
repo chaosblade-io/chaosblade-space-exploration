@@ -50,6 +50,16 @@ risk:
   trace:
     max-apis-per-service: 5  # 每个服务最多分析的API数量
 
+# ChaosBlade Box配置
+chaosblade:
+  box:
+    base-url: "http://1.94.151.57:7001"
+    username: "root"
+    password: "1234"
+    namespace: "default"
+    cookie-expire-minutes: 10
+    request-timeout-seconds: 30
+
 # Logging configuration
 logging:
   level:

@@ -1,6 +1,8 @@
 package com.chaosblade.svc.k8sgraph.service.risk;
 
 import com.chaosblade.svc.k8sgraph.client.LlmClient;
+import com.chaosblade.svc.k8sgraph.client.chaosblade.ChaosBladeService;
+import com.chaosblade.svc.k8sgraph.client.chaosblade.model.SceneFunction;
 import com.chaosblade.svc.k8sgraph.domain.risk.pipeline.*;
 import com.chaosblade.svc.k8sgraph.domain.risk.pipeline.ComprehensiveAnalysisResult.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,29 +12,104 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 
 /**
  * Phase 5: 综合分析与故障场景生成服务
- * 
+ *
  * 将三层风险信息（资源层、拓扑层、链路层）综合分析，生成可执行的混沌工程故障场景
  */
 @Service
 public class ComprehensiveAnalysisService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(ComprehensiveAnalysisService.class);
-    
+
     @Autowired
     private LlmClient llmClient;
-    
+
+    @Autowired
+    private ChaosBladeService chaosBladeService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
-    /** 系统提示词 */
-    private static final String SYSTEM_PROMPT = buildSystemPrompt();
+
+    /** 缓存的故障类型列表（格式：故障名称:故障代码） */
+    private List<String> cachedFaultTypes = new ArrayList<>();
+
+    /** 缓存的故障类型Map（code -> name） */
+    private Map<String, String> faultTypeMap = new HashMap<>();
     
     /**
+     * 初始化时加载故障类型列表
+     */
+    @PostConstruct
+    public void init() {
+        loadFaultTypes();
+    }
+
+    /**
+     * 加载ChaosBlade Box支持的故障类型
+     */
+    private void loadFaultTypes() {
+        try {
+            logger.info("Loading fault types from ChaosBlade Box...");
+            List<SceneFunction> functions = chaosBladeService.getAllSceneFunctions();
+
+            cachedFaultTypes.clear();
+            faultTypeMap.clear();
+
+            for (SceneFunction func : functions) {
+                String code = func.getCode();
+                String name = func.getName();
+                if (code != null && !code.isEmpty() && name != null && !name.isEmpty()) {
+                    cachedFaultTypes.add(name + ":" + code);
+                    faultTypeMap.put(code, name);
+                }
+            }
+
+            logger.info("Loaded {} fault types from ChaosBlade Box", cachedFaultTypes.size());
+        } catch (Exception e) {
+            logger.warn("Failed to load fault types from ChaosBlade Box: {}", e.getMessage());
+            // 使用默认故障类型
+            initDefaultFaultTypes();
+        }
+    }
+
+    /**
+     * 初始化默认故障类型（当无法从ChaosBlade Box获取时）
+     */
+    private void initDefaultFaultTypes() {
+        cachedFaultTypes.clear();
+        faultTypeMap.clear();
+
+        // 容器CPU相关
+        addFaultType("容器内Cpu满载", "chaos.container-cpu.fullload");
+        addFaultType("容器内Cpu占用过高", "chaos.container-cpu.load");
+        // 容器内存相关
+        addFaultType("容器内Mem占用过高", "chaos.container-mem.load");
+        addFaultType("容器内Mem使用量(oom)", "chaos.container-mem.oom");
+        // 容器网络相关
+        addFaultType("容器内网络延迟", "chaos.container-network.delay");
+        addFaultType("容器内网络丢包", "chaos.container-network.loss");
+        addFaultType("容器内网络DNS", "chaos.container-network.dns");
+        // Pod相关
+        addFaultType("Pod删除", "chaos.pod.delete");
+        addFaultType("Pod故障", "chaos.pod.fail");
+        // 进程相关
+        addFaultType("容器内进程杀死", "chaos.container-process.kill");
+        addFaultType("容器内进程停止", "chaos.container-process.stop");
+
+        logger.info("Initialized {} default fault types", cachedFaultTypes.size());
+    }
+
+    private void addFaultType(String name, String code) {
+        cachedFaultTypes.add(name + ":" + code);
+        faultTypeMap.put(code, name);
+    }
+
+    /**
      * 执行综合分析
-     * 
+     *
      * @param namespace 命名空间
      * @param phase1Results Phase 1规则扫描结果
      * @param phase2Result Phase 2拓扑风险结果
@@ -46,71 +123,83 @@ public class ComprehensiveAnalysisService {
             TopologyRiskResult phase2Result,
             RiskRankResult phase3Result,
             Map<String, TraceAnalysisResult> phase4Results) {
-        
+
         logger.info("Starting comprehensive analysis for namespace: {}", namespace);
-        
+
         ComprehensiveAnalysisResult result = new ComprehensiveAnalysisResult(namespace);
-        
+
         try {
+            // 确保故障类型已加载
+            if (cachedFaultTypes.isEmpty()) {
+                loadFaultTypes();
+            }
+
+            // 构建包含故障类型的系统提示词
+            String systemPrompt = buildSystemPromptWithFaultTypes();
+
             // 对每个Top N服务进行综合分析
             for (String serviceName : phase4Results.keySet()) {
                 logger.info("Analyzing service: {}", serviceName);
-                
+
                 ServiceComprehensiveAnalysis serviceAnalysis = analyzeService(
+                    namespace,
                     serviceName,
                     phase1Results.get(serviceName),
                     phase2Result,
                     phase3Result,
-                    phase4Results.get(serviceName)
+                    phase4Results.get(serviceName),
+                    systemPrompt
                 );
-                
+
                 result.getServiceAnalyses().put(serviceName, serviceAnalysis);
             }
-            
+
             // 生成全局摘要
             generateGlobalSummary(result, phase1Results, phase3Result);
-            
+
             // 生成全局改进建议
             generateGlobalRecommendations(result);
-            
+
         } catch (Exception e) {
             logger.error("Comprehensive analysis failed: {}", e.getMessage(), e);
         }
-        
+
         return result;
     }
-    
+
     /**
      * 分析单个服务
      */
     private ServiceComprehensiveAnalysis analyzeService(
+            String namespace,
             String serviceName,
             ServiceRiskProfile phase1Profile,
             TopologyRiskResult phase2Result,
             RiskRankResult phase3Result,
-            TraceAnalysisResult phase4Result) {
-        
+            TraceAnalysisResult phase4Result,
+            String systemPrompt) {
+
         // 构建LLM提示词
         String userPrompt = buildServiceAnalysisPrompt(
-            serviceName, phase1Profile, phase2Result, phase3Result, phase4Result);
-        
+            namespace, serviceName, phase1Profile, phase2Result, phase3Result, phase4Result);
+
         // 调用LLM
-        String llmResponse = llmClient.chat(SYSTEM_PROMPT, userPrompt);
-        
+        String llmResponse = llmClient.chat(systemPrompt, userPrompt);
+
         // 解析响应
         return parseServiceAnalysis(serviceName, llmResponse, phase1Profile);
     }
     
     /**
-     * 构建系统提示词
+     * 构建包含故障类型的系统提示词
      */
-    private static String buildSystemPrompt() {
+    private String buildSystemPromptWithFaultTypes() {
         StringBuilder sb = new StringBuilder();
         sb.append("你是一位资深的微服务架构师和混沌工程专家。\n\n");
-        
+
         sb.append("## 你的任务\n");
         sb.append("基于三层风险信息（资源层、拓扑层、链路层），进行综合分析并生成可执行的混沌工程故障场景。\n\n");
-        
+
         sb.append("## 分析要求\n");
         sb.append("1. **风险关联分析**：识别风险之间的因果关系，区分根因风险和衍生风险\n");
         sb.append("2. **因果链识别**：找出典型的风险传播模式，如：\n");
@@ -121,16 +210,25 @@ public class ComprehensiveAnalysisService {
         sb.append("   - 渐进式：从轻微故障开始，逐步加大强度\n");
         sb.append("   - 可观测：明确的成功/失败判定标准\n");
         sb.append("   - 可回滚：有清晰的故障终止和恢复方案\n\n");
-        
-        sb.append("## 故障场景类型映射\n");
-        sb.append("| 识别的风险 | 建议的故障场景 |\n");
+
+        // 添加ChaosBlade Box支持的故障类型列表
+        sb.append("## 【重要】可用的故障类型列表\n");
+        sb.append("以下是ChaosBlade Box平台支持的故障类型，格式为 `故障名称:故障代码`\n");
+        sb.append("**你必须从以下列表中选择故障类型，不要使用列表之外的故障类型！**\n\n");
+        sb.append("```\n");
+        for (String faultType : cachedFaultTypes) {
+            sb.append(faultType).append("\n");
+        }
+        sb.append("```\n\n");
+
+        sb.append("## 风险与故障类型的推荐映射\n");
+        sb.append("| 识别的风险 | 推荐的故障代码 |\n");
         sb.append("|-----------|---------------|\n");
-        sb.append("| 单副本部署 | POD_KILL, POD_FAILURE |\n");
-        sb.append("| 无资源限制 | CPU_STRESS, MEMORY_STRESS |\n");
-        sb.append("| 扇入瓶颈 | TRAFFIC_SPIKE, HTTP_DELAY |\n");
-        sb.append("| 数据库依赖 | DB_DELAY, NETWORK_DELAY |\n");
-        sb.append("| 网络调用链长 | NETWORK_DELAY, NETWORK_LOSS |\n");
-        sb.append("| 高错误率 | HTTP_ERROR, JVM_EXCEPTION |\n\n");
+        sb.append("| 单副本部署/可用性风险 | chaos.pod.delete, chaos.pod.fail |\n");
+        sb.append("| 无资源限制/CPU相关 | chaos.container-cpu.fullload, chaos.container-cpu.load |\n");
+        sb.append("| 无资源限制/内存相关 | chaos.container-mem.load, chaos.container-mem.oom |\n");
+        sb.append("| 网络调用链长/网络依赖 | chaos.container-network.delay, chaos.container-network.loss |\n");
+        sb.append("| 高错误率/进程问题 | chaos.container-process.kill, chaos.container-process.stop |\n\n");
 
         sb.append("## 严格按以下JSON格式输出\n");
         sb.append("```json\n");
@@ -147,7 +245,8 @@ public class ComprehensiveAnalysisService {
         sb.append("      \"score\": 30,\n");
         sb.append("      \"isRootCause\": true,\n");
         sb.append("      \"causesRiskIds\": [\"RISK_002\"],\n");
-        sb.append("      \"causedByRiskId\": null\n");
+        sb.append("      \"causedByRiskId\": null,\n");
+        sb.append("      \"relatedScenarioIds\": [\"CHAOS_001\"]\n");
         sb.append("    }\n");
         sb.append("  ],\n");
         sb.append("  \"causalChains\": [\n");
@@ -162,15 +261,16 @@ public class ComprehensiveAnalysisService {
         sb.append("    {\n");
         sb.append("      \"scenarioId\": \"CHAOS_001\",\n");
         sb.append("      \"name\": \"场景名称\",\n");
+        sb.append("      \"code\": \"chaos.container-cpu.fullload\",\n");
+        sb.append("      \"faultName\": \"容器内Cpu满载\",\n");
         sb.append("      \"targetRiskId\": \"RISK_001\",\n");
-        sb.append("      \"type\": \"POD_KILL|CPU_STRESS|MEMORY_STRESS|NETWORK_DELAY|...\",\n");
+        sb.append("      \"type\": \"CPU_STRESS\",\n");
         sb.append("      \"objective\": \"验证目标\",\n");
         sb.append("      \"intensity\": 3,\n");
         sb.append("      \"steps\": [\"步骤1\", \"步骤2\"],\n");
         sb.append("      \"expectedImpact\": \"预期影响\",\n");
         sb.append("      \"successCriteria\": [\"成功标准1\"],\n");
         sb.append("      \"rollbackPlan\": \"回滚方案\",\n");
-        sb.append("      \"chaosBladeCommand\": \"blade create ...\",\n");
         sb.append("      \"durationSeconds\": 60\n");
         sb.append("    }\n");
         sb.append("  ],\n");
@@ -187,7 +287,13 @@ public class ComprehensiveAnalysisService {
         sb.append("    }\n");
         sb.append("  ]\n");
         sb.append("}\n");
-        sb.append("```\n");
+        sb.append("```\n\n");
+
+        sb.append("## 注意事项\n");
+        sb.append("1. **code字段必须填写**：每个chaosScenario必须包含从故障类型列表中选择的code值\n");
+        sb.append("2. **faultName字段必须填写**：对应code的故障名称\n");
+        sb.append("3. **relatedScenarioIds字段**：每个risk需要关联对应的场景ID列表\n");
+        sb.append("4. **只使用列表中的故障代码**：不要编造不存在的故障类型\n");
 
         return sb.toString();
     }
@@ -196,6 +302,7 @@ public class ComprehensiveAnalysisService {
      * 构建服务分析提示词
      */
     private String buildServiceAnalysisPrompt(
+            String namespace,
             String serviceName,
             ServiceRiskProfile phase1Profile,
             TopologyRiskResult phase2Result,
@@ -203,7 +310,9 @@ public class ComprehensiveAnalysisService {
             TraceAnalysisResult phase4Result) {
 
         StringBuilder sb = new StringBuilder();
-        sb.append("## 分析目标服务: ").append(serviceName).append("\n\n");
+        sb.append("## 分析目标\n");
+        sb.append("- 命名空间: ").append(namespace).append("\n");
+        sb.append("- 服务名称: ").append(serviceName).append("\n\n");
 
         // Phase 1: 资源层风险
         sb.append("### 一、资源层风险（Phase 1: K8s配置扫描）\n");
@@ -394,7 +503,8 @@ public class ComprehensiveAnalysisService {
             analysis.setOverallRiskLevel(RiskLevel.valueOf(levelStr));
             analysis.setOverallRiskScore(root.path("overallRiskScore").asDouble(50.0));
 
-            // 解析Top风险
+            // 解析Top风险（先收集场景ID到风险的映射，后续关联场景对象）
+            Map<String, List<String>> riskToScenarioIds = new HashMap<>();
             JsonNode topRisksNode = root.path("topRisks");
             if (topRisksNode.isArray()) {
                 for (JsonNode riskNode : topRisksNode) {
@@ -415,6 +525,16 @@ public class ComprehensiveAnalysisService {
                             causes.add(c.asText());
                         }
                         risk.setCausesRiskIds(causes);
+                    }
+
+                    // 解析关联的场景ID列表
+                    JsonNode relatedScenarioIdsNode = riskNode.path("relatedScenarioIds");
+                    if (relatedScenarioIdsNode.isArray()) {
+                        List<String> scenarioIds = new ArrayList<>();
+                        for (JsonNode s : relatedScenarioIdsNode) {
+                            scenarioIds.add(s.asText());
+                        }
+                        riskToScenarioIds.put(risk.getRiskId(), scenarioIds);
                     }
 
                     analysis.getTopRisks().add(risk);
@@ -443,13 +563,25 @@ public class ComprehensiveAnalysisService {
                 }
             }
 
-            // 解析故障场景
+            // 解析故障场景，并构建场景ID到场景对象的映射
+            Map<String, ChaosScenario> scenarioMap = new HashMap<>();
             JsonNode scenariosNode = root.path("chaosScenarios");
             if (scenariosNode.isArray()) {
                 for (JsonNode scenarioNode : scenariosNode) {
                     ChaosScenario scenario = new ChaosScenario();
                     scenario.setScenarioId(scenarioNode.path("scenarioId").asText());
                     scenario.setName(scenarioNode.path("name").asText());
+
+                    // 解析新增的code和faultName字段
+                    String code = scenarioNode.path("code").asText(null);
+                    scenario.setCode(code);
+                    String faultName = scenarioNode.path("faultName").asText(null);
+                    // 如果LLM没有返回faultName，尝试从缓存的映射中获取
+                    if ((faultName == null || faultName.isEmpty()) && code != null) {
+                        faultName = faultTypeMap.get(code);
+                    }
+                    scenario.setFaultName(faultName);
+
                     scenario.setTargetRiskId(scenarioNode.path("targetRiskId").asText());
                     scenario.setType(parseScenarioType(scenarioNode.path("type").asText()));
                     scenario.setObjective(scenarioNode.path("objective").asText());
@@ -478,6 +610,22 @@ public class ComprehensiveAnalysisService {
                     }
 
                     analysis.getChaosScenarios().add(scenario);
+                    scenarioMap.put(scenario.getScenarioId(), scenario);
+                }
+            }
+
+            // 将场景对象关联到对应的风险
+            for (RiskWithCausality risk : analysis.getTopRisks()) {
+                List<String> scenarioIds = riskToScenarioIds.get(risk.getRiskId());
+                if (scenarioIds != null) {
+                    List<ChaosScenario> relatedScenarios = new ArrayList<>();
+                    for (String scenarioId : scenarioIds) {
+                        ChaosScenario scenario = scenarioMap.get(scenarioId);
+                        if (scenario != null) {
+                            relatedScenarios.add(scenario);
+                        }
+                    }
+                    risk.setRelatedScenarios(relatedScenarios);
                 }
             }
 

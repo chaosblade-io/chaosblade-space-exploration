@@ -130,37 +130,43 @@ public class ComprehensiveAnalysisResult {
         
         /** 导致的衍生风险ID列表 */
         private List<String> causesRiskIds = new ArrayList<>();
-        
+
         /** 由哪个风险导致（如果是衍生风险） */
         private String causedByRiskId;
-        
+
+        /** 关联的演练场景列表 */
+        private List<ChaosScenario> relatedScenarios = new ArrayList<>();
+
         // Getters and Setters
         public String getRiskId() { return riskId; }
         public void setRiskId(String riskId) { this.riskId = riskId; }
-        
+
         public RiskLayer getLayer() { return layer; }
         public void setLayer(RiskLayer layer) { this.layer = layer; }
-        
+
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
-        
+
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
-        
+
         public String getSeverity() { return severity; }
         public void setSeverity(String severity) { this.severity = severity; }
-        
+
         public double getScore() { return score; }
         public void setScore(double score) { this.score = score; }
-        
+
         public boolean isRootCause() { return isRootCause; }
         public void setRootCause(boolean rootCause) { isRootCause = rootCause; }
-        
+
         public List<String> getCausesRiskIds() { return causesRiskIds; }
         public void setCausesRiskIds(List<String> causesRiskIds) { this.causesRiskIds = causesRiskIds; }
-        
+
         public String getCausedByRiskId() { return causedByRiskId; }
         public void setCausedByRiskId(String causedByRiskId) { this.causedByRiskId = causedByRiskId; }
+
+        public List<ChaosScenario> getRelatedScenarios() { return relatedScenarios; }
+        public void setRelatedScenarios(List<ChaosScenario> relatedScenarios) { this.relatedScenarios = relatedScenarios; }
     }
 
     /**
@@ -212,6 +218,12 @@ public class ComprehensiveAnalysisResult {
         /** 场景名称 */
         private String name;
 
+        /** 故障代码（ChaosBlade Box故障类型code，如：chaos.container-cpu.fullload） */
+        private String code;
+
+        /** 故障类型名称（如：容器内Cpu满载） */
+        private String faultName;
+
         /** 针对的风险ID */
         private String targetRiskId;
 
@@ -248,6 +260,12 @@ public class ComprehensiveAnalysisResult {
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
+
+        public String getCode() { return code; }
+        public void setCode(String code) { this.code = code; }
+
+        public String getFaultName() { return faultName; }
+        public void setFaultName(String faultName) { this.faultName = faultName; }
 
         public String getTargetRiskId() { return targetRiskId; }
         public void setTargetRiskId(String targetRiskId) { this.targetRiskId = targetRiskId; }

@@ -2,6 +2,9 @@ package com.chaosblade.svc.k8sgraph.controller;
 
 import com.chaosblade.svc.k8sgraph.domain.risk.*;
 import com.chaosblade.svc.k8sgraph.domain.risk.pipeline.*;
+import com.chaosblade.svc.k8sgraph.service.ChaosBladeLabelerService;
+import com.chaosblade.svc.k8sgraph.service.ChaosBladeLabelerService.LabelingResult;
+import com.chaosblade.svc.k8sgraph.service.ChaosBladeLabelerService.DeploymentLabelStatus;
 import com.chaosblade.svc.k8sgraph.service.RiskAnalysisService;
 import com.chaosblade.svc.k8sgraph.service.risk.RiskPipelineOrchestrator;
 import com.chaosblade.svc.k8sgraph.service.risk.RiskRuleEngineService;
@@ -31,7 +34,10 @@ public class RiskAnalysisController {
 
     @Autowired
     private RiskPipelineOrchestrator riskPipelineOrchestrator;
-    
+
+    @Autowired
+    private ChaosBladeLabelerService chaosBladeLabelerService;
+
     /**
      * 分析 K8s 资源配置风险
      * 
@@ -220,6 +226,48 @@ public class RiskAnalysisController {
 
         PipelineResult result = riskPipelineOrchestrator.execute(namespace);
         return ResponseEntity.ok(result.getSummary());
+    }
+
+    // ==================== ChaosBlade标签管理接口 ====================
+
+    /**
+     * 给命名空间下所有Deployment打上ChaosBlade标签
+     *
+     * POST /api/risk-analysis/chaosblade/label/{namespace}
+     * 可选参数: appGroup (默认使用命名空间名称)
+     */
+    @PostMapping("/chaosblade/label/{namespace}")
+    public ResponseEntity<LabelingResult> labelNamespaceForChaosBlade(
+            @PathVariable String namespace,
+            @RequestParam(required = false) String appGroup) {
+        logger.info("Received ChaosBlade labeling request: namespace={}, appGroup={}", namespace, appGroup);
+
+        if (namespace == null || namespace.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // 如果没有指定appGroup，使用namespace作为默认值
+        String effectiveAppGroup = (appGroup != null && !appGroup.trim().isEmpty()) ? appGroup : namespace;
+
+        LabelingResult result = chaosBladeLabelerService.labelNamespace(namespace, effectiveAppGroup);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 获取命名空间下所有Deployment的ChaosBlade标签状态
+     *
+     * GET /api/risk-analysis/chaosblade/label/{namespace}/status
+     */
+    @GetMapping("/chaosblade/label/{namespace}/status")
+    public ResponseEntity<java.util.List<DeploymentLabelStatus>> getLabelStatus(@PathVariable String namespace) {
+        logger.info("Received ChaosBlade label status request: namespace={}", namespace);
+
+        if (namespace == null || namespace.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        java.util.List<DeploymentLabelStatus> statusList = chaosBladeLabelerService.getLabelStatus(namespace);
+        return ResponseEntity.ok(statusList);
     }
 }
 
