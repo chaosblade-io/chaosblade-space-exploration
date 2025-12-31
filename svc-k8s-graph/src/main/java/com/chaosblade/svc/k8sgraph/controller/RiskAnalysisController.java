@@ -6,6 +6,7 @@ import com.chaosblade.svc.k8sgraph.service.ChaosBladeLabelerService;
 import com.chaosblade.svc.k8sgraph.service.ChaosBladeLabelerService.LabelingResult;
 import com.chaosblade.svc.k8sgraph.service.ChaosBladeLabelerService.DeploymentLabelStatus;
 import com.chaosblade.svc.k8sgraph.service.RiskAnalysisService;
+import com.chaosblade.svc.k8sgraph.service.risk.AsyncPipelineService;
 import com.chaosblade.svc.k8sgraph.service.risk.RiskPipelineOrchestrator;
 import com.chaosblade.svc.k8sgraph.service.risk.RiskRuleEngineService;
 import org.slf4j.Logger;
@@ -14,7 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 风险分析 API Controller
@@ -34,6 +37,9 @@ public class RiskAnalysisController {
 
     @Autowired
     private RiskPipelineOrchestrator riskPipelineOrchestrator;
+
+    @Autowired
+    private AsyncPipelineService asyncPipelineService;
 
     @Autowired
     private ChaosBladeLabelerService chaosBladeLabelerService;
@@ -187,21 +193,138 @@ public class RiskAnalysisController {
         return ResponseEntity.ok(rules);
     }
 
-    // ==================== Pipeline接口 ====================
+    // ==================== Pipeline接口（异步模式） ====================
 
     /**
-     * 执行完整的风险分析Pipeline
+     * 启动风险分析Pipeline（异步）
      *
      * GET /api/risk-analysis/pipeline/{namespace}
      *
-     * 执行三阶段风险分析：
+     * 立即返回执行状态，Pipeline在后台异步执行。
+     * 如果该namespace已有任务在执行，直接返回当前执行状态。
+     *
+     * 执行六阶段风险分析：
      * - Phase 1: 规则扫描
      * - Phase 2: 拓扑LLM分析
      * - Phase 3: RiskRank计算
+     * - Phase 4: Trace深度分析
+     * - Phase 5: 综合分析与故障场景生成
+     * - Phase 6: 实验配置生成
      */
     @GetMapping("/pipeline/{namespace}")
-    public ResponseEntity<PipelineResult> executePipeline(@PathVariable String namespace) {
-        logger.info("Received pipeline execution request: namespace={}", namespace);
+    public ResponseEntity<PipelineExecutionStatus> executePipeline(@PathVariable String namespace) {
+        logger.info("Received async pipeline execution request: namespace={}", namespace);
+
+        if (namespace == null || namespace.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        PipelineExecutionStatus status = asyncPipelineService.startPipeline(namespace);
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * 获取Pipeline执行状态
+     *
+     * GET /api/risk-analysis/pipeline/{namespace}/status
+     *
+     * 返回当前执行进度、各Phase状态、错误信息等
+     */
+    @GetMapping("/pipeline/{namespace}/status")
+    public ResponseEntity<PipelineExecutionStatus> getPipelineStatus(@PathVariable String namespace) {
+        logger.info("Received pipeline status request: namespace={}", namespace);
+
+        if (namespace == null || namespace.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        PipelineExecutionStatus status = asyncPipelineService.getStatus(namespace);
+        if (status == null) {
+            // 如果没有执行记录，返回默认状态
+            Map<String, Object> response = new HashMap<>();
+            response.put("namespace", namespace);
+            response.put("state", "NOT_STARTED");
+            response.put("message", "该namespace尚未执行过Pipeline分析");
+            return ResponseEntity.ok(new PipelineExecutionStatus(null, namespace));
+        }
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * 获取Pipeline完整结果
+     *
+     * GET /api/risk-analysis/pipeline/{namespace}/summary
+     *
+     * 如果Pipeline已完成，返回完整的PipelineResult。
+     * 如果Pipeline未完成或未执行，返回当前执行状态和默认结构。
+     */
+    @GetMapping("/pipeline/{namespace}/summary")
+    public ResponseEntity<Map<String, Object>> getPipelineSummary(@PathVariable String namespace) {
+        logger.info("Received pipeline summary request: namespace={}", namespace);
+
+        if (namespace == null || namespace.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        PipelineExecutionStatus status = asyncPipelineService.getStatus(namespace);
+        Map<String, Object> response = new HashMap<>();
+        response.put("namespace", namespace);
+
+        if (status == null) {
+            response.put("state", "NOT_STARTED");
+            response.put("message", "该namespace尚未执行过Pipeline分析");
+            response.put("result", null);
+            return ResponseEntity.ok(response);
+        }
+
+        response.put("executionId", status.getExecutionId());
+        response.put("state", status.getState().name());
+        response.put("currentPhase", status.getCurrentPhase());
+        response.put("progressPercent", status.getProgressPercent());
+        response.put("startTime", status.getStartTime());
+        response.put("endTime", status.getEndTime());
+        response.put("elapsedTimeMs", status.getElapsedTimeMs());
+        response.put("phaseStatuses", status.getPhaseStatuses());
+
+        if (status.getState() == PipelineExecutionStatus.ExecutionState.COMPLETED) {
+            response.put("result", status.getResult());
+        } else if (status.getState() == PipelineExecutionStatus.ExecutionState.FAILED) {
+            response.put("errorMessage", status.getErrorMessage());
+            response.put("failedPhase", status.getFailedPhase());
+            response.put("result", null);
+        } else {
+            response.put("message", "Pipeline正在执行中，请稍后再试");
+            response.put("result", null);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 获取Pipeline历史执行记录
+     *
+     * GET /api/risk-analysis/pipeline/{namespace}/history
+     */
+    @GetMapping("/pipeline/{namespace}/history")
+    public ResponseEntity<List<PipelineExecutionStatus>> getPipelineHistory(@PathVariable String namespace) {
+        logger.info("Received pipeline history request: namespace={}", namespace);
+
+        if (namespace == null || namespace.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<PipelineExecutionStatus> history = asyncPipelineService.getHistory(namespace);
+        return ResponseEntity.ok(history);
+    }
+
+    /**
+     * 同步执行Pipeline（用于调试或小规模测试）
+     *
+     * GET /api/risk-analysis/pipeline/{namespace}/sync
+     */
+    @GetMapping("/pipeline/{namespace}/sync")
+    public ResponseEntity<PipelineResult> executePipelineSync(@PathVariable String namespace) {
+        logger.info("Received sync pipeline execution request: namespace={}", namespace);
 
         if (namespace == null || namespace.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -209,23 +332,6 @@ public class RiskAnalysisController {
 
         PipelineResult result = riskPipelineOrchestrator.execute(namespace);
         return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 获取Pipeline执行摘要（轻量级接口）
-     *
-     * GET /api/risk-analysis/pipeline/{namespace}/summary
-     */
-    @GetMapping("/pipeline/{namespace}/summary")
-    public ResponseEntity<PipelineResult.PipelineSummary> getPipelineSummary(@PathVariable String namespace) {
-        logger.info("Received pipeline summary request: namespace={}", namespace);
-
-        if (namespace == null || namespace.trim().isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        PipelineResult result = riskPipelineOrchestrator.execute(namespace);
-        return ResponseEntity.ok(result.getSummary());
     }
 
     // ==================== ChaosBlade标签管理接口 ====================

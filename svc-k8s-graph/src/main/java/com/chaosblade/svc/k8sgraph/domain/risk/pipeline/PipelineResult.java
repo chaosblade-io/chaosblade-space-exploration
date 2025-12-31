@@ -56,6 +56,9 @@ public class PipelineResult {
     /** Phase 5耗时(ms) */
     private long phase5TimeMs;
 
+    /** Phase 6耗时(ms) */
+    private long phase6TimeMs;
+
     /** 总耗时(ms) */
     private long totalTimeMs;
     
@@ -116,6 +119,9 @@ public class PipelineResult {
 
     public long getPhase5TimeMs() { return phase5TimeMs; }
     public void setPhase5TimeMs(long phase5TimeMs) { this.phase5TimeMs = phase5TimeMs; }
+
+    public long getPhase6TimeMs() { return phase6TimeMs; }
+    public void setPhase6TimeMs(long phase6TimeMs) { this.phase6TimeMs = phase6TimeMs; }
 
     public long getTotalTimeMs() { return totalTimeMs; }
     public void setTotalTimeMs(long totalTimeMs) { this.totalTimeMs = totalTimeMs; }

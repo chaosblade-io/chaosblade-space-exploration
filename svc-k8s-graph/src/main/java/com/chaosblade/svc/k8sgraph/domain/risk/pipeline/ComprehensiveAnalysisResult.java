@@ -254,6 +254,18 @@ public class ComprehensiveAnalysisResult {
         /** 建议的执行时长（秒） */
         private int durationSeconds;
 
+        /** 故障参数（LLM生成，如cpu-percent=80） */
+        private Map<String, String> faultParams = new HashMap<>();
+
+        /** 生成的实验配置（Phase 6填充） */
+        private Object experimentConfig;
+
+        /** 配置生成是否成功 */
+        private boolean configGenerated = false;
+
+        /** 配置生成失败原因 */
+        private String configError;
+
         // Getters and Setters
         public String getScenarioId() { return scenarioId; }
         public void setScenarioId(String scenarioId) { this.scenarioId = scenarioId; }
@@ -296,6 +308,18 @@ public class ComprehensiveAnalysisResult {
 
         public int getDurationSeconds() { return durationSeconds; }
         public void setDurationSeconds(int durationSeconds) { this.durationSeconds = durationSeconds; }
+
+        public Map<String, String> getFaultParams() { return faultParams; }
+        public void setFaultParams(Map<String, String> faultParams) { this.faultParams = faultParams; }
+
+        public Object getExperimentConfig() { return experimentConfig; }
+        public void setExperimentConfig(Object experimentConfig) { this.experimentConfig = experimentConfig; }
+
+        public boolean isConfigGenerated() { return configGenerated; }
+        public void setConfigGenerated(boolean configGenerated) { this.configGenerated = configGenerated; }
+
+        public String getConfigError() { return configError; }
+        public void setConfigError(String configError) { this.configError = configError; }
     }
 
     /**
