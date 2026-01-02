@@ -117,18 +117,19 @@ public class RiskRankAlgorithm {
             double inherent = inherentRiskScores.get(service);
             double propagated = propagatedScores.getOrDefault(service, 0.0);
             double total = inherent + propagated;
-            
+
             RankedService ranked = new RankedService();
             ranked.setServiceName(service);
-            ranked.setInherentRiskScore(inherent);
-            ranked.setPropagatedRiskScore(propagated);
-            ranked.setRiskRankScore(total);
-            
+            // 四舍五入到两位小数
+            ranked.setInherentRiskScore(roundToTwoDecimals(inherent));
+            ranked.setPropagatedRiskScore(roundToTwoDecimals(propagated));
+            ranked.setRiskRankScore(roundToTwoDecimals(total));
+
             if (total > 0) {
-                ranked.setInherentRiskRatio(inherent / total);
-                ranked.setPropagatedRiskRatio(propagated / total);
+                ranked.setInherentRiskRatio(roundToTwoDecimals(inherent / total));
+                ranked.setPropagatedRiskRatio(roundToTwoDecimals(propagated / total));
             }
-            
+
             ranked.setRiskLevel(calculateRiskLevel(total));
             
             // 找出主要贡献者
@@ -275,6 +276,13 @@ public class RiskRankAlgorithm {
 
     public void setConvergenceThreshold(double convergenceThreshold) {
         this.convergenceThreshold = convergenceThreshold;
+    }
+
+    /**
+     * 四舍五入到两位小数
+     */
+    private double roundToTwoDecimals(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 }
 
