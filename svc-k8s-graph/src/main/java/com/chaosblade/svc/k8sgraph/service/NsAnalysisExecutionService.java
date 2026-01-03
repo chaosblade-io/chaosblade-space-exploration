@@ -2,6 +2,7 @@ package com.chaosblade.svc.k8sgraph.service;
 
 import com.chaosblade.svc.k8sgraph.domain.risk.pipeline.*;
 import com.chaosblade.svc.k8sgraph.domain.risk.pipeline.PipelineExecutionStatus.ExecutionState;
+import com.chaosblade.svc.k8sgraph.entity.NsAnalysisLog;
 import com.chaosblade.svc.k8sgraph.entity.NsAnalysisTask;
 import com.chaosblade.svc.k8sgraph.service.risk.RiskPipelineOrchestrator;
 import org.slf4j.Logger;
@@ -121,11 +122,15 @@ public class NsAnalysisExecutionService {
             cacheService.updateProgress(taskId, 0, 5, "开始分析...");
             status.setState(ExecutionState.RUNNING);
 
+            // 记录开始日志
+            addLog(taskId, NsAnalysisLog.INFO, "任务开始执行, namespace=" + namespace);
+
             logger.info("Task execution started in thread pool: taskId={}, namespace={}, thread={}",
                 taskId, namespace, Thread.currentThread().getName());
 
             // 检查是否被取消
             if (isCancelled(taskId)) {
+                addLog(taskId, NsAnalysisLog.WARN, "任务被取消");
                 handleCancellation(taskId, status);
                 return;
             }
@@ -135,11 +140,13 @@ public class NsAnalysisExecutionService {
 
             // 检查是否被取消
             if (isCancelled(taskId)) {
+                addLog(taskId, NsAnalysisLog.WARN, "任务被取消");
                 handleCancellation(taskId, status);
                 return;
             }
 
             // 完成任务
+            long duration = System.currentTimeMillis() - startTime;
             if (result.isSuccess()) {
                 persistenceService.completeTask(taskId);
                 cacheService.updateProgress(taskId, 6, 100, "分析完成");
@@ -149,14 +156,21 @@ public class NsAnalysisExecutionService {
                 // 缓存结果
                 cacheResult(taskId, namespace, result);
 
-                logger.info("Task completed successfully: taskId={}, duration={}ms",
-                    taskId, System.currentTimeMillis() - startTime);
+                // 记录完成日志
+                addLog(taskId, NsAnalysisLog.INFO, 6,
+                    String.format("任务执行完成, 耗时%dms, 服务数=%d", duration, result.getPhase1Results().size()),
+                    null, duration);
+
+                logger.info("Task completed successfully: taskId={}, duration={}ms", taskId, duration);
             } else {
                 persistenceService.failTask(taskId, "ANALYSIS_FAILED", result.getErrorMessage());
                 cacheService.updateProgress(taskId, status.getCurrentPhase(),
                     status.getProgressPercent(), "分析失败: " + result.getErrorMessage());
                 status.setState(ExecutionState.FAILED);
                 status.setErrorMessage(result.getErrorMessage());
+
+                // 记录失败日志
+                addLog(taskId, NsAnalysisLog.ERROR, "任务执行失败: " + result.getErrorMessage());
 
                 logger.error("Task failed: taskId={}, error={}", taskId, result.getErrorMessage());
             }
@@ -168,9 +182,31 @@ public class NsAnalysisExecutionService {
                 status.getProgressPercent(), "执行异常: " + e.getMessage());
             status.setState(ExecutionState.FAILED);
             status.setErrorMessage(e.getMessage());
+
+            // 记录异常日志
+            addLog(taskId, NsAnalysisLog.ERROR, "任务执行异常: " + e.getMessage());
         } finally {
             // 清理
             cancelledTasks.remove(taskId);
+        }
+    }
+
+    /**
+     * 添加执行日志
+     */
+    private void addLog(String taskId, int level, String message) {
+        try {
+            persistenceService.addLog(taskId, level, message);
+        } catch (Exception e) {
+            logger.warn("Failed to add log for task {}: {}", taskId, e.getMessage());
+        }
+    }
+
+    private void addLog(String taskId, int level, int phase, String message, String details, Long durationMs) {
+        try {
+            persistenceService.addLog(taskId, level, phase, message, details, durationMs);
+        } catch (Exception e) {
+            logger.warn("Failed to add log for task {}: {}", taskId, e.getMessage());
         }
     }
 
@@ -214,6 +250,7 @@ public class NsAnalysisExecutionService {
      */
     private Thread startProgressMonitor(String taskId, PipelineExecutionStatus status) {
         Thread thread = new Thread(() -> {
+            int lastPhase = 0;
             try {
                 while (!Thread.currentThread().isInterrupted()) {
                     // 检查是否被取消
@@ -225,6 +262,14 @@ public class NsAnalysisExecutionService {
                     int phase = status.getCurrentPhase();
                     int percent = status.getProgressPercent();
                     String message = getPhaseMessage(status);
+
+                    // 阶段变化时记录日志
+                    if (phase != lastPhase && phase > 0) {
+                        addLog(taskId, NsAnalysisLog.INFO, phase,
+                            String.format("开始执行阶段%d: %s", phase, getPhaseNameByNumber(phase)),
+                            null, null);
+                        lastPhase = phase;
+                    }
 
                     persistenceService.updateProgress(taskId, phase, percent);
                     cacheService.updateProgress(taskId, phase, percent, message);
@@ -238,6 +283,21 @@ public class NsAnalysisExecutionService {
         thread.setDaemon(true);
         thread.start();
         return thread;
+    }
+
+    /**
+     * 根据阶段编号获取阶段名称
+     */
+    private String getPhaseNameByNumber(int phase) {
+        switch (phase) {
+            case 1: return "服务发现";
+            case 2: return "依赖分析";
+            case 3: return "指标采集";
+            case 4: return "风险评估";
+            case 5: return "结果聚合";
+            case 6: return "完成";
+            default: return "未知阶段";
+        }
     }
 
     /**

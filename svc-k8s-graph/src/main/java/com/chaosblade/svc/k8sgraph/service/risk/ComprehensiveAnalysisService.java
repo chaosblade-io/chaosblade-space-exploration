@@ -179,6 +179,9 @@ public class ComprehensiveAnalysisService {
             TraceAnalysisResult phase4Result,
             String systemPrompt) {
 
+        // 从Phase3获取该服务的风险分数和级别
+        RiskRankResult.RankedService phase3Service = findServiceInPhase3(phase3Result, serviceName);
+
         // 构建LLM提示词
         String userPrompt = buildServiceAnalysisPrompt(
             namespace, serviceName, phase1Profile, phase2Result, phase3Result, phase4Result);
@@ -186,8 +189,21 @@ public class ComprehensiveAnalysisService {
         // 调用LLM
         String llmResponse = llmClient.chat(systemPrompt, userPrompt);
 
-        // 解析响应
-        return parseServiceAnalysis(serviceName, llmResponse, phase1Profile);
+        // 解析响应，并使用Phase3的分数和级别
+        return parseServiceAnalysis(serviceName, llmResponse, phase1Profile, phase3Service);
+    }
+
+    /**
+     * 从Phase3结果中查找指定服务
+     */
+    private RiskRankResult.RankedService findServiceInPhase3(RiskRankResult phase3Result, String serviceName) {
+        if (phase3Result == null || phase3Result.getRankedServices() == null) {
+            return null;
+        }
+        return phase3Result.getRankedServices().stream()
+                .filter(s -> serviceName.equals(s.getServiceName()))
+                .findFirst()
+                .orElse(null);
     }
     
     /**
@@ -489,19 +505,41 @@ public class ComprehensiveAnalysisService {
 
     // ==================== LLM响应解析 ====================
 
+    /**
+     * 解析LLM响应并设置服务分析结果
+     *
+     * 重要：overallRiskScore和overallRiskLevel直接使用Phase3的计算结果，
+     * 确保与Phase3保持一致，不依赖LLM的判断
+     */
     private ServiceComprehensiveAnalysis parseServiceAnalysis(String serviceName, String llmResponse,
-            ServiceRiskProfile phase1Profile) {
+            ServiceRiskProfile phase1Profile, RiskRankResult.RankedService phase3Service) {
         ServiceComprehensiveAnalysis analysis = new ServiceComprehensiveAnalysis();
         analysis.setServiceName(serviceName);
+
+        // 【关键】使用Phase3的分数和级别，确保一致性
+        if (phase3Service != null) {
+            analysis.setOverallRiskScore(phase3Service.getRiskRankScore());
+            analysis.setOverallRiskLevel(parseRiskLevelFromString(phase3Service.getRiskLevel()));
+            logger.debug("Using Phase3 risk score for {}: score={}, level={}",
+                    serviceName, phase3Service.getRiskRankScore(), phase3Service.getRiskLevel());
+        } else {
+            // 如果Phase3中找不到该服务，使用Phase1的分数
+            if (phase1Profile != null) {
+                analysis.setOverallRiskScore(phase1Profile.getTotalScore());
+                analysis.setOverallRiskLevel(parseRiskLevelFromString(phase1Profile.getRiskLevel()));
+            } else {
+                analysis.setOverallRiskScore(50.0);
+                analysis.setOverallRiskLevel(RiskLevel.MEDIUM);
+            }
+            logger.warn("Service {} not found in Phase3 result, using fallback", serviceName);
+        }
 
         try {
             String json = extractJson(llmResponse);
             JsonNode root = objectMapper.readTree(json);
 
-            // 解析风险等级和分数
-            String levelStr = root.path("overallRiskLevel").asText("MEDIUM");
-            analysis.setOverallRiskLevel(RiskLevel.valueOf(levelStr));
-            analysis.setOverallRiskScore(root.path("overallRiskScore").asDouble(50.0));
+            // 注意：不再从LLM响应中读取overallRiskLevel和overallRiskScore
+            // 这些值已经在上面从Phase3设置好了
 
             // 解析Top风险（先收集场景ID到风险的映射，后续关联场景对象）
             Map<String, List<String>> riskToScenarioIds = new HashMap<>();
@@ -665,14 +703,8 @@ public class ComprehensiveAnalysisService {
 
         } catch (Exception e) {
             logger.error("Failed to parse LLM response for service {}: {}", serviceName, e.getMessage());
-            // 设置默认值
-            if (phase1Profile != null) {
-                analysis.setOverallRiskLevel(parseRiskLevelFromString(phase1Profile.getRiskLevel()));
-                analysis.setOverallRiskScore(phase1Profile.getTotalScore());
-            } else {
-                analysis.setOverallRiskLevel(RiskLevel.MEDIUM);
-                analysis.setOverallRiskScore(50.0);
-            }
+            // 注意：overallRiskScore和overallRiskLevel已在方法开头从Phase3设置，
+            // 这里不需要再设置，LLM解析失败只影响topRisks、chaosScenarios等字段
         }
 
         return analysis;

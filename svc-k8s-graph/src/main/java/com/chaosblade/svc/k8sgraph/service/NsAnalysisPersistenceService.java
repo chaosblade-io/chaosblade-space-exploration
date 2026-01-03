@@ -1,8 +1,10 @@
 package com.chaosblade.svc.k8sgraph.service;
 
 import com.chaosblade.svc.k8sgraph.dto.*;
+import com.chaosblade.svc.k8sgraph.entity.NsAnalysisLog;
 import com.chaosblade.svc.k8sgraph.entity.NsAnalysisResult;
 import com.chaosblade.svc.k8sgraph.entity.NsAnalysisTask;
+import com.chaosblade.svc.k8sgraph.repository.NsAnalysisLogRepository;
 import com.chaosblade.svc.k8sgraph.repository.NsAnalysisResultRepository;
 import com.chaosblade.svc.k8sgraph.repository.NsAnalysisTaskRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +51,9 @@ public class NsAnalysisPersistenceService {
 
     @Autowired
     private NsAnalysisResultRepository resultRepository;
+
+    @Autowired
+    private NsAnalysisLogRepository logRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -157,11 +162,19 @@ public class NsAnalysisPersistenceService {
     }
 
     /**
-     * 获取任务
+     * 获取任务（通过taskId字符串）
      */
     @Transactional(readOnly = true)
     public Optional<NsAnalysisTask> getTask(String taskId) {
         return taskRepository.findByTaskId(taskId);
+    }
+
+    /**
+     * 获取任务（通过数据库主键ID）
+     */
+    @Transactional(readOnly = true)
+    public Optional<NsAnalysisTask> getTaskByDbId(Long dbId) {
+        return taskRepository.findById(dbId);
     }
 
     /**
@@ -455,6 +468,82 @@ public class NsAnalysisPersistenceService {
             logger.error("Failed to parse phase {} result: taskId={}", phase, taskId, e);
             return Optional.empty();
         }
+    }
+
+    // ==================== 日志相关方法 ====================
+
+    /**
+     * 添加日志
+     */
+    public NsAnalysisLog addLog(String taskId, int level, String message) {
+        NsAnalysisLog log = new NsAnalysisLog(taskId, level, message);
+        return logRepository.save(log);
+    }
+
+    /**
+     * 添加带阶段的日志
+     */
+    public NsAnalysisLog addLog(String taskId, int level, int phase, String message) {
+        NsAnalysisLog log = new NsAnalysisLog(taskId, level, phase, message);
+        return logRepository.save(log);
+    }
+
+    /**
+     * 添加带详情的日志
+     */
+    public NsAnalysisLog addLog(String taskId, int level, int phase, String message, String details, Long durationMs) {
+        NsAnalysisLog log = new NsAnalysisLog(taskId, level, phase, message);
+        log.setDetails(details);
+        log.setDurationMs(durationMs);
+        return logRepository.save(log);
+    }
+
+    /**
+     * 获取任务的所有日志
+     */
+    @Transactional(readOnly = true)
+    public List<NsAnalysisLog> getLogs(String taskId) {
+        return logRepository.findByTaskIdOrderByCreatedAtAsc(taskId);
+    }
+
+    /**
+     * 分页获取任务日志
+     */
+    @Transactional(readOnly = true)
+    public Page<NsAnalysisLog> getLogs(String taskId, int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size);
+        return logRepository.findByTaskIdOrderByCreatedAtAsc(taskId, pageable);
+    }
+
+    /**
+     * 获取任务的日志（按最低级别过滤）
+     */
+    @Transactional(readOnly = true)
+    public List<NsAnalysisLog> getLogs(String taskId, int minLevel) {
+        return logRepository.findByTaskIdAndMinLevel(taskId, minLevel);
+    }
+
+    /**
+     * 获取任务指定阶段的日志
+     */
+    @Transactional(readOnly = true)
+    public List<NsAnalysisLog> getLogsByPhase(String taskId, int phase) {
+        return logRepository.findByTaskIdAndPhaseOrderByCreatedAtAsc(taskId, phase);
+    }
+
+    /**
+     * 获取任务的错误日志数量
+     */
+    @Transactional(readOnly = true)
+    public long countErrors(String taskId) {
+        return logRepository.countErrorsByTaskId(taskId);
+    }
+
+    /**
+     * 删除任务的所有日志
+     */
+    public void deleteLogs(String taskId) {
+        logRepository.deleteByTaskId(taskId);
     }
 }
 

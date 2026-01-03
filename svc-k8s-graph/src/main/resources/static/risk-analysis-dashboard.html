@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChaosBlade Risk Analysis Pipeline</title>
+    <style>
+        :root {
+            --primary-color: #1a73e8;
+            --primary-dark: #0d47a1;
+            --primary-light: #e3f2fd;
+            --success-color: #34a853;
+            --warning-color: #fbbc04;
+            --danger-color: #ea4335;
+            --critical-color: #d32f2f;
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-primary: #202124;
+            --text-secondary: #5f6368;
+            --border-color: #dadce0;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-hover: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+            color: white;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .navbar-brand svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .navbar-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 主容器 */
+        .main-container {
+            margin-top: 64px;
+            padding: 24px;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .control-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .control-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .control-form {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .btn-primary:disabled {
+            background: var(--border-color);
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-color);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        /* 阶段进度条 */
+        .phases-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .phases-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .phases-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .phases-time {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .phases-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+        }
+
+        .phase-card {
+            background: var(--bg-color);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .phase-card.active {
+            border-color: var(--primary-color);
+            background: var(--primary-light);
+        }
+
+        .phase-card.completed {
+            border-color: var(--success-color);
+            background: #e8f5e9;
+        }
+
+        .phase-card.failed {
+            border-color: var(--danger-color);
+            background: #ffebee;
+        }
+
+        .phase-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--border-color);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .phase-card.active .phase-number {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .phase-card.completed .phase-number {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .phase-name {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .phase-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .phase-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .phase-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--primary-color);
+            transition: width 0.3s;
+        }
+
+        /* 摘要卡片 */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .summary-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            font-size: 24px;
+        }
+
+        .summary-icon.blue { background: var(--primary-light); color: var(--primary-color); }
+        .summary-icon.green { background: #e8f5e9; color: var(--success-color); }
+        .summary-icon.orange { background: #fff3e0; color: #f57c00; }
+        .summary-icon.red { background: #ffebee; color: var(--danger-color); }
+
+        .summary-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .summary-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* 标签页 */
+        .tabs-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .tabs-header {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 16px 24px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-color);
+            background: var(--primary-light);
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            padding: 24px;
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 表格样式 */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background: var(--bg-color);
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table tr:hover {
+            background: var(--bg-color);
+        }
+
+        .risk-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .risk-badge.critical { background: #ffcdd2; color: #c62828; }
+        .risk-badge.high { background: #ffe0b2; color: #e65100; }
+        .risk-badge.medium { background: #fff9c4; color: #f9a825; }
+        .risk-badge.low { background: #c8e6c9; color: #2e7d32; }
+
+        .score-bar {
+            width: 100px;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        /* 场景卡片 */
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 16px;
+        }
+
+        .scenario-card {
+            background: var(--bg-color);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .scenario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .scenario-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .scenario-type {
+            font-size: 11px;
+            padding: 4px 8px;
+            background: var(--primary-light);
+            color: var(--primary-color);
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .scenario-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .scenario-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .scenario-tag {
+            font-size: 11px;
+            padding: 3px 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        /* JSON查看器 */
+        .json-viewer {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .json-viewer pre {
+            color: #d4d4d4;
+            font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .json-key { color: #9cdcfe; }
+        .json-string { color: #ce9178; }
+        .json-number { color: #b5cea8; }
+        .json-boolean { color: #569cd6; }
+        .json-null { color: #808080; }
+
+        /* 加载动画 */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .phases-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .phases-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .control-form {
+                flex-direction: column;
+            }
+            .form-group {
+                width: 100%;
+            }
+        }
+
+        /* 历史记录侧边栏 */
+        .history-panel {
+            position: fixed;
+            right: -400px;
+            top: 64px;
+            bottom: 0;
+            width: 400px;
+            background: var(--card-bg);
+            box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+            transition: right 0.3s;
+            z-index: 999;
+            overflow-y: auto;
+        }
+
+        .history-panel.open {
+            right: 0;
+        }
+
+        .history-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: var(--card-bg);
+        }
+
+        .history-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .history-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .history-list {
+            padding: 16px;
+        }
+
+        .history-item {
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            border-color: var(--primary-color);
+            background: var(--primary-light);
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .history-item-id {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .history-item-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .history-item-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Toast通知 */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 2000;
+        }
+
+        .toast {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: var(--shadow-hover);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s;
+            max-width: 400px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast.success { border-left: 4px solid var(--success-color); }
+        .toast.error { border-left: 4px solid var(--danger-color); }
+        .toast.warning { border-left: 4px solid var(--warning-color); }
+        .toast.info { border-left: 4px solid var(--primary-color); }
+
+        /* 任务列表样式 */
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .task-table th,
+        .task-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        .task-table th {
+            background: var(--bg-color);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .task-table tr:hover {
+            background: var(--bg-color);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-badge.pending { background: #e3f2fd; color: #1565c0; }
+        .status-badge.running { background: #fff3e0; color: #e65100; }
+        .status-badge.completed { background: #e8f5e9; color: #2e7d32; }
+        .status-badge.failed { background: #ffebee; color: #c62828; }
+        .status-badge.cancelled { background: #f5f5f5; color: #616161; }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--card-bg);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            margin-right: 4px;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-light);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .action-btn.danger:hover {
+            background: #ffebee;
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .pagination-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--card-bg);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: var(--primary-light);
+            border-color: var(--primary-color);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            width: 80px;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 0.3s;
+        }
+
+        /* 确认对话框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: var(--shadow-hover);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .modal-body {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <svg viewBox="0 0 32 32" fill="currentColor">
+                <path d="M16 2L4 8v16l12 6 12-6V8L16 2zm0 2.5l9 4.5-9 4.5-9-4.5 9-4.5zM6 10.5l9 4.5v9l-9-4.5v-9zm20 0v9l-9 4.5v-9l9-4.5z"/>
+            </svg>
+            <span>ChaosBlade Risk Analysis</span>
+        </div>
+        <div class="navbar-status">
+            <div class="status-dot"></div>
+            <span>系统运行中</span>
+            <span id="currentTime"></span>
+        </div>
+    </nav>
+
+    <!-- Toast容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <div class="control-header">
+                <h2 class="control-title">🎯 Pipeline 执行控制</h2>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="loadTaskList()">
+                        📋 任务列表
+                    </button>
+                    <button class="btn btn-secondary" onclick="toggleHistory()">
+                        🕐 本地历史
+                    </button>
+                </div>
+            </div>
+            <div class="control-form">
+                <div class="form-group">
+                    <label class="form-label">命名空间</label>
+                    <input type="text" class="form-input" id="namespaceInput"
+                           placeholder="例如: train-ticket" value="train-ticket">
+                </div>
+                <div class="form-group" style="flex: 0.4;">
+                    <label class="form-label">Top N</label>
+                    <input type="number" class="form-input" id="topNInput"
+                           placeholder="5" value="5" min="1" max="20">
+                </div>
+                <div class="form-group" style="flex: 0.6;">
+                    <label class="form-label">任务ID (查询用)</label>
+                    <input type="text" class="form-input" id="taskIdInput"
+                           placeholder="ns-xxxxxxxx">
+                </div>
+                <button class="btn btn-primary" id="startBtn" onclick="createTask()">
+                    <span>🚀 创建任务</span>
+                </button>
+                <button class="btn btn-secondary" id="queryBtn" onclick="queryResult()">
+                    <span>🔍 查询结果</span>
+                </button>
+                <button class="btn btn-secondary" onclick="getLatestResult()">
+                    <span>📊 最新结果</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 任务列表面板 -->
+        <div class="control-panel" id="taskListPanel" style="display: none;">
+            <div class="control-header">
+                <h2 class="control-title">📋 任务列表</h2>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select class="form-input" id="taskStatusFilter" style="width: 120px;" onchange="loadTaskList()">
+                        <option value="">全部状态</option>
+                        <option value="PENDING">待处理</option>
+                        <option value="RUNNING">运行中</option>
+                        <option value="COMPLETED">已完成</option>
+                        <option value="FAILED">失败</option>
+                        <option value="CANCELLED">已取消</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadTaskList()">🔄 刷新</button>
+                    <button class="btn btn-secondary" onclick="hideTaskList()">✕ 关闭</button>
+                </div>
+            </div>
+            <div id="taskListContent">
+                <!-- 动态生成 -->
+            </div>
+            <div id="taskListPagination" style="margin-top: 16px; display: flex; justify-content: center; gap: 8px;">
+                <!-- 分页 -->
+            </div>
+        </div>
+
+        <!-- 阶段进度 -->
+        <div class="phases-container" id="phasesContainer" style="display: none;">
+            <div class="phases-header">
+                <h3 class="phases-title">📊 分析阶段进度</h3>
+                <span class="phases-time" id="totalTime">总耗时: --</span>
+            </div>
+            <div class="phases-grid" id="phasesGrid">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+
+        <!-- 摘要卡片 -->
+        <div class="summary-grid" id="summaryGrid" style="display: none;">
+            <!-- 动态生成 -->
+        </div>
+
+        <!-- 结果标签页 -->
+        <div class="tabs-container" id="tabsContainer" style="display: none;">
+            <div class="tabs-header">
+                <button class="tab-btn active" data-tab="ranking">🏆 风险排名</button>
+                <button class="tab-btn" data-tab="scenarios">💥 故障场景</button>
+                <button class="tab-btn" data-tab="phase1">Phase1 规则扫描</button>
+                <button class="tab-btn" data-tab="phase2">Phase2 拓扑分析</button>
+                <button class="tab-btn" data-tab="phase3">Phase3 风险排名</button>
+                <button class="tab-btn" data-tab="phase4">Phase4 Trace分析</button>
+                <button class="tab-btn" data-tab="phase5">Phase5 综合分析</button>
+                <button class="tab-btn" data-tab="raw">📄 原始数据</button>
+            </div>
+
+            <div class="tab-content active" id="tab-ranking">
+                <div id="rankingContent"></div>
+            </div>
+
+            <div class="tab-content" id="tab-scenarios">
+                <div id="scenariosContent"></div>
+            </div>
+
+            <div class="tab-content" id="tab-phase1">
+                <div id="phase1Content"></div>
+            </div>
+
+            <div class="tab-content" id="tab-phase2">
+                <div id="phase2Content"></div>
+            </div>
+
+            <div class="tab-content" id="tab-phase3">
+                <div id="phase3Content"></div>
+            </div>
+
+            <div class="tab-content" id="tab-phase4">
+                <div id="phase4Content"></div>
+            </div>
+
+            <div class="tab-content" id="tab-phase5">
+                <div id="phase5Content"></div>
+            </div>
+
+            <div class="tab-content" id="tab-raw">
+                <div class="json-viewer" id="rawJsonViewer">
+                    <pre id="rawJson"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 历史记录侧边栏 -->
+    <div class="history-panel" id="historyPanel">
+        <div class="history-header">
+            <h3 class="history-title">🕐 本地历史记录</h3>
+            <button class="history-close" onclick="toggleHistory()">&times;</button>
+        </div>
+        <div class="history-list" id="historyList">
+            <!-- 动态生成 -->
+        </div>
+    </div>
+
+    <!-- 确认对话框 -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-content">
+            <h3 class="modal-title" id="modalTitle">确认操作</h3>
+            <p class="modal-body" id="modalBody">确定要执行此操作吗？</p>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal()">取消</button>
+                <button class="btn btn-primary" id="modalConfirmBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 配置 ==========
+        const API_BASE = 'http://1.94.151.57:8106';
+        let currentTaskId = null;
+        let pollingInterval = null;
+        let currentData = null;
+        let taskListPage = 1;
+        let modalCallback = null;
+
+        // 阶段配置
+        const PHASES = [
+            { id: 1, name: 'Phase 1', desc: '规则扫描', icon: '📋' },
+            { id: 2, name: 'Phase 2', desc: '拓扑风险分析', icon: '🔗' },
+            { id: 3, name: 'Phase 3', desc: '风险排名', icon: '🏆' },
+            { id: 4, name: 'Phase 4', desc: 'Trace分析', icon: '📡' },
+            { id: 5, name: 'Phase 5', desc: '综合分析', icon: '🧠' },
+            { id: 6, name: 'Phase 6', desc: '结果持久化', icon: '💾' }
+        ];
+
+        // ========== 初始化 ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            initPhasesGrid();
+            initTabs();
+            updateTime();
+            setInterval(updateTime, 1000);
+            loadHistory();
+        });
+
+        function updateTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleString('zh-CN');
+        }
+
+        function initPhasesGrid() {
+            const grid = document.getElementById('phasesGrid');
+            grid.innerHTML = PHASES.map(phase => `
+                <div class="phase-card" id="phase-${phase.id}">
+                    <div class="phase-number">${phase.id}</div>
+                    <div class="phase-name">${phase.icon} ${phase.name}</div>
+                    <div class="phase-desc">${phase.desc}</div>
+                    <div class="phase-time" id="phase-time-${phase.id}">--</div>
+                    <div class="phase-progress" id="phase-progress-${phase.id}" style="width: 0%"></div>
+                </div>
+            `).join('');
+        }
+
+        function initTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+                });
+            });
+        }
+
+        // ========== API: POST /api/ns-analysis/tasks - 创建任务 ==========
+        async function createTask() {
+            const namespace = document.getElementById('namespaceInput').value.trim();
+            const topN = parseInt(document.getElementById('topNInput').value) || 5;
+
+            if (!namespace) {
+                showToast('请输入命名空间', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> 创建中...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/ns-analysis/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        namespace: namespace,
+                        topN: topN
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    currentTaskId = data.data.taskId;
+                    showToast(`任务已创建: ${currentTaskId}`, 'success');
+                    document.getElementById('taskIdInput').value = currentTaskId;
+                    document.getElementById('phasesContainer').style.display = 'block';
+                    resetPhases();
+                    startProgressPolling(currentTaskId);
+                } else {
+                    showToast(data.message || '创建失败', 'error');
+                }
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🚀 创建任务</span>';
+            }
+        }
+
+        // ========== API: GET /api/ns-analysis/tasks/{taskId}/progress - 进度轮询 ==========
+        function startProgressPolling(taskId) {
+            if (pollingInterval) clearInterval(pollingInterval);
+
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/ns-analysis/tasks/${taskId}/progress`);
+                    const data = await response.json();
+
+                    if (data.success && data.data) {
+                        updatePhasesFromProgress(data.data);
+
+                        const status = data.data.status;
+                        if (status === 'COMPLETED' || status === 'FAILED' || status === 'CANCELLED') {
+                            clearInterval(pollingInterval);
+                            pollingInterval = null;
+
+                            if (status === 'COMPLETED') {
+                                showToast('分析完成!', 'success');
+                                loadResult(taskId);
+                                addToHistory(taskId, document.getElementById('namespaceInput').value, data.data);
+                            } else if (status === 'FAILED') {
+                                showToast('分析失败', 'error');
+                            } else {
+                                showToast('任务已取消', 'warning');
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 1000);
+        }
+
+        function updatePhasesFromProgress(progress) {
+            const currentPhase = progress.currentPhase || 0;
+            const percent = progress.progressPercent || 0;
+
+            PHASES.forEach(phase => {
+                const card = document.getElementById(`phase-${phase.id}`);
+                const timeEl = document.getElementById(`phase-time-${phase.id}`);
+                const progressEl = document.getElementById(`phase-progress-${phase.id}`);
+
+                if (phase.id < currentPhase) {
+                    card.className = 'phase-card completed';
+                    progressEl.style.width = '100%';
+                    timeEl.textContent = '✓ 完成';
+                } else if (phase.id === currentPhase) {
+                    card.className = 'phase-card active';
+                    progressEl.style.width = '50%';
+                    timeEl.textContent = '执行中...';
+                } else {
+                    card.className = 'phase-card';
+                    progressEl.style.width = '0%';
+                    timeEl.textContent = '--';
+                }
+            });
+
+            document.getElementById('totalTime').textContent = `进度: ${percent}%`;
+        }
+
+        // 重置阶段状态
+        function resetPhases() {
+            PHASES.forEach(phase => {
+                const card = document.getElementById(`phase-${phase.id}`);
+                card.className = 'phase-card';
+                document.getElementById(`phase-time-${phase.id}`).textContent = '--';
+                document.getElementById(`phase-progress-${phase.id}`).style.width = '0%';
+            });
+        }
+
+        // ========== API: GET /api/ns-analysis/tasks - 任务列表 ==========
+        async function loadTaskList(page = 1) {
+            taskListPage = page;
+            const namespace = document.getElementById('namespaceInput').value.trim();
+            const status = document.getElementById('taskStatusFilter').value;
+
+            document.getElementById('taskListPanel').style.display = 'block';
+            document.getElementById('taskListContent').innerHTML = '<div style="text-align:center; padding:40px;"><div class="spinner" style="margin:0 auto;"></div></div>';
+
+            try {
+                let url = `${API_BASE}/api/ns-analysis/tasks?page=${page}&size=10`;
+                if (namespace) url += `&namespace=${encodeURIComponent(namespace)}`;
+                if (status) url += `&status=${status}`;
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    renderTaskList(result.data);
+                } else {
+                    document.getElementById('taskListContent').innerHTML = renderEmptyState('加载失败');
+                }
+            } catch (error) {
+                document.getElementById('taskListContent').innerHTML = renderEmptyState('请求失败: ' + error.message);
+            }
+        }
+
+        function renderTaskList(pageData) {
+            const tasks = pageData.content || [];
+            const container = document.getElementById('taskListContent');
+
+            if (!tasks.length) {
+                container.innerHTML = renderEmptyState('暂无任务记录');
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="task-table">
+                    <thead>
+                        <tr>
+                            <th>任务ID</th>
+                            <th>命名空间</th>
+                            <th>状态</th>
+                            <th>进度</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tasks.map(task => `
+                            <tr>
+                                <td><code style="color: var(--primary-color);">${task.taskId}</code></td>
+                                <td>${task.namespace}</td>
+                                <td>${renderStatusBadge(task.status)}</td>
+                                <td>
+                                    <div class="progress-bar"><div class="progress-bar-fill" style="width: ${task.progressPercent || 0}%"></div></div>
+                                    ${task.progressPercent || 0}%
+                                </td>
+                                <td>${formatDateTime(task.createdAt)}</td>
+                                <td>
+                                    <button class="action-btn" onclick="getTaskDetail('${task.taskId}')" title="查看详情">👁️</button>
+                                    <button class="action-btn" onclick="loadResult('${task.taskId}')" title="查看结果">📊</button>
+                                    ${task.status === 'RUNNING' ? `<button class="action-btn danger" onclick="confirmCancelTask('${task.taskId}')" title="取消任务">⏹️</button>` : ''}
+                                    ${task.status !== 'RUNNING' ? `<button class="action-btn danger" onclick="confirmDeleteTask('${task.taskId}')" title="删除任务">🗑️</button>` : ''}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            // 分页
+            renderPagination(pageData);
+        }
+
+        function renderStatusBadge(status) {
+            const statusMap = {
+                'PENDING': { class: 'pending', text: '待处理' },
+                'RUNNING': { class: 'running', text: '运行中' },
+                'COMPLETED': { class: 'completed', text: '已完成' },
+                'FAILED': { class: 'failed', text: '失败' },
+                'CANCELLED': { class: 'cancelled', text: '已取消' }
+            };
+            const config = statusMap[status] || { class: 'pending', text: status };
+            return `<span class="status-badge ${config.class}">${config.text}</span>`;
+        }
+
+        function renderPagination(pageData) {
+            const totalPages = pageData.totalPages || 1;
+            const currentPage = pageData.page || 1;
+            const container = document.getElementById('taskListPagination');
+
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            html += `<button class="pagination-btn" onclick="loadTaskList(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>上一页</button>`;
+
+            for (let i = 1; i <= totalPages && i <= 5; i++) {
+                html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="loadTaskList(${i})">${i}</button>`;
+            }
+
+            html += `<button class="pagination-btn" onclick="loadTaskList(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>下一页</button>`;
+            container.innerHTML = html;
+        }
+
+        function hideTaskList() {
+            document.getElementById('taskListPanel').style.display = 'none';
+        }
+
+        // ========== API: GET /api/ns-analysis/tasks/{taskId} - 任务详情 ==========
+        async function getTaskDetail(taskId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/ns-analysis/tasks/${taskId}`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    showToast(`任务状态: ${result.data.status}`, 'info');
+                    // 可以在这里展示更多详情
+                    console.log('Task detail:', result.data);
+                } else {
+                    showToast(result.message || '获取失败', 'error');
+                }
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // ========== API: GET /api/ns-analysis/namespaces/{namespace}/latest - 最新结果 ==========
+        async function getLatestResult() {
+            const namespace = document.getElementById('namespaceInput').value.trim();
+            if (!namespace) {
+                showToast('请输入命名空间', 'warning');
+                return;
+            }
+
+            try {
+                showToast('正在获取最新结果...', 'info');
+                const response = await fetch(`${API_BASE}/api/ns-analysis/namespaces/${encodeURIComponent(namespace)}/latest`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    currentData = result.data;
+                    if (result.data.taskId) {
+                        document.getElementById('taskIdInput').value = result.data.taskId;
+                    }
+                    renderResult(result.data);
+                    document.getElementById('summaryGrid').style.display = 'grid';
+                    document.getElementById('tabsContainer').style.display = 'block';
+                    showToast('已加载最新结果', 'success');
+                } else {
+                    showToast(result.message || '未找到结果', 'error');
+                }
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // ========== API: POST /api/ns-analysis/tasks/{taskId}/cancel - 取消任务 ==========
+        function confirmCancelTask(taskId) {
+            showModal('取消任务', `确定要取消任务 ${taskId} 吗？`, async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/ns-analysis/tasks/${taskId}/cancel`, {
+                        method: 'POST'
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showToast('任务已取消', 'success');
+                        loadTaskList(taskListPage);
+                    } else {
+                        showToast(result.message || '取消失败', 'error');
+                    }
+                } catch (error) {
+                    showToast('请求失败: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // ========== API: DELETE /api/ns-analysis/tasks/{taskId} - 删除任务 ==========
+        function confirmDeleteTask(taskId) {
+            showModal('删除任务', `确定要删除任务 ${taskId} 吗？此操作不可恢复！`, async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/ns-analysis/tasks/${taskId}`, {
+                        method: 'DELETE'
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showToast('任务已删除', 'success');
+                        loadTaskList(taskListPage);
+                    } else {
+                        showToast(result.message || '删除失败', 'error');
+                    }
+                } catch (error) {
+                    showToast('请求失败: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // ========== API: GET /api/ns-analysis/tasks/{taskId}/risks - 风险列表 ==========
+        async function getTaskRisks(taskId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/ns-analysis/tasks/${taskId}/risks`);
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('Risks:', result.data);
+                    return result.data;
+                }
+            } catch (error) {
+                console.error('Get risks error:', error);
+            }
+            return null;
+        }
+
+        // ========== API: GET /api/ns-analysis/tasks/{taskId}/top-risks - Top N 风险 ==========
+        async function getTopRisks(taskId, topN = 5) {
+            try {
+                const response = await fetch(`${API_BASE}/api/ns-analysis/tasks/${taskId}/top-risks?topN=${topN}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('Top risks:', result.data);
+                    return result.data;
+                }
+            } catch (error) {
+                console.error('Get top risks error:', error);
+            }
+            return null;
+        }
+
+        // ========== 模态框 ==========
+        function showModal(title, body, callback) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = body;
+            modalCallback = callback;
+            document.getElementById('modalConfirmBtn').onclick = async () => {
+                hideModal();
+                if (modalCallback) await modalCallback();
+            };
+            document.getElementById('confirmModal').classList.add('show');
+        }
+
+        function hideModal() {
+            document.getElementById('confirmModal').classList.remove('show');
+            modalCallback = null;
+        }
+
+        // ========== 辅助函数 ==========
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '--';
+            return new Date(dateStr).toLocaleString('zh-CN');
+        }
+
+        // 更新阶段状态（兼容旧的轮询方式）
+        function updatePhasesStatus(data) {
+            const currentPhase = data.currentPhase || 0;
+            const timings = data.phaseTimings || {};
+
+            PHASES.forEach(phase => {
+                const card = document.getElementById(`phase-${phase.id}`);
+                const timeEl = document.getElementById(`phase-time-${phase.id}`);
+                const progressEl = document.getElementById(`phase-progress-${phase.id}`);
+
+                if (phase.id < currentPhase) {
+                    card.className = 'phase-card completed';
+                    progressEl.style.width = '100%';
+                    const timeKey = `phase${phase.id}TimeMs`;
+                    if (timings[timeKey]) {
+                        timeEl.textContent = formatTime(timings[timeKey]);
+                    }
+                } else if (phase.id === currentPhase) {
+                    card.className = 'phase-card active';
+                    progressEl.style.width = '50%';
+                    timeEl.textContent = '执行中...';
+                } else {
+                    card.className = 'phase-card';
+                    progressEl.style.width = '0%';
+                }
+            });
+
+            if (timings.totalTimeMs) {
+                document.getElementById('totalTime').textContent =
+                    `总耗时: ${formatTime(timings.totalTimeMs)}`;
+            }
+        }
+
+        // 格式化时间
+        function formatTime(ms) {
+            if (ms < 1000) return ms + 'ms';
+            if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+            return (ms / 60000).toFixed(1) + 'min';
+        }
+
+        // 查询结果
+        async function queryResult() {
+            const taskId = document.getElementById('taskIdInput').value.trim();
+            if (!taskId) {
+                showToast('请输入任务ID', 'warning');
+                return;
+            }
+            loadResult(taskId);
+        }
+
+        // 加载结果
+        async function loadResult(taskId) {
+            try {
+                showToast('正在加载结果...', 'info');
+
+                const response = await fetch(`${API_BASE}/api/ns-analysis/results/${taskId}`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    currentData = result.data;
+                    renderResult(result.data);
+                    document.getElementById('summaryGrid').style.display = 'grid';
+                    document.getElementById('tabsContainer').style.display = 'block';
+                    showToast('结果加载成功', 'success');
+                } else {
+                    showToast(result.message || '未找到结果', 'error');
+                }
+            } catch (error) {
+                showToast('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 渲染结果
+        function renderResult(data) {
+            renderSummary(data);
+            renderRanking(data);
+            renderScenarios(data);
+            renderPhaseDetails(data);
+            renderRawJson(data);
+        }
+
+        // 渲染摘要
+        function renderSummary(data) {
+            const summary = data.summary || {};
+            const grid = document.getElementById('summaryGrid');
+
+            grid.innerHTML = `
+                <div class="summary-card">
+                    <div class="summary-icon blue">📦</div>
+                    <div class="summary-value">${summary.servicesAnalyzed || data.servicesCount || '--'}</div>
+                    <div class="summary-label">分析服务数</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon orange">⚠️</div>
+                    <div class="summary-value">${summary.rulesTriggered || data.rulesTriggered || '--'}</div>
+                    <div class="summary-label">规则触发数</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon red">🔥</div>
+                    <div class="summary-value">${summary.criticalServices || data.criticalCount || '--'}</div>
+                    <div class="summary-label">关键风险服务</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon green">📊</div>
+                    <div class="summary-value">${(summary.maxRiskScore || data.maxRiskScore || 0).toFixed(1)}</div>
+                    <div class="summary-label">最高风险分数</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon blue">🎯</div>
+                    <div class="summary-value">${summary.topRiskService || data.topRiskService || '--'}</div>
+                    <div class="summary-label">最高风险服务</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon orange">⏱️</div>
+                    <div class="summary-value">${formatTime(data.executionTime || data.phaseTimings?.totalTimeMs || 0)}</div>
+                    <div class="summary-label">执行耗时</div>
+                </div>
+            `;
+        }
+
+        // 渲染风险排名
+        function renderRanking(data) {
+            const container = document.getElementById('rankingContent');
+            let services = [];
+
+            // 优先从phase3Result获取
+            if (data.phase3Result?.rankedServices) {
+                services = data.phase3Result.rankedServices;
+            } else if (data.rankedServicesSummary) {
+                services = data.rankedServicesSummary;
+            }
+
+            if (!services.length) {
+                container.innerHTML = renderEmptyState('暂无风险排名数据');
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>服务名称</th>
+                            <th>风险等级</th>
+                            <th>风险分数</th>
+                            <th>固有风险</th>
+                            <th>传播风险</th>
+                            <th>分数分布</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${services.slice(0, 20).map((svc, idx) => `
+                            <tr>
+                                <td><strong>#${idx + 1}</strong></td>
+                                <td>${svc.serviceName}</td>
+                                <td>${renderRiskBadge(svc.riskLevel)}</td>
+                                <td><strong>${(svc.riskRankScore || 0).toFixed(1)}</strong></td>
+                                <td>${(svc.inherentRiskScore || 0).toFixed(1)}</td>
+                                <td>${(svc.propagatedRiskScore || 0).toFixed(1)}</td>
+                                <td>${renderScoreBar(svc.inherentRiskScore, svc.propagatedRiskScore)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // 渲染风险等级徽章
+        function renderRiskBadge(level) {
+            const levels = {
+                'CRITICAL': { class: 'critical', text: '严重' },
+                'HIGH': { class: 'high', text: '高' },
+                'MEDIUM': { class: 'medium', text: '中' },
+                'LOW': { class: 'low', text: '低' }
+            };
+            const config = levels[level] || levels['LOW'];
+            return `<span class="risk-badge ${config.class}">${config.text}</span>`;
+        }
+
+        // 渲染分数条
+        function renderScoreBar(inherent, propagated) {
+            const total = (inherent || 0) + (propagated || 0);
+            if (total === 0) return '<div class="score-bar"><div class="score-bar-fill" style="width: 0%"></div></div>';
+
+            const inherentPct = (inherent / total * 100).toFixed(0);
+            return `
+                <div class="score-bar" title="固有: ${inherentPct}%, 传播: ${(100-inherentPct)}%">
+                    <div class="score-bar-fill" style="width: ${inherentPct}%; background: linear-gradient(90deg, #1a73e8 ${inherentPct}%, #ea4335 ${inherentPct}%)"></div>
+                </div>
+            `;
+        }
+
+        // 渲染故障场景
+        function renderScenarios(data) {
+            const container = document.getElementById('scenariosContent');
+            let scenarios = [];
+
+            // 从phase5Result中提取场景
+            const phase5 = data.phase5Result || {};
+            if (phase5.serviceAnalyses) {
+                Object.values(phase5.serviceAnalyses).forEach(analysis => {
+                    if (analysis.chaosScenarios) {
+                        scenarios.push(...analysis.chaosScenarios.map(s => ({
+                            ...s,
+                            serviceName: analysis.serviceName
+                        })));
+                    }
+                });
+            }
+
+            if (!scenarios.length) {
+                container.innerHTML = renderEmptyState('暂无故障场景数据');
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="scenario-grid">
+                    ${scenarios.slice(0, 12).map(scenario => `
+                        <div class="scenario-card">
+                            <div class="scenario-header">
+                                <div class="scenario-title">${scenario.name || scenario.scenarioName || '未命名场景'}</div>
+                                <span class="scenario-type">${scenario.type || scenario.scenarioType || 'UNKNOWN'}</span>
+                            </div>
+                            <div class="scenario-desc">${scenario.description || scenario.objective || '无描述'}</div>
+                            <div class="scenario-tags">
+                                <span class="scenario-tag">📦 ${scenario.serviceName || '未知服务'}</span>
+                                <span class="scenario-tag">🎯 ${scenario.layer || 'RESOURCE'}</span>
+                                ${scenario.priority ? `<span class="scenario-tag">⭐ 优先级: ${scenario.priority}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // 渲染阶段详情
+        function renderPhaseDetails(data) {
+            // Phase 1
+            const phase1 = data.phase1Result || data.phase1Results;
+            document.getElementById('phase1Content').innerHTML = phase1
+                ? renderJsonSection(phase1, 'Phase1 规则扫描结果')
+                : renderEmptyState('暂无Phase1数据');
+
+            // Phase 2
+            const phase2 = data.phase2Result;
+            document.getElementById('phase2Content').innerHTML = phase2
+                ? renderJsonSection(phase2, 'Phase2 拓扑风险分析结果')
+                : renderEmptyState('暂无Phase2数据');
+
+            // Phase 3
+            const phase3 = data.phase3Result;
+            document.getElementById('phase3Content').innerHTML = phase3
+                ? renderJsonSection(phase3, 'Phase3 风险排名结果')
+                : renderEmptyState('暂无Phase3数据');
+
+            // Phase 4
+            const phase4 = data.phase4Results || data.phase4Result;
+            document.getElementById('phase4Content').innerHTML = phase4
+                ? renderJsonSection(phase4, 'Phase4 Trace分析结果')
+                : renderEmptyState('暂无Phase4数据');
+
+            // Phase 5
+            const phase5 = data.phase5Result;
+            document.getElementById('phase5Content').innerHTML = phase5
+                ? renderJsonSection(phase5, 'Phase5 综合分析结果')
+                : renderEmptyState('暂无Phase5数据');
+        }
+
+        // 渲染JSON区块
+        function renderJsonSection(data, title) {
+            return `
+                <h4 style="margin-bottom: 16px;">${title}</h4>
+                <div class="json-viewer">
+                    <pre>${syntaxHighlight(JSON.stringify(data, null, 2))}</pre>
+                </div>
+            `;
+        }
+
+        // 渲染原始JSON
+        function renderRawJson(data) {
+            document.getElementById('rawJson').innerHTML =
+                syntaxHighlight(JSON.stringify(data, null, 2));
+        }
+
+        // JSON语法高亮
+        function syntaxHighlight(json) {
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+                function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                }
+            );
+        }
+
+        // 渲染空状态
+        function renderEmptyState(message) {
+            return `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm1-8h-2V7h2v2z"/>
+                    </svg>
+                    <h3>${message}</h3>
+                    <p>请先执行分析或选择历史记录</p>
+                </div>
+            `;
+        }
+
+        // Toast通知
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 历史记录
+        function toggleHistory() {
+            document.getElementById('historyPanel').classList.toggle('open');
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('riskAnalysisHistory') || '[]');
+            renderHistory(history);
+        }
+
+        function addToHistory(taskId, namespace, data) {
+            const history = JSON.parse(localStorage.getItem('riskAnalysisHistory') || '[]');
+            const newItem = {
+                taskId,
+                namespace,
+                time: new Date().toISOString(),
+                summary: data.summary || {}
+            };
+
+            // 去重
+            const filtered = history.filter(h => h.taskId !== taskId);
+            filtered.unshift(newItem);
+
+            // 最多保留20条
+            const trimmed = filtered.slice(0, 20);
+            localStorage.setItem('riskAnalysisHistory', JSON.stringify(trimmed));
+            renderHistory(trimmed);
+        }
+
+        function renderHistory(history) {
+            const list = document.getElementById('historyList');
+
+            if (!history.length) {
+                list.innerHTML = renderEmptyState('暂无历史记录');
+                return;
+            }
+
+            list.innerHTML = history.map(item => `
+                <div class="history-item" onclick="loadHistoryItem('${item.taskId}')">
+                    <div class="history-item-header">
+                        <span class="history-item-id">${item.taskId}</span>
+                        <span class="history-item-time">${new Date(item.time).toLocaleString('zh-CN')}</span>
+                    </div>
+                    <div class="history-item-stats">
+                        <span>📦 ${item.namespace}</span>
+                        <span>🔥 ${item.summary?.criticalServices || 0} 关键风险</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadHistoryItem(taskId) {
+            document.getElementById('taskIdInput').value = taskId;
+            toggleHistory();
+            loadResult(taskId);
+        }
+    </script>
+</body>
+</html>
+

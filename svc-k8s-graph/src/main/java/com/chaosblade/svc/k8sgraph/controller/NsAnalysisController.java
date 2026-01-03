@@ -6,6 +6,7 @@ import com.chaosblade.svc.k8sgraph.entity.NsAnalysisTask;
 import com.chaosblade.svc.k8sgraph.service.NsAnalysisCacheService;
 import com.chaosblade.svc.k8sgraph.service.NsAnalysisExecutionService;
 import com.chaosblade.svc.k8sgraph.service.NsAnalysisPersistenceService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,10 +14,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+
 import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -152,38 +156,97 @@ public class NsAnalysisController {
     }
 
     /**
-     * 获取分析结果
+     * 获取分析结果（完整结果，包含所有阶段数据）
+     *
+     * @param taskId 任务ID
+     * @param fullData 是否返回完整的压缩数据（默认false，只返回各阶段结果）
      */
     @GetMapping("/results/{taskId}")
-    public ResponseEntity<Map<String, Object>> getResult(@PathVariable String taskId) {
-        // 先查缓存
+    public ResponseEntity<Map<String, Object>> getResult(
+            @PathVariable String taskId,
+            @RequestParam(defaultValue = "false") boolean fullData) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        // 先查缓存（缓存中有完整的各阶段结果）
         Optional<Map<String, Object>> cached = cacheService.getResult(taskId);
         if (cached.isPresent()) {
-            Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", cached.get());
             response.put("source", "cache");
             return ResponseEntity.ok(response);
         }
-        
+
         // 查数据库
-        Optional<NsAnalysisResult> result = persistenceService.getResult(taskId);
-        if (!result.isPresent()) {
-            Map<String, Object> response = new HashMap<>();
+        Optional<NsAnalysisResult> resultOpt = persistenceService.getResult(taskId);
+        if (!resultOpt.isPresent()) {
             response.put("success", false);
             response.put("message", "结果不存在: " + taskId);
             return ResponseEntity.status(404).body(response);
         }
 
-        Map<String, Object> response = new HashMap<>();
+        NsAnalysisResult result = resultOpt.get();
+
+        // 构建完整的返回数据
+        Map<String, Object> data = new HashMap<>();
+        data.put("taskId", taskId);
+        data.put("namespace", result.getNamespace());
+
+        // 基本信息
+        data.put("servicesCount", result.getServicesCount());
+        data.put("rulesTriggered", result.getRulesTriggered());
+        data.put("criticalCount", result.getCriticalCount());
+        data.put("maxRiskScore", result.getMaxRiskScore());
+        data.put("topRiskService", result.getTopRiskService());
+        data.put("riskLevel", result.getRiskLevel() != null ? result.getRiskLevel().name() : null);
+        data.put("createdAt", result.getCreatedAt());
+
+        // 各阶段结果（从LONGTEXT字段解析）
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            if (result.getPhase1Result() != null) {
+                data.put("phase1Result", objectMapper.readValue(result.getPhase1Result(), Object.class));
+            }
+            if (result.getPhase2Result() != null) {
+                data.put("phase2Result", objectMapper.readValue(result.getPhase2Result(), Object.class));
+            }
+            if (result.getPhase3Ranking() != null) {
+                data.put("phase3Result", objectMapper.readValue(result.getPhase3Ranking(), Object.class));
+            }
+            if (result.getPhase4Results() != null) {
+                data.put("phase4Results", objectMapper.readValue(result.getPhase4Results(), Object.class));
+            }
+            if (result.getPhase5Result() != null) {
+                data.put("phase5Result", objectMapper.readValue(result.getPhase5Result(), Object.class));
+            }
+            if (result.getPhaseTimings() != null) {
+                data.put("phaseTimings", objectMapper.readValue(result.getPhaseTimings(), Object.class));
+            }
+            if (result.getRankedServicesSummary() != null) {
+                data.put("rankedServicesSummary", objectMapper.readValue(result.getRankedServicesSummary(), Object.class));
+            }
+
+            // 如果请求完整数据，从压缩的resultData中解压
+            if (fullData) {
+                Optional<Map<String, Object>> fullResultData = persistenceService.getFullResultData(result);
+                if (fullResultData.isPresent()) {
+                    data.put("fullResultData", fullResultData.get());
+                }
+            }
+
+        } catch (Exception e) {
+            logger.warn("Failed to parse result data for taskId: {}", taskId, e);
+        }
+
         response.put("success", true);
-        response.put("data", NsAnalysisResultDTO.fromEntity(result.get()));
+        response.put("data", data);
         response.put("source", "database");
         return ResponseEntity.ok(response);
     }
 
     /**
-     * 获取命名空间最新结果
+     * 获取命名空间最新结果（完整结果）
      */
     @GetMapping("/namespaces/{namespace}/latest")
     public ResponseEntity<Map<String, Object>> getLatestResult(@PathVariable String namespace) {
@@ -201,17 +264,25 @@ public class NsAnalysisController {
         }
 
         // 查数据库
-        Optional<NsAnalysisResult> result = persistenceService.getLatestResult(namespace);
-        if (!result.isPresent()) {
+        Optional<NsAnalysisResult> resultOpt = persistenceService.getLatestResult(namespace);
+        if (!resultOpt.isPresent()) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "命名空间无分析结果: " + namespace);
             return ResponseEntity.status(404).body(response);
         }
 
+        // 复用getResult的完整数据返回逻辑
+        NsAnalysisResult result = resultOpt.get();
+        Optional<NsAnalysisTask> taskOpt = persistenceService.getTaskByDbId(result.getTaskDbId());
+        if (taskOpt.isPresent()) {
+            return getResult(taskOpt.get().getTaskId(), false);
+        }
+
+        // 回退：返回DTO
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("data", NsAnalysisResultDTO.fromEntity(result.get()));
+        response.put("data", NsAnalysisResultDTO.fromEntity(result));
         response.put("source", "database");
         return ResponseEntity.ok(response);
     }
@@ -361,6 +432,76 @@ public class NsAnalysisController {
         status.put("progressPercent", task.getProgressPercent());
         status.put("createdAt", task.getCreatedAt());
         return status;
+    }
+
+    /**
+     * 获取任务执行日志
+     *
+     * @param taskId 任务ID
+     * @param minLevel 最低日志级别: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR (默认0)
+     * @param phase 阶段过滤 (可选, 1-6)
+     */
+    @GetMapping("/tasks/{taskId}/logs")
+    public ResponseEntity<Map<String, Object>> getTaskLogs(
+            @PathVariable String taskId,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(3) int minLevel,
+            @RequestParam(required = false) Integer phase) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        // 验证任务存在
+        Optional<NsAnalysisTask> taskOpt = persistenceService.getTask(taskId);
+        if (!taskOpt.isPresent()) {
+            response.put("success", false);
+            response.put("message", "任务不存在: " + taskId);
+            return ResponseEntity.status(404).body(response);
+        }
+
+        List<?> logs;
+        if (phase != null) {
+            logs = persistenceService.getLogsByPhase(taskId, phase);
+        } else if (minLevel > 0) {
+            logs = persistenceService.getLogs(taskId, minLevel);
+        } else {
+            logs = persistenceService.getLogs(taskId);
+        }
+
+        response.put("success", true);
+        response.put("taskId", taskId);
+        response.put("logsCount", logs.size());
+        response.put("errorCount", persistenceService.countErrors(taskId));
+        response.put("logs", logs);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 分页获取任务执行日志
+     */
+    @GetMapping("/tasks/{taskId}/logs/page")
+    public ResponseEntity<Map<String, Object>> getTaskLogsPaged(
+            @PathVariable String taskId,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "50") @Min(1) @Max(200) int size) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        Optional<NsAnalysisTask> taskOpt = persistenceService.getTask(taskId);
+        if (!taskOpt.isPresent()) {
+            response.put("success", false);
+            response.put("message", "任务不存在: " + taskId);
+            return ResponseEntity.status(404).body(response);
+        }
+
+        Page<?> logsPage = persistenceService.getLogs(taskId, page, size);
+
+        response.put("success", true);
+        response.put("taskId", taskId);
+        response.put("page", page);
+        response.put("size", size);
+        response.put("totalElements", logsPage.getTotalElements());
+        response.put("totalPages", logsPage.getTotalPages());
+        response.put("logs", logsPage.getContent());
+        return ResponseEntity.ok(response);
     }
 }
 

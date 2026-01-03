@@ -47,7 +47,7 @@ public class NsAnalysisResult {
     private Integer criticalCount = 0;
 
     /** 最高风险分数 (最大支持99999999.99) */
-    @Column(name = "max_risk_score", precision = 10, scale = 10)
+    @Column(name = "max_risk_score", precision = 10, scale = 2)
     private BigDecimal maxRiskScore;
 
     /** 最高风险服务名 */
