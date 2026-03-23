@@ -4,6 +4,7 @@ import com.chaosblade.svc.k8sgraph.domain.risk.pipeline.*;
 import com.chaosblade.svc.k8sgraph.domain.risk.pipeline.PipelineExecutionStatus.ExecutionState;
 import com.chaosblade.svc.k8sgraph.entity.NsAnalysisLog;
 import com.chaosblade.svc.k8sgraph.entity.NsAnalysisTask;
+import com.chaosblade.svc.k8sgraph.service.risk.PipelineLogCallback;
 import com.chaosblade.svc.k8sgraph.service.risk.RiskPipelineOrchestrator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -221,10 +222,13 @@ public class NsAnalysisExecutionService {
         // 启动进度更新线程
         Thread progressThread = startProgressMonitor(taskId, status);
 
+        // 创建日志回调，将Pipeline执行日志持久化到数据库
+        PipelineLogCallback logCallback = createLogCallback(taskId);
+
         PipelineResult result;
         try {
-            // 执行Pipeline
-            result = pipelineOrchestrator.execute(namespace, status);
+            // 执行Pipeline（传入日志回调）
+            result = pipelineOrchestrator.execute(namespace, status, logCallback);
 
             // 检查是否被取消
             if (isCancelled(taskId)) {
@@ -243,6 +247,43 @@ public class NsAnalysisExecutionService {
         }
 
         return result;
+    }
+
+    /**
+     * 创建日志回调实例
+     */
+    private PipelineLogCallback createLogCallback(String taskId) {
+        return new PipelineLogCallback() {
+            @Override
+            public void info(int phase, String message) {
+                addLog(taskId, NsAnalysisLog.INFO, phase, message, null, null);
+            }
+
+            @Override
+            public void info(int phase, String message, String details) {
+                addLog(taskId, NsAnalysisLog.INFO, phase, message, details, null);
+            }
+
+            @Override
+            public void info(int phase, String message, long durationMs) {
+                addLog(taskId, NsAnalysisLog.INFO, phase, message, null, durationMs);
+            }
+
+            @Override
+            public void warn(int phase, String message) {
+                addLog(taskId, NsAnalysisLog.WARN, phase, message, null, null);
+            }
+
+            @Override
+            public void error(int phase, String message) {
+                addLog(taskId, NsAnalysisLog.ERROR, phase, message, null, null);
+            }
+
+            @Override
+            public void debug(int phase, String message) {
+                addLog(taskId, NsAnalysisLog.DEBUG, phase, message, null, null);
+            }
+        };
     }
 
     /**

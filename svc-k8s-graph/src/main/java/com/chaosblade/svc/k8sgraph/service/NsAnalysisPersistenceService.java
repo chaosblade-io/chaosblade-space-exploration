@@ -183,7 +183,15 @@ public class NsAnalysisPersistenceService {
     @Transactional(readOnly = true)
     public PageResponse<NsAnalysisTaskDTO> queryTasks(String namespace, String status, int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        NsAnalysisTask.TaskStatus taskStatus = status != null ? NsAnalysisTask.TaskStatus.valueOf(status) : null;
+        NsAnalysisTask.TaskStatus taskStatus = null;
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                taskStatus = NsAnalysisTask.TaskStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid task status: {}, ignoring status filter", status);
+                // 无效的status参数，忽略该筛选条件
+            }
+        }
         Page<NsAnalysisTask> p = taskRepository.findByConditions(namespace, taskStatus, null, null, pageable);
         List<NsAnalysisTaskDTO> dtos = p.getContent().stream()
                 .map(NsAnalysisTaskDTO::fromEntity)

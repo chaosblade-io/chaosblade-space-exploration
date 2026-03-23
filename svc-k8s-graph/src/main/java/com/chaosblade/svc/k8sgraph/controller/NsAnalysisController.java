@@ -19,6 +19,7 @@ import org.springframework.data.domain.Page;
 import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,21 +77,19 @@ public class NsAnalysisController {
     }
 
     /**
-     * 获取任务状态
+     * 获取任务详情
+     *
+     * 返回完整的任务信息，包括：
+     * - 基本信息：taskId, namespace, systemId, topN, createdBy
+     * - 状态信息：status, triggerType, currentPhase, progressPercent
+     * - 时间信息：createdAt, startedAt, finishedAt, updatedAt, totalTimeMs
+     * - 错误信息：errorCode, errorMessage
+     *
+     * 注意：始终从数据库获取最新数据，确保返回完整的任务信息
      */
     @GetMapping("/tasks/{taskId}")
     public ResponseEntity<Map<String, Object>> getTask(@PathVariable String taskId) {
-        // 先查缓存
-        Optional<Map<String, Object>> cached = cacheService.getTaskStatus(taskId);
-        if (cached.isPresent()) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", cached.get());
-            response.put("source", "cache");
-            return ResponseEntity.ok(response);
-        }
-        
-        // 查数据库
+        // 直接从数据库获取最新数据，确保信息完整性
         Optional<NsAnalysisTask> task = persistenceService.getTask(taskId);
         if (!task.isPresent()) {
             Map<String, Object> response = new HashMap<>();
@@ -101,8 +100,7 @@ public class NsAnalysisController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("data", NsAnalysisTaskDTO.fromEntity(task.get()));
-        response.put("source", "database");
+        response.put("data", buildTaskStatus(task.get()));
         return ResponseEntity.ok(response);
     }
 
@@ -126,33 +124,127 @@ public class NsAnalysisController {
 
     /**
      * 获取任务进度
+     *
+     * 返回完整的进度信息：
+     * - percent: 整体进度百分比 (0-100)
+     * - currentPhase: 当前执行阶段 (1-6)
+     * - status: 任务状态
+     * - totalTimeMs: 总耗时(毫秒)
+     * - phases: 各阶段详情数组
+     *   - phase: 阶段号
+     *   - name: 阶段名称
+     *   - status: 阶段状态 (pending/running/completed/failed)
+     *   - durationMs: 阶段耗时(毫秒)
      */
     @GetMapping("/tasks/{taskId}/progress")
     public ResponseEntity<Map<String, Object>> getProgress(@PathVariable String taskId) {
-        Optional<Map<String, Object>> progress = cacheService.getProgress(taskId);
-        
         Map<String, Object> response = new HashMap<>();
-        if (progress.isPresent()) {
-            response.put("success", true);
-            response.put("data", progress.get());
-        } else {
-            // 从数据库获取
-            Optional<NsAnalysisTask> task = persistenceService.getTask(taskId);
-            if (task.isPresent()) {
-                NsAnalysisTask t = task.get();
-                Map<String, Object> data = new HashMap<>();
-                data.put("phase", t.getCurrentPhase());
-                data.put("percent", t.getProgressPercent());
-                data.put("status", t.getStatus().name());
-                response.put("success", true);
-                response.put("data", data);
-            } else {
-                response.put("success", false);
-                response.put("message", "任务不存在");
-                return ResponseEntity.status(404).body(response);
-            }
+
+        // 从数据库获取任务信息
+        Optional<NsAnalysisTask> taskOpt = persistenceService.getTask(taskId);
+        if (!taskOpt.isPresent()) {
+            response.put("success", false);
+            response.put("message", "任务不存在");
+            return ResponseEntity.status(404).body(response);
         }
+
+        NsAnalysisTask task = taskOpt.get();
+        Map<String, Object> data = buildProgressData(task);
+
+        response.put("success", true);
+        response.put("data", data);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 构建完整的进度数据
+     */
+    private Map<String, Object> buildProgressData(NsAnalysisTask task) {
+        Map<String, Object> data = new HashMap<>();
+
+        // 基础进度信息
+        data.put("percent", task.getProgressPercent() != null ? task.getProgressPercent() : 0);
+        data.put("currentPhase", task.getCurrentPhase() != null ? task.getCurrentPhase() : 0);
+        data.put("status", task.getStatus() != null ? task.getStatus().name() : "PENDING");
+        data.put("totalTimeMs", task.getTotalTimeMs());
+
+        // 阶段名称定义
+        String[] phaseNames = {
+            "规则扫描",
+            "拓扑风险分析",
+            "风险排名计算",
+            "Trace深度分析",
+            "综合分析与场景生成",
+            "配置生成"
+        };
+
+        // 获取各阶段耗时数据
+        Map<Integer, Long> phaseTimingsMap = getPhaseTimingsMap(task.getTaskId());
+
+        // 构建阶段详情数组
+        List<Map<String, Object>> phases = new ArrayList<>();
+        int currentPhase = task.getCurrentPhase() != null ? task.getCurrentPhase() : 0;
+        boolean isCompleted = task.getStatus() == NsAnalysisTask.TaskStatus.COMPLETED;
+        boolean isFailed = task.getStatus() == NsAnalysisTask.TaskStatus.FAILED;
+
+        for (int i = 1; i <= 6; i++) {
+            Map<String, Object> phaseInfo = new HashMap<>();
+            phaseInfo.put("phase", i);
+            phaseInfo.put("name", phaseNames[i - 1]);
+
+            // 判断阶段状态
+            String phaseStatus;
+            if (i < currentPhase || (i == currentPhase && isCompleted)) {
+                phaseStatus = "completed";
+            } else if (i == currentPhase && isFailed) {
+                phaseStatus = "failed";
+            } else if (i == currentPhase) {
+                phaseStatus = "running";
+            } else {
+                phaseStatus = "pending";
+            }
+            phaseInfo.put("status", phaseStatus);
+
+            // 阶段耗时
+            Long durationMs = phaseTimingsMap.get(i);
+            phaseInfo.put("durationMs", durationMs);
+
+            phases.add(phaseInfo);
+        }
+
+        data.put("phases", phases);
+        return data;
+    }
+
+    /**
+     * 从结果表获取各阶段耗时数据
+     */
+    private Map<Integer, Long> getPhaseTimingsMap(String taskId) {
+        Map<Integer, Long> timingsMap = new HashMap<>();
+        try {
+            Optional<NsAnalysisResult> resultOpt = persistenceService.getResult(taskId);
+            if (resultOpt.isPresent() && resultOpt.get().getPhaseTimings() != null) {
+                String phaseTimingsJson = resultOpt.get().getPhaseTimings();
+                // 解析JSON格式的阶段耗时: {"1": 8200, "2": 5100, ...}
+                @SuppressWarnings("unchecked")
+                Map<String, Object> timings = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(phaseTimingsJson, Map.class);
+                for (Map.Entry<String, Object> entry : timings.entrySet()) {
+                    try {
+                        int phase = Integer.parseInt(entry.getKey());
+                        long duration = entry.getValue() instanceof Number
+                                ? ((Number) entry.getValue()).longValue()
+                                : Long.parseLong(entry.getValue().toString());
+                        timingsMap.put(phase, duration);
+                    } catch (NumberFormatException e) {
+                        // 忽略无效的键
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to parse phase timings for task: {}", taskId, e);
+        }
+        return timingsMap;
     }
 
     /**
@@ -424,13 +516,38 @@ public class NsAnalysisController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 构建完整的任务状态信息
+     * 用于缓存和API响应，确保返回所有详情页需要的字段
+     */
     private Map<String, Object> buildTaskStatus(NsAnalysisTask task) {
         Map<String, Object> status = new HashMap<>();
+        // 基本信息
+        status.put("id", task.getId());
         status.put("taskId", task.getTaskId());
         status.put("namespace", task.getNamespace());
-        status.put("status", task.getStatus().name());
+        status.put("systemId", task.getSystemId());
+        status.put("topN", task.getTopN());
+        status.put("createdBy", task.getCreatedBy());
+
+        // 状态信息
+        status.put("status", task.getStatus() != null ? task.getStatus().name() : null);
+        status.put("triggerType", task.getTriggerType() != null ? task.getTriggerType().name() : null);
+        status.put("currentPhase", task.getCurrentPhase());
         status.put("progressPercent", task.getProgressPercent());
-        status.put("createdAt", task.getCreatedAt());
+
+        // 时间信息 - 格式化为字符串
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        status.put("createdAt", task.getCreatedAt() != null ? task.getCreatedAt().format(formatter) : null);
+        status.put("startedAt", task.getStartedAt() != null ? task.getStartedAt().format(formatter) : null);
+        status.put("finishedAt", task.getFinishedAt() != null ? task.getFinishedAt().format(formatter) : null);
+        status.put("updatedAt", task.getUpdatedAt() != null ? task.getUpdatedAt().format(formatter) : null);
+        status.put("totalTimeMs", task.getTotalTimeMs());
+
+        // 错误信息
+        status.put("errorCode", task.getErrorCode());
+        status.put("errorMessage", task.getErrorMessage());
+
         return status;
     }
 

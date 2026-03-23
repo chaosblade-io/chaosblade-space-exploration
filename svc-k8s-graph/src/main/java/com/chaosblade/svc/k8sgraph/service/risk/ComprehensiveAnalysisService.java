@@ -246,6 +246,20 @@ public class ComprehensiveAnalysisService {
         sb.append("| 网络调用链长/网络依赖 | chaos.container-network.delay, chaos.container-network.loss |\n");
         sb.append("| 高错误率/进程问题 | chaos.container-process.kill, chaos.container-process.stop |\n\n");
 
+        sb.append("## 故障参数配置要求（faultParams）\n");
+        sb.append("每个chaosScenario必须包含完整的faultParams字段，根据故障类型提供相应参数：\n\n");
+        sb.append("| 故障代码 | 必填参数 | 参数说明 |\n");
+        sb.append("|---------|---------|--------|\n");
+        sb.append("| chaos.container-cpu.fullload | cpu-count | CPU核数，如: \"2\" |\n");
+        sb.append("| chaos.container-cpu.load | cpu-percent | CPU使用率百分比，如: \"80\" |\n");
+        sb.append("| chaos.container-mem.load | mem-percent, mode | 内存百分比和模式，如: \"80\", \"ram\" |\n");
+        sb.append("| chaos.container-mem.oom | - | 无需额外参数 |\n");
+        sb.append("| chaos.container-network.delay | time, offset | 延迟毫秒数和偏移，如: \"300\", \"50\" |\n");
+        sb.append("| chaos.container-network.loss | percent | 丢包百分比，如: \"30\" |\n");
+        sb.append("| chaos.pod.delete | - | 无需额外参数 |\n");
+        sb.append("| chaos.pod.fail | - | 无需额外参数 |\n");
+        sb.append("| chaos.container-process.kill | process | 进程名或关键字，如: \"java\" |\n\n");
+
         sb.append("## 严格按以下JSON格式输出\n");
         sb.append("```json\n");
         sb.append("{\n");
@@ -287,7 +301,10 @@ public class ComprehensiveAnalysisService {
         sb.append("      \"expectedImpact\": \"预期影响\",\n");
         sb.append("      \"successCriteria\": [\"成功标准1\"],\n");
         sb.append("      \"rollbackPlan\": \"回滚方案\",\n");
-        sb.append("      \"durationSeconds\": 60\n");
+        sb.append("      \"durationSeconds\": 60,\n");
+        sb.append("      \"faultParams\": {\n");
+        sb.append("        \"cpu-count\": \"2\"\n");
+        sb.append("      }\n");
         sb.append("    }\n");
         sb.append("  ],\n");
         sb.append("  \"recommendations\": [\n");
@@ -308,8 +325,9 @@ public class ComprehensiveAnalysisService {
         sb.append("## 注意事项\n");
         sb.append("1. **code字段必须填写**：每个chaosScenario必须包含从故障类型列表中选择的code值\n");
         sb.append("2. **faultName字段必须填写**：对应code的故障名称\n");
-        sb.append("3. **relatedScenarioIds字段**：每个risk需要关联对应的场景ID列表\n");
-        sb.append("4. **只使用列表中的故障代码**：不要编造不存在的故障类型\n");
+        sb.append("3. **faultParams字段必须填写**：必须根据故障类型提供完整的参数配置，参考上方的'故障参数配置要求'表格\n");
+        sb.append("4. **relatedScenarioIds字段**：每个risk需要关联对应的场景ID列表\n");
+        sb.append("5. **只使用列表中的故障代码**：不要编造不存在的故障类型\n");
 
         return sb.toString();
     }
@@ -645,6 +663,23 @@ public class ComprehensiveAnalysisService {
                             criteria.add(c.asText());
                         }
                         scenario.setSuccessCriteria(criteria);
+                    }
+
+                    // 解析faultParams（故障参数）
+                    JsonNode faultParamsNode = scenarioNode.path("faultParams");
+                    if (faultParamsNode.isObject()) {
+                        Map<String, String> faultParams = new HashMap<>();
+                        Iterator<String> fieldNames = faultParamsNode.fieldNames();
+                        while (fieldNames.hasNext()) {
+                            String fieldName = fieldNames.next();
+                            faultParams.put(fieldName, faultParamsNode.path(fieldName).asText());
+                        }
+                        scenario.setFaultParams(faultParams);
+                        logger.debug("Parsed faultParams for scenario {}: {}",
+                            scenario.getScenarioId(), faultParams);
+                    } else {
+                        logger.warn("No faultParams found for scenario: {}, code: {}",
+                            scenario.getScenarioId(), code);
                     }
 
                     analysis.getChaosScenarios().add(scenario);
