@@ -51,7 +51,8 @@ public class ProbeTaskDtos {
 
         public List<FaultConfigurationItem> faultConfigurations; // required (>=0)
         public List<TaskSloItem> taskSlo;                        // required (>=0)
-        public ApiDefinitionDTO apiDefinition;                   // required
+        public ApiDefinitionDTO apiDefinition;                   // optional (如果传了 apiDefinitionId 则不需要)
+        public Long apiDefinitionId;                              // optional: 复用已有的 http_req_def ID
     }
 
     public static class ProbeTaskCreateResponse {

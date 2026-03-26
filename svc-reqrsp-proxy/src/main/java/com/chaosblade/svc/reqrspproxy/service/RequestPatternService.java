@@ -437,6 +437,17 @@ public class RequestPatternService {
                 logger.warn("Debug export failed: {}", e.getMessage());
             }
 
+            // proxy-agent 模式：先从 proxy-agent 拉取 snapshot 到 MySQL，再收集
+            if ("new".equalsIgnoreCase(proxyEngine)) {
+                logger.info("Step 7a: Pulling snapshots from proxy-agent to MySQL before collection...");
+                for (String recId : recordingIds) {
+                    try {
+                        recordingService.pullSnapshots(recId);
+                    } catch (Exception e) {
+                        logger.warn("Failed to pull snapshots for {}: {}", recId, e.getMessage());
+                    }
+                }
+            }
             List<RecordedEntry> recordedEntries = collectAllRecordedData(recordingIds);
             taskStateManager.updateTaskProgress(taskId, recordedEntries.size(), null);
 

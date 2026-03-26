@@ -327,6 +327,14 @@ public class RecordingService {
     /**
      * 从 proxy-agent 拉取快照并存入 proxy_snapshot 表
      */
+    /**
+     * 从 proxy-agent 拉取 snapshot 数据并保存到 MySQL proxy_snapshot 表。
+     * 供外部在 collectAllRecordedData() 之前调用，确保数据已持久化。
+     */
+    public void pullSnapshots(String recordingId) {
+        pullAndSaveSnapshots(recordingId);
+    }
+
     @SuppressWarnings("unchecked")
     private void pullAndSaveSnapshots(String recordingId) {
         ProxyInstance instance = proxyManager.getProxyInstance(recordingId);
@@ -512,6 +520,50 @@ public class RecordingService {
 
     public List<RecordedEntry> getEntries(String recordingId, int offset, int limit) {
         try {
+            // 新引擎（proxy-agent）：从 MySQL proxy_snapshot 表读取
+            if ("new".equalsIgnoreCase(proxyEngine)) {
+                List<ProxySnapshot> snapshots = snapshotRepo.findByRecordingId(recordingId);
+                // 查找对应的 proxy_instance 以获取服务名和 namespace
+                ProxyInstance instance = proxyManager.getProxyInstance(recordingId);
+                String svcName = (instance != null) ? instance.getTargetService() : "";
+                String ns = (instance != null) ? instance.getNamespace() : "";
+
+                List<RecordedEntry> entries = new java.util.ArrayList<>();
+                for (int i = offset; i < Math.min(snapshots.size(), offset + limit); i++) {
+                    ProxySnapshot snap = snapshots.get(i);
+                    RecordedEntry entry = new RecordedEntry();
+                    entry.setRecordingId(recordingId);
+                    entry.setServiceName(svcName);
+                    entry.setNamespace(ns);
+                    entry.setMethod(snap.getMethod());
+                    entry.setPath(snap.getPath());
+                    entry.setStatus(snap.getResponseStatus());
+                    entry.setTimestamp(snap.getRecordedAt());
+                    // headers
+                    try {
+                        if (snap.getRequestHeaders() != null) {
+                            entry.setRequestHeaders(new ObjectMapper().readValue(snap.getRequestHeaders(),
+                                    new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {}));
+                        }
+                        if (snap.getResponseHeaders() != null) {
+                            entry.setResponseHeaders(new ObjectMapper().readValue(snap.getResponseHeaders(),
+                                    new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {}));
+                        }
+                    } catch (Exception ignore) { }
+                    // body
+                    if (snap.getRequestBody() != null) {
+                        entry.setRequestBody(new String(snap.getRequestBody(), java.nio.charset.StandardCharsets.UTF_8));
+                    }
+                    if (snap.getResponseBody() != null) {
+                        entry.setResponseBody(new String(snap.getResponseBody(), java.nio.charset.StandardCharsets.UTF_8));
+                    }
+                    entries.add(entry);
+                }
+                logger.info("getEntries(proxy-agent): recordingId={}, service={}, total={}, returned={}",
+                        recordingId, svcName, snapshots.size(), entries.size());
+                return entries;
+            }
+            // 旧引擎（Envoy）：从 Redis 读取
             if (!stateService.exists(recordingId)) {
                 throw new RuntimeException("Recording not found: " + recordingId);
             }

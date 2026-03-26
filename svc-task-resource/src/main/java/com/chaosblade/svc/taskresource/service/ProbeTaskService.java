@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
@@ -60,8 +61,27 @@ public class ProbeTaskService {
             throw new BusinessException("API_NOT_FOUND", "API不存在: " + req.apiId);
         }
 
-        // 1) 创建 http_req_def
-        Long apiDefinitionId = createHttpReqDef(req.apiDefinition);
+        // 1) 复用已有 http_req_def 或创建新的
+        Long apiDefinitionId;
+        if (req.apiDefinitionId != null && req.apiDefinitionId > 0) {
+            // 前端传了已有的 http_req_def ID，直接复用
+            if (!httpReqDefRepository.existsById(req.apiDefinitionId)) {
+                throw new BusinessException("API_DEF_NOT_FOUND", "http_req_def 不存在: " + req.apiDefinitionId);
+            }
+            apiDefinitionId = req.apiDefinitionId;
+            logger.info("Reusing existing http_req_def: id={}", apiDefinitionId);
+        } else if (req.apiDefinition == null && req.apiId != null) {
+            // 前端没传 apiDefinition，通过 apiId 自动查找关联的 http_req_def
+            List<HttpReqDef> candidates = httpReqDefRepository.findByApiId(req.apiId);
+            HttpReqDef found = candidates.isEmpty() ? null : candidates.get(0);
+            if (found == null) {
+                throw new BusinessException("API_DEF_NOT_FOUND", "未找到 apiId=" + req.apiId + " 对应的 http_req_def，请先在数据库中预定义");
+            }
+            apiDefinitionId = found.getId();
+            logger.info("Auto-resolved http_req_def by apiId={}: reqDefId={}", req.apiId, apiDefinitionId);
+        } else {
+            apiDefinitionId = createHttpReqDef(req.apiDefinition);
+        }
 
         // 2) 创建 detection_tasks 主任务（补充 api_definition_id）
         Long taskId = createDetectionTask(req, apiDefinitionId);
@@ -113,19 +133,27 @@ public class ProbeTaskService {
                 || isBlank(req.createdBy) || req.requestNum == null) {
             throw new BusinessException("REQ_FIELDS_MISSING", "必填字段缺失: name/description/systemId/apiId/createdBy/requestNum");
         }
-        if (req.apiDefinition == null) {
-            throw new BusinessException("API_DEF_MISSING", "apiDefinition 不能为空");
-        }
-        // 校验 code 唯一性
-        if (httpReqDefRepository.existsByCode(req.apiDefinition.code)) {
-            throw new BusinessException("API_DEFINITION_CODE_EXISTS", "API 定义创建失败：code '"+req.apiDefinition.code+"' 已存在");
-        }
-        // 校验 method/bodyMode 枚举
-        try { HttpReqDef.HttpMethod.valueOf(req.apiDefinition.method); } catch (Exception e) {
-            throw new BusinessException("METHOD_INVALID", "非法的HTTP方法: "+req.apiDefinition.method);
-        }
-        try { HttpReqDef.BodyMode.valueOf(req.apiDefinition.bodyMode); } catch (Exception e) {
-            throw new BusinessException("BODY_MODE_INVALID", "非法的请求体模式: "+req.apiDefinition.bodyMode);
+        // apiDefinition 验证：三种模式都合法
+        // 1. apiDefinitionId 有值 → 复用已有 http_req_def
+        // 2. apiDefinition 为空但 apiId 有值 → 通过 apiId 自动查找
+        // 3. apiDefinition 有值 → 创建新的
+        if (req.apiDefinitionId != null && req.apiDefinitionId > 0) {
+            // 模式1: 复用模式
+        } else if (req.apiDefinition == null && req.apiId != null) {
+            // 模式2: 通过 apiId 自动查找，验证在 createProbeTask 中进行
+        } else if (req.apiDefinition != null) {
+            // 模式3: 创建新的
+            if (httpReqDefRepository.existsByCode(req.apiDefinition.code)) {
+                throw new BusinessException("API_DEFINITION_CODE_EXISTS", "API 定义创建失败：code '"+req.apiDefinition.code+"' 已存在");
+            }
+            try { HttpReqDef.HttpMethod.valueOf(req.apiDefinition.method); } catch (Exception e) {
+                throw new BusinessException("METHOD_INVALID", "非法的HTTP方法: "+req.apiDefinition.method);
+            }
+            try { HttpReqDef.BodyMode.valueOf(req.apiDefinition.bodyMode); } catch (Exception e) {
+                throw new BusinessException("BODY_MODE_INVALID", "非法的请求体模式: "+req.apiDefinition.bodyMode);
+            }
+        } else {
+            throw new BusinessException("API_DEF_MISSING", "apiDefinition、apiDefinitionId、apiId 至少提供一个");
         }
     }
 

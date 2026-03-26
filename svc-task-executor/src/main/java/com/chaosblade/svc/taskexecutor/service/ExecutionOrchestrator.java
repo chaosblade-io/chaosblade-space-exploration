@@ -781,8 +781,8 @@ public class ExecutionOrchestrator {
             mp.put("name", "mem-percent"); mp.put("value", Collections.singletonList("95"));
             matchers.add(mp);
         }
-        // force 仅对 network 类型有效，mem load 不支持 --force 参数
-        if (faultType.contains("network") || faultType.contains("pod")) {
+        // force 仅对 network 类型有效，cpu/mem/pod 均不支持 --force 参数
+        if (faultType.contains("network")) {
             Map<String, Object> mForce = new LinkedHashMap<>();
             mForce.put("name", "force"); mForce.put("value", Collections.singletonList("true"));
             matchers.add(mForce);
