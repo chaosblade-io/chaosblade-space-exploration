@@ -58,8 +58,8 @@ kubernetes:
 # Observability API configuration (Coroot)
 observability:
   api:
-    base-url: "http://1.94.151.57:8003"
-    project-id: "f21z1y9i"
+    base-url: "http://116.63.51.45:30800"
+    project-id: "60hjkbo3"
     cookie: "sid=ab46c3ac87b2e6b30a0eba82d0be33f3; coroot_session=eyJpZCI6MX0=.L4mM7jLoBFBkvEE7K27aKr_F8eGhGd2l5pJMZyjr2Rk="
 
 # LLM configuration (Anthropic Claude)

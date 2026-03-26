@@ -1,0 +1,87 @@
+{{- if .Values.initDb.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "space-exploration.fullname" . }}-init-db
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+    app.kubernetes.io/component: init-db
+  annotations:
+    # Run after MySQL is ready but before application pods
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: init-db
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        # Wait for MySQL to accept connections before running init SQL
+        - name: wait-for-mysql
+          image: {{ .Values.mysql.image }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for MySQL to be ready..."
+              until mysqladmin ping -h "{{ include "space-exploration.mysqlHost" . }}" -u root -p"${MYSQL_ROOT_PASSWORD}" --silent 2>/dev/null; do
+                echo "MySQL is not ready yet. Retrying in 3s..."
+                sleep 3
+              done
+              echo "MySQL is ready."
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "space-exploration.fullname" . }}-db-secret
+                  key: MYSQL_ROOT_PASSWORD
+      containers:
+        - name: init-db
+          image: {{ .Values.mysql.image }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "Running database initialization..."
+              mysql -h "{{ include "space-exploration.mysqlHost" . }}" \
+                    -u root \
+                    -p"${MYSQL_ROOT_PASSWORD}" \
+                    < /sql/init-db.sql
+              echo "Database initialization complete."
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "space-exploration.fullname" . }}-db-secret
+                  key: MYSQL_ROOT_PASSWORD
+          volumeMounts:
+            - name: init-sql
+              mountPath: /sql
+              readOnly: true
+      volumes:
+        - name: init-sql
+          configMap:
+            name: {{ include "space-exploration.fullname" . }}-init-sql
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "space-exploration.fullname" . }}-init-sql
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  init-db.sql: |-
+{{ .Files.Get "files/init-db.sql" | indent 4 }}
+{{- end }}

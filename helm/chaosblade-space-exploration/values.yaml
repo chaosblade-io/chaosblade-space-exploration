@@ -1,0 +1,145 @@
+# -- Global settings ----------------------------------------------------------
+namespace: chaosblade
+
+# Image registry (Harbor)
+registry: 1.94.151.57:85/test
+imageTag: latest
+imagePullPolicy: IfNotPresent
+# imagePullSecrets:
+#   - name: harbor-secret
+
+# -- Application services -----------------------------------------------------
+
+taskResource:
+  replicas: 1
+  image: svc-task-resource
+  port: 8101
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+taskExecutor:
+  replicas: 1
+  image: svc-task-executor
+  port: 8102
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+reqrspProxy:
+  replicas: 1
+  image: svc-reqrsp-proxy
+  port: 8105
+  proxyEngine: new   # "new" = proxy-agent, "legacy" = envoy
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+resultProcessor:
+  replicas: 1
+  image: svc-result-processor
+  port: 8104
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+chaosbladeBox:
+  enabled: true
+  replicas: 1
+  image: chaosblade-box
+  port: 7001
+  nodePort: 30701
+
+chaosbladeBoxFe:
+  enabled: true
+  replicas: 1
+  image: chaosblade-box-fe
+  port: 80
+  nodePort: 30080
+
+k8sGraph:
+  enabled: true
+  replicas: 1
+  image: svc-k8s-graph
+  port: 8106
+
+# -- Infrastructure -----------------------------------------------------------
+
+mysql:
+  enabled: true
+  image: mysql:8.4
+  rootPassword: chaos123
+  databases:
+    - spaceexploration
+    - chaosblade
+  storage: 10Gi
+  storageClassName: ""          # leave empty for default StorageClass
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+redis:
+  enabled: true
+  image: redis:7
+  storage: 1Gi
+  storageClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# -- Kubernetes API access (for svc-reqrsp-proxy) ----------------------------
+
+kubernetes:
+  apiUrl: "https://kubernetes.default.svc"
+  inCluster: true               # use ServiceAccount token when running inside K8s
+
+# -- Proxy agent settings ----------------------------------------------------
+
+proxyAgent:
+  image: proxy-agent
+  controlPort: 9090
+
+# -- Health-check tuning ------------------------------------------------------
+
+probes:
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- LLM API ------------------------------------------------------------------
+
+llm:
+  apiUrl: "https://api.deepseek.com/v1/chat/completions"
+  apiKey: "sk-c4e18be15f4646858ace474b9e6490f9"
+  model: "deepseek-chat"
+
+# -- Init DB Job --------------------------------------------------------------
+
+initDb:
+  # Set to false to skip the DB-init Job (e.g. when schema already exists)
+  enabled: true

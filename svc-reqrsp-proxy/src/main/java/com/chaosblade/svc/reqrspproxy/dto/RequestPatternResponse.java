@@ -28,6 +28,12 @@ public class RequestPatternResponse {
     private Integer analyzedServices;
     private String recordingId;
 
+    // proxy-agent 模式下各服务的 recordingId 列表（用于 Stage 4/5/6 跨阶段复用）
+    private List<String> recordingIds;
+
+    // 服务名 → recordingId 的映射（解决并发启动导致的顺序不确定问题）
+    private java.util.Map<String, String> serviceRecordingMap;
+
     // 执行ID，便于在异步流程中持久化
     @com.fasterxml.jackson.annotation.JsonProperty("execution_id")
     private Long executionId;
@@ -134,6 +140,22 @@ public class RequestPatternResponse {
 
     public void setRecordingId(String recordingId) {
         this.recordingId = recordingId;
+    }
+
+    public List<String> getRecordingIds() {
+        return recordingIds;
+    }
+
+    public void setRecordingIds(List<String> recordingIds) {
+        this.recordingIds = recordingIds;
+    }
+
+    public java.util.Map<String, String> getServiceRecordingMap() {
+        return serviceRecordingMap;
+    }
+
+    public void setServiceRecordingMap(java.util.Map<String, String> serviceRecordingMap) {
+        this.serviceRecordingMap = serviceRecordingMap;
     }
 
     public Long getExecutionId() {

@@ -266,11 +266,11 @@ public class ChaosBladeApi {
         try {
             logger.info("Deleting ChaosBlade resource: {}", name);
             
-            List<io.fabric8.kubernetes.api.model.StatusDetails> result = client.genericKubernetesResources(CTX)
+            Boolean result = client.genericKubernetesResources(CTX)
                     .withName(name)
                     .delete();
-            
-            boolean deleted = result != null && !result.isEmpty();
+
+            boolean deleted = Boolean.TRUE.equals(result);
             
             if (deleted) {
                 logger.info("Successfully deleted ChaosBlade resource: {}", name);

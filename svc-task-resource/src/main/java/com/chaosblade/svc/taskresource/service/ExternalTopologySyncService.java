@@ -37,6 +37,11 @@ public class ExternalTopologySyncService {
 
     @Autowired private ApiTopologyPersistenceService topologyPersistenceService;
 
+    /** Last sync attempt timestamp. Avoid retrying within cooldown period. */
+    private volatile long lastSyncAttempt = 0;
+    /** Cooldown between sync attempts: 60 seconds */
+    private static final long SYNC_COOLDOWN_MS = 60_000;
+
     private RestTemplate buildRestTemplate() {
         SimpleClientHttpRequestFactory f = new SimpleClientHttpRequestFactory();
         f.setConnectTimeout(props.getTimeoutMs());
@@ -49,8 +54,14 @@ public class ExternalTopologySyncService {
      * - Only insert when missing (avoid duplicates)
      */
     public void syncBeforeList() {
+        // Cooldown: skip if last attempt was within 60 seconds (avoid blocking every GET /systems)
+        long now = java.lang.System.currentTimeMillis();
+        if (now - lastSyncAttempt < SYNC_COOLDOWN_MS) {
+            return;
+        }
+        lastSyncAttempt = now;
+
         String base = props.getBaseUrl();
-        log.info("我执行了哦: {}", base);
         if (base == null || base.trim().isEmpty()) {
             log.warn("external.topology.base-url not configured, skip external sync");
             return;

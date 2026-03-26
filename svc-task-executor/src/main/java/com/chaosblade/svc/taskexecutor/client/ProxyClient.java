@@ -128,6 +128,94 @@ public class ProxyClient {
         });
     }
 
+    public Map<String, Object> stopRecording(String recordingId) {
+        return retrying(() -> {
+            HttpHeaders h = new HttpHeaders(); h.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
+                props.getBaseUrl()+"/api/recordings/"+recordingId+"/stop",
+                HttpMethod.POST, new HttpEntity<>(h),
+                new ParameterizedTypeReference<Map<String,Object>>() {}
+            );
+            return resp.getBody();
+        });
+    }
+
+    public Map<String, Object> stopRecordingOnly(String recordingId) {
+        return retrying(() -> {
+            HttpHeaders h = new HttpHeaders(); h.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
+                props.getBaseUrl()+"/api/recordings/"+recordingId+"/stop-only",
+                HttpMethod.POST, new HttpEntity<>(h),
+                new ParameterizedTypeReference<Map<String,Object>>() {}
+            );
+            return resp.getBody();
+        });
+    }
+
+    public Map<String, Object> switchToIntercept(String recordingId, List<Map<String,Object>> rules) {
+        return retrying(() -> {
+            HttpHeaders h = new HttpHeaders(); h.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<List<Map<String,Object>>> req = new HttpEntity<>(rules, h);
+            ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
+                props.getBaseUrl()+"/api/recordings/"+recordingId+"/switch-intercept",
+                HttpMethod.POST, req,
+                new ParameterizedTypeReference<Map<String,Object>>() {}
+            );
+            return resp.getBody();
+        });
+    }
+
+    public Map<String, Object> cleanupRecording(String recordingId) {
+        return retrying(() -> {
+            HttpHeaders h = new HttpHeaders(); h.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
+                props.getBaseUrl()+"/api/recordings/"+recordingId+"/cleanup",
+                HttpMethod.POST, new HttpEntity<>(h),
+                new ParameterizedTypeReference<Map<String,Object>>() {}
+            );
+            return resp.getBody();
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getRecordingSnapshots(String recordingId) {
+        return retrying(() -> {
+            ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(
+                props.getBaseUrl()+"/api/recordings/"+recordingId+"/snapshots",
+                HttpMethod.GET, HttpEntity.EMPTY,
+                new ParameterizedTypeReference<Map<String,Object>>() {}
+            );
+            Map<String,Object> body = resp.getBody();
+            if (body != null && body.get("data") instanceof List) {
+                return (List<Map<String,Object>>) body.get("data");
+            }
+            return java.util.Collections.<Map<String,Object>>emptyList();
+        });
+    }
+
+    public void resumeRecording(String recordingId) {
+        retrying(() -> {
+            HttpHeaders h = new HttpHeaders(); h.setContentType(MediaType.APPLICATION_JSON);
+            restTemplate.exchange(
+                props.getBaseUrl()+"/api/recordings/"+recordingId+"/resume",
+                HttpMethod.POST, new HttpEntity<>(h),
+                new ParameterizedTypeReference<Map<String,Object>>() {}
+            );
+            return null;
+        });
+    }
+
+    public void clearRecordingSnapshots(String recordingId) {
+        retrying(() -> {
+            restTemplate.exchange(
+                props.getBaseUrl()+"/api/recordings/"+recordingId+"/snapshots",
+                HttpMethod.DELETE, HttpEntity.EMPTY,
+                new ParameterizedTypeReference<Map<String,Object>>() {}
+            );
+            return null;
+        });
+    }
+
     public Map<String,Object> getInterceptorStatus(String recordId) {
         return retrying(() -> {
             ResponseEntity<Map<String,Object>> resp = restTemplate.exchange(

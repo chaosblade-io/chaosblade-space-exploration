@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaosblade-box
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+    {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.chaosbladeBox.replicas }}
+  selector:
+    matchLabels:
+      {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box" "context" .) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "space-exploration.serviceAccountName" . }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: chaosblade-box
+          image: {{ include "space-exploration.image" (dict "image" .Values.chaosbladeBox.image "context" .) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.chaosbladeBox.port }}
+              name: http
+          envFrom:
+            - secretRef:
+                name: {{ include "space-exploration.fullname" . }}-db-secret
+          env:
+            - name: SERVER_PORT
+              value: {{ .Values.chaosbladeBox.port | quote }}
+            - name: SPRING_DATASOURCE_URL
+              value: {{ printf "jdbc:mysql://%s:3306/chaosblade?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8" (include "space-exploration.mysqlHost" .) | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: {{ .Values.mysql.rootPassword | quote }}
+            - name: PROBE_API_BASE_URL
+              value: {{ printf "http://svc-task-resource.%s.svc.cluster.local:%d" .Values.namespace (int .Values.taskResource.port) | quote }}
+            - name: PROBE_TOPO_BASE_URL
+              value: {{ printf "http://svc-k8s-graph.%s.svc.cluster.local:%d" .Values.namespace (int .Values.k8sGraph.port) | quote }}
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chaosblade-box
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+    {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box" "context" .) | nindent 4 }}
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.chaosbladeBox.port }}
+      targetPort: {{ .Values.chaosbladeBox.port }}
+      nodePort: {{ .Values.chaosbladeBox.nodePort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box" "context" .) | nindent 4 }}

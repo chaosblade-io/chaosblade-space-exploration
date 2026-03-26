@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-svc
+  namespace: test-services
+  labels:
+    app: db-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-svc
+  template:
+    metadata:
+      labels:
+        app: db-svc
+    spec:
+      containers:
+        - name: db-svc
+          image: 1.94.151.57:85/test/db-svc:latest
+          ports:
+            - containerPort: 8083
+          env:
+            - name: PORT
+              value: "8083"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-svc
+  namespace: test-services
+  labels:
+    app: db-svc
+spec:
+  selector:
+    app: db-svc
+  ports:
+    - port: 8083
+      targetPort: 8083
+      protocol: TCP

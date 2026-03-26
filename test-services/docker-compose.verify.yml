@@ -1,0 +1,77 @@
+version: "3.8"
+
+# docker-compose for integration verification:
+# test-services + proxy-agent (proxy sits between gateway and order-svc)
+#
+# Call chain:
+#   gateway (:8080) → proxy-agent (:18081, proxies to order-svc:8081) → order-svc → inventory-svc → db-svc
+#
+# The gateway is configured to call proxy-agent instead of order-svc directly.
+
+services:
+  db-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    environment:
+      - PORT=8083
+    networks:
+      - verify-net
+
+  inventory-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile.inventory
+    environment:
+      - PORT=8082
+      - DB_SVC_ADDR=db-svc:8083
+    depends_on:
+      - db-svc
+    networks:
+      - verify-net
+
+  order-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile.order
+    environment:
+      - PORT=8081
+      - INVENTORY_SVC_ADDR=inventory-svc:8082
+    depends_on:
+      - inventory-svc
+    networks:
+      - verify-net
+
+  proxy-agent:
+    build:
+      context: ../proxy-agent
+      dockerfile: Dockerfile
+    environment:
+      - PROXY_TARGET=http://order-svc:8081
+      - PROXY_PORT=8081
+      - CONTROL_PORT=9090
+      - SNAPSHOT_DIR=/data/snapshots
+      - INITIAL_MODE=passthrough
+    ports:
+      - "19090:9090"
+    networks:
+      - verify-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ORDER_SVC_ADDR=proxy-agent:8081
+    depends_on:
+      - proxy-agent
+      - order-svc
+    networks:
+      - verify-net
+
+networks:
+  verify-net:
+    driver: bridge

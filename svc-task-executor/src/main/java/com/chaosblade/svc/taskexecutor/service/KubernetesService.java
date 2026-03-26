@@ -30,13 +30,11 @@ public class KubernetesService implements AutoCloseable {
     public KubernetesService(KubernetesProperties props) {
         this.props = props;
         this.executor = Executors.newFixedThreadPool(Math.max(1, props.getThreadPoolSize()));
-        Config cfg = new ConfigBuilder()
-                .withMasterUrl(props.getApiUrl())
-                .withOauthToken(props.getToken())
-                .withTrustCerts(!props.isVerifySsl())
-                .withRequestTimeout(props.getRequestTimeoutMs())
-                .withConnectionTimeout(props.getConnectionTimeoutMs())
-                .build();
+        // Use in-cluster config (ServiceAccount token auto-mounted by K8s)
+        Config cfg = Config.autoConfigure(null);
+        cfg.setTrustCerts(true);
+        cfg.setRequestTimeout(props.getRequestTimeoutMs());
+        cfg.setConnectionTimeout(props.getConnectionTimeoutMs());
         this.client = new KubernetesClientBuilder().withConfig(cfg).build();
     }
 

@@ -15,7 +15,7 @@ public class ExternalTopologyProperties {
     private String baseUrl;
 
     /** 超时时间（毫秒），可选 */
-    private int timeoutMs = 15000;
+    private int timeoutMs = 2000;
 
     public String getBaseUrl() {
         return baseUrl;

@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  db-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    ports:
+      - "8083:8083"
+    environment:
+      - PORT=8083
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  inventory-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile.inventory
+    ports:
+      - "8082:8082"
+    environment:
+      - PORT=8082
+      - DB_SVC_ADDR=db-svc:8083
+    depends_on:
+      - db-svc
+    networks:
+      - test-net
+
+  order-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile.order
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - INVENTORY_SVC_ADDR=inventory-svc:8082
+    depends_on:
+      - inventory-svc
+    networks:
+      - test-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ORDER_SVC_ADDR=order-svc:8081
+    depends_on:
+      - order-svc
+    networks:
+      - test-net
+
+networks:
+  test-net:
+    driver: bridge

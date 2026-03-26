@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-svc
+  namespace: test-services
+  labels:
+    app: order-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-svc
+  template:
+    metadata:
+      labels:
+        app: order-svc
+    spec:
+      containers:
+        - name: order-svc
+          image: 1.94.151.57:85/test/order-svc:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: PORT
+              value: "8081"
+            - name: INVENTORY_SVC_ADDR
+              value: "inventory-svc:8082"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-svc
+  namespace: test-services
+  labels:
+    app: order-svc
+spec:
+  selector:
+    app: order-svc
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP

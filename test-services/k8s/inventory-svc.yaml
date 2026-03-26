@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-svc
+  namespace: test-services
+  labels:
+    app: inventory-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-svc
+  template:
+    metadata:
+      labels:
+        app: inventory-svc
+    spec:
+      containers:
+        - name: inventory-svc
+          image: 1.94.151.57:85/test/inventory-svc:latest
+          ports:
+            - containerPort: 8082
+          env:
+            - name: PORT
+              value: "8082"
+            - name: DB_SVC_ADDR
+              value: "db-svc:8083"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-svc
+  namespace: test-services
+  labels:
+    app: inventory-svc
+spec:
+  selector:
+    app: inventory-svc
+  ports:
+    - port: 8082
+      targetPort: 8082
+      protocol: TCP

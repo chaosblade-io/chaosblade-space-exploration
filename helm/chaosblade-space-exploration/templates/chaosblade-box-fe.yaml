@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chaosblade-box-fe-nginx
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # Static assets under /chaos-blade/ prefix (webpack publicPath)
+        location /chaos-blade/ {
+            alias /usr/share/nginx/html/;
+            try_files $uri $uri/ /index.html;
+        }
+
+        # Frontend routes — serve index.html for SPA routing
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # Proxy /chaos-blade/api/* (strip /chaos-blade/api prefix → / on box)
+        location /chaos-blade/api/ {
+            rewrite ^/chaos-blade/api/(.*)$ /$1 break;
+            proxy_pass http://chaosblade-box.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.chaosbladeBox.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Proxy /api/xflow/* to svc-k8s-graph (must come before the general /api rule)
+        location /api/xflow/ {
+            proxy_pass http://svc-k8s-graph.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.k8sGraph.port }}/api/xflow/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Proxy /api/* to chaosblade-box backend (strip /api prefix, matching webpack proxy pathRewrite)
+        location /api/ {
+            proxy_pass http://chaosblade-box.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.chaosbladeBox.port }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaosblade-box-fe
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+    {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box-fe" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.chaosbladeBoxFe.replicas }}
+  selector:
+    matchLabels:
+      {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box-fe" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box-fe" "context" .) | nindent 8 }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: chaosblade-box-fe
+          image: {{ include "space-exploration.image" (dict "image" .Values.chaosbladeBoxFe.image "context" .) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.chaosbladeBoxFe.port }}
+              name: http
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: chaosblade-box-fe-nginx
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chaosblade-box-fe
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+    {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box-fe" "context" .) | nindent 4 }}
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.chaosbladeBoxFe.port }}
+      targetPort: {{ .Values.chaosbladeBoxFe.port }}
+      nodePort: {{ .Values.chaosbladeBoxFe.nodePort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "space-exploration.selectorLabels" (dict "component" "chaosblade-box-fe" "context" .) | nindent 4 }}

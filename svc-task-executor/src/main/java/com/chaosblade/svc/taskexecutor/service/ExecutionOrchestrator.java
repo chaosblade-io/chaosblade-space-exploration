@@ -46,7 +46,8 @@ public class ExecutionOrchestrator {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ExecutionOrchestrator.class);
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String faultBaseUrl = "http://1.94.151.57:8103";
+    private final String faultBaseUrl;
+    private final String proxyEngine;
 
     public ExecutionOrchestrator(DetectionTaskRepository detectionTaskRepository,
                                  SystemRepository systemRepository,
@@ -60,7 +61,9 @@ public class ExecutionOrchestrator {
                                  TestResultRepository testResultRepository,
                                  TestCaseRepository testCaseRepository,
                                  TaskExecutionLogService taskExecutionLogService,
-                                 SummaryService summaryService) {
+                                 SummaryService summaryService,
+                                 @org.springframework.beans.factory.annotation.Value("${scheduler.base-url:http://svc-fault-scheduler:8103}") String schedulerBaseUrl,
+                                 @org.springframework.beans.factory.annotation.Value("${proxy.engine:new}") String proxyEngine) {
         this.detectionTaskRepository = detectionTaskRepository;
         this.systemRepository = systemRepository;
         this.proxyClient = proxyClient;
@@ -74,6 +77,8 @@ public class ExecutionOrchestrator {
         this.testCaseRepository = testCaseRepository;
         this.taskExecutionLogService = taskExecutionLogService;
         this.summaryService = summaryService;
+        this.faultBaseUrl = schedulerBaseUrl;
+        this.proxyEngine = proxyEngine;
     }
 
 
@@ -107,7 +112,7 @@ public class ExecutionOrchestrator {
         try {
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                     "[Orchestrator] Begin execution: status="+te.getStatus()+", namespace="+te.getNamespace()+", reqDefId="+te.getReqDefId());
-            // 阶段1：触发分析（不提前生成用例，避免 Pod 名称过期）
+            // 阶段1:触发分析（不提前生成用例，避免 Pod 名称过期）
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO, "[Stage1] Start analyzing patterns");
             List<String> svcListForAnalyze = faultConfigQueryService.getFaultConfigsByTaskId(te.getTaskId())
                     .stream().map(ServiceFaultConfig::getServiceName).distinct().collect(java.util.stream.Collectors.toList());
@@ -116,7 +121,7 @@ public class ExecutionOrchestrator {
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                     "[Stage1] Status -> ANALYZING_PATTERNS; analyzeServices="+svcListForAnalyze.size());
 
-            // 阶段2：触发分析 + 轮询（增加 executionId）
+            // 阶段2:触发分析 + 轮询（增加 executionId）
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                     "[Stage2] Analyze request: reqDefId="+te.getReqDefId()+", ns="+te.getNamespace()+", services="+svcListForAnalyze.size()+", durationSec=600, reqCount=1");
             Map<String,Object> analyzeParams = new LinkedHashMap<>();
@@ -159,7 +164,36 @@ public class ExecutionOrchestrator {
                 throw new BusinessException("ANALYZE_TIMEOUT","Proxy 分析超时");
             }
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO, "[Stage2] Analyze completed");
-                // 阶段2完成后：并行等待所有相关服务恢复稳定（所有 pod 正常）
+            // proxy-agent 模式: 从 analyze 任务结果中提取 serviceRecordingMap
+            Map<String, String> serviceRecordingMap = new LinkedHashMap<>();
+            if (!"legacy".equalsIgnoreCase(proxyEngine)) {
+                Object dataObj = stFinal.getOrDefault("data", stFinal);
+                if (dataObj instanceof Map) {
+                    Object srmObj = ((Map<?,?>)dataObj).get("serviceRecordingMap");
+                    if (srmObj instanceof Map) {
+                        for (Map.Entry<?,?> e : ((Map<?,?>)srmObj).entrySet()) {
+                            serviceRecordingMap.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
+                        }
+                    }
+                    // fallback: 从 recordingIds 列表获取（无顺序保证）
+                    if (serviceRecordingMap.isEmpty()) {
+                        Object rids = ((Map<?,?>)dataObj).get("recordingIds");
+                        if (rids instanceof List) {
+                            List<?> ridList = (List<?>)rids;
+                            for (int ri = 0; ri < ridList.size() && ri < svcListForAnalyze.size(); ri++) {
+                                serviceRecordingMap.put(svcListForAnalyze.get(ri), String.valueOf(ridList.get(ri)));
+                            }
+                        }
+                    }
+                }
+                if (!serviceRecordingMap.isEmpty()) {
+                    // 保存所有 recordingIds（逗号分隔）
+                    te.setInterceptRecordId(String.join(",", serviceRecordingMap.values()));
+                    taskExecutionRepository.save(te);
+                    log.info("[Stage2] proxy-agent serviceRecordingMap: {}", serviceRecordingMap);
+                }
+            }
+                // 阶段2完成后:并行等待所有相关服务恢复稳定（所有 pod 正常）
                 try {
                     List<String> svcList = svcListForAnalyze;
                     ExecutorService wpool = Executors.newFixedThreadPool(Math.min(Math.max(1, svcList.size()), 8));
@@ -183,8 +217,8 @@ public class ExecutionOrchestrator {
                             "[Post-Stage2] Services stable summary: ok="+okCount+"/"+total);
                 } catch (Exception ignore) { /* 保守等待，不影响后续流程 */ }
 
-            // 阶段3：移除录制阶段（不再调用 startRecording）
-            // 阶段3：在服务稳定之后再生成用例，避免 Pod 名称过期
+            // 阶段3:移除录制阶段（不再调用 startRecording）
+            // 阶段3:在服务稳定之后再生成用例，避免 Pod 名称过期
             List<EnhancedSimplifiedTestCaseDTO> cases = generateAllServiceCases(te.getTaskId());
             Map<String, Long> caseIdMap = persistGeneratedCases(te.getTaskId(), executionId, cases);
             writeBaggageMap(te.getTaskId(), executionId, cases);
@@ -202,203 +236,243 @@ public class ExecutionOrchestrator {
                         "[Stage3] Cases generated: total="+totalCases+", baseline="+baseCnt+", single="+singleCnt+", dual="+dualCnt+", baggageMap.size="+baggageCnt);
             }
 
-            // 阶段4：按“每个唯一服务注入一次”并行执行注入 + 回放校验
+            // 阶段4:按"每个唯一服务注入一次"并行执行注入 + 回放校验
             te.setStatus("INJECTING_AND_REPLAYING");
             taskExecutionRepository.save(te);
+
+            // Load HttpReqDef for direct API calls during Stage4
+            final HttpReqDef apiDef = httpReqDefRepository.findById(te.getReqDefId())
+                    .orElseThrow(() -> new BusinessException("REQ_DEF_NOT_FOUND", "HttpReqDef not found: " + te.getReqDefId()));
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO, "[Stage4] Start injecting & replaying");
-            // 收集所有用例中涉及到的唯一服务
-            Map<String, EnhancedFaultTargetDTO> serviceTargets = new LinkedHashMap<>();
+            // 收集所有唯一的 (service, faultType) 组合
+            Map<String, EnhancedFaultTargetDTO> faultOptionTargets = new LinkedHashMap<>();
             for (EnhancedSimplifiedTestCaseDTO c : cases) {
-                if (c.getFaults()==null) continue;
+                if (c.getFaults() == null) continue;
                 for (EnhancedFaultTargetDTO ft : c.getFaults()) {
-                    serviceTargets.putIfAbsent(ft.getServiceName(), ft);
+                    String faultType = "";
+                    if (ft.getFaultDefinition() != null && ft.getFaultDefinition().get("faultType") != null) {
+                        faultType = String.valueOf(ft.getFaultDefinition().get("faultType"));
+                    }
+                    String key = ft.getServiceName() + "|" + faultType;
+                    faultOptionTargets.putIfAbsent(key, ft);
                 }
             }
-            List<String> services = new ArrayList<>(serviceTargets.keySet());
-            log.info("[Stage4] Unique services to inject: {}", services.size());
+            // services 列表仍用于 proxy-agent 部署（按服务去重）
+            List<String> services = faultOptionTargets.values().stream()
+                    .map(EnhancedFaultTargetDTO::getServiceName).distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            log.info("[Stage4] Unique fault options: {}, services: {}", faultOptionTargets.size(), services.size());
 
-            ExecutorService pool = Executors.newFixedThreadPool(Math.min(Math.max(1, services.size()), 8));
-            List<Future<Map.Entry<String,String>>> futures = new ArrayList<>(); // 返回 <service, bladeName>
+            // Stage 4: Serial fault injection - inject ONE (service, faultType) at a time,
+            // send end-to-end API request, observe impact, recover, then next option.
+            List<String> faultOptionKeys = new ArrayList<>(faultOptionTargets.keySet());
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
-                    "[Stage4] Services to inject: count="+services.size()+", names="+services);
+                    "[Stage4] Fault options to inject (SERIAL): count="+faultOptionKeys.size());
 
-            for (String svc : services) {
-                EnhancedFaultTargetDTO ft = serviceTargets.get(svc);
-                futures.add(pool.submit(() -> {
-                    try {
-                        // 1) 注入故障（仅一次/服务）
-                        @SuppressWarnings("unchecked")
-                        Map<String,Object> full = (Map<String,Object>) (Map<?,?>) ft.getFaultDefinition();
-                        Object specObj = full.get("spec");
-                        Map<String,Object> payload;
-                        if (specObj instanceof Map) {
-                            payload = new LinkedHashMap<>();
-                            payload.put("spec", specObj);
-                        } else {
-                            payload = full;
-                        }
-                        HttpHeaders fh = new HttpHeaders();
-                        fh.setContentType(MediaType.APPLICATION_JSON);
-                        HttpEntity<Map<String,Object>> fReq = new HttpEntity<>(payload, fh);
-                        ResponseEntity<Map<String,Object>> fResp = restTemplate.exchange(
-                                faultBaseUrl + "/api/faults/execute",
-                                HttpMethod.POST,
-                                fReq,
-                                new ParameterizedTypeReference<Map<String,Object>>() {}
-                        );
-                        Map<String,Object> respBody = fResp.getBody();
-                        String bladeName = null;
-                        if (respBody != null) {
-                            Object data = respBody.get("data");
-                            if (data instanceof Map) {
-                                Object bn = ((Map<?,?>) data).get("bladeName");
-                                if (bn!=null) bladeName = String.valueOf(bn);
-                            }
-                        }
-                        log.info("[Stage4] Injected fault for service={}, bladeName={}", svc, bladeName);
-                        taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
-                                "[Stage4] Injected fault: service="+svc+", bladeName="+bladeName);
+            String apiMethodStr = apiDef.getMethod() != null ? apiDef.getMethod().name() : "GET";
+            String apiUrl = apiDef.getUrlTemplate();
 
-                        // 等待故障真正生效：轮询 phase=Running，超时30秒，间隔500ms
-                        if (bladeName != null && !bladeName.trim().isEmpty()) {
-                            long waitDeadline = System.currentTimeMillis() + 30_000L;
-                            while (System.currentTimeMillis() < waitDeadline) {
-                                try {
-                                    ResponseEntity<Map<String,Object>> stResp = restTemplate.exchange(
-                                            faultBaseUrl + "/api/faults/"+bladeName+"/status",
-                                            HttpMethod.GET,
-                                            HttpEntity.EMPTY,
-                                            new ParameterizedTypeReference<Map<String,Object>>() {}
-                                    );
-                                    Map<String,Object> stBody = stResp.getBody();
-                                    Object d = (stBody!=null)? stBody.get("data") : null;
-                                    String phase = null;
-                                    if (d instanceof Map) {
-                                        Object ph = ((Map<?,?>) d).get("phase");
-                                        if (ph!=null) phase = String.valueOf(ph);
-                                    }
-                                    if ("Running".equalsIgnoreCase(phase)) {
-                                        log.info("[Stage4] Fault is running for service={}, bladeName={}", svc, bladeName);
+            for (int si = 0; si < faultOptionKeys.size(); si++) {
+                String optKey = faultOptionKeys.get(si);
+                EnhancedFaultTargetDTO ft = faultOptionTargets.get(optKey);
+                String svc = ft.getServiceName();
+                String faultTypeLabel = (ft.getFaultDefinition() != null && ft.getFaultDefinition().get("faultType") != null)
+                        ? String.valueOf(ft.getFaultDefinition().get("faultType")) : "unknown";
+                String bladeName = null;
+                log.info("[Stage4] [{}/{}] Processing: {} ({})", si+1, faultOptionKeys.size(), svc, faultTypeLabel);
+                taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
+                        "[Stage4] [" + (si+1) + "/" + faultOptionKeys.size() + "] Injecting: " + svc + " (" + faultTypeLabel + ")");
+
+                // proxy-agent 模式: 在注入故障前，清空该服务的 snapshot 并恢复录制模式
+                if (!"legacy".equalsIgnoreCase(proxyEngine)) {
+                    String svcRecId = serviceRecordingMap.get(svc);
+                    if (svcRecId != null) {
+                        try {
+                            proxyClient.clearRecordingSnapshots(svcRecId);
+                            proxyClient.resumeRecording(svcRecId);
+                            log.info("[Stage4] proxy-agent for {} set to record mode, snapshots cleared", svc);
+                        } catch (Exception e) {
+                            log.warn("[Stage4] Failed to resume recording for {}: {}", svc, e.getMessage());
+                        }
+                    }
+                }
+
+                try {
+                    // 4.1) Inject fault on THIS service only
+                    @SuppressWarnings("unchecked")
+                    Map<String,Object> full = (Map<String,Object>) (Map<?,?>) ft.getFaultDefinition();
+                    Object specObj = full.get("spec");
+                    Map<String,Object> payload;
+                    if (specObj instanceof Map) {
+                        payload = new LinkedHashMap<>();
+                        payload.put("spec", specObj);
+                    } else {
+                        payload = full;
+                    }
+                    HttpHeaders fh = new HttpHeaders();
+                    fh.setContentType(MediaType.APPLICATION_JSON);
+                    HttpEntity<Map<String,Object>> fReq = new HttpEntity<>(payload, fh);
+                    ResponseEntity<Map<String,Object>> fResp = restTemplate.exchange(
+                            faultBaseUrl + "/api/faults/execute",
+                            HttpMethod.POST, fReq,
+                            new ParameterizedTypeReference<Map<String,Object>>() {}
+                    );
+                    Map<String,Object> respBody = fResp.getBody();
+                    if (respBody != null) {
+                        Object dataObj = respBody.get("data");
+                        if (dataObj instanceof Map) {
+                            Object bn = ((Map<?,?>) dataObj).get("bladeName");
+                            if (bn != null) bladeName = String.valueOf(bn);
+                        }
+                    }
+                    log.info("[Stage4] Injected fault: service={}, bladeName={}", svc, bladeName);
+
+                    // 4.2) Wait for fault to be Running (30s timeout)
+                    if (bladeName != null && !bladeName.trim().isEmpty()) {
+                        long waitDeadline = System.currentTimeMillis() + 30_000L;
+                        boolean faultRunning = false;
+                        while (System.currentTimeMillis() < waitDeadline) {
+                            try {
+                                ResponseEntity<Map<String,Object>> stResp = restTemplate.exchange(
+                                        faultBaseUrl + "/api/faults/" + bladeName + "/status",
+                                        HttpMethod.GET, HttpEntity.EMPTY,
+                                        new ParameterizedTypeReference<Map<String,Object>>() {}
+                                );
+                                Map<String,Object> stBody = stResp.getBody();
+                                Object d = (stBody != null) ? stBody.get("data") : null;
+                                if (d instanceof Map) {
+                                    Object ph = ((Map<?,?>) d).get("phase");
+                                    if (ph != null && "Running".equalsIgnoreCase(String.valueOf(ph))) {
+                                        faultRunning = true;
+                                        log.info("[Stage4] Fault running: service={}", svc);
                                         break;
                                     }
-                                } catch (Exception ignore) {}
-                                try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                                }
+                            } catch (Exception ignore) {}
+                            try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                        }
+                        if (!faultRunning) {
+                            log.warn("[Stage4] Fault did not reach Running state for {}", svc);
+                        }
+                    }
+
+                    // 4.3) Send end-to-end API request while THIS service has fault
+                    Map<String,Object> data = new LinkedHashMap<>();
+                    long callStart = System.currentTimeMillis();
+                    try {
+                        HttpHeaders reqHeaders = new HttpHeaders();
+                        reqHeaders.setContentType(MediaType.APPLICATION_JSON);
+                        HttpEntity<String> apiReq = new HttpEntity<>(
+                                apiDef.getBodyTemplate() != null ? apiDef.getBodyTemplate() : "", reqHeaders);
+                        org.springframework.http.HttpMethod method = org.springframework.http.HttpMethod.resolve(apiMethodStr);
+                        if (method == null) method = org.springframework.http.HttpMethod.GET;
+                        ResponseEntity<String> apiResp = restTemplate.exchange(apiUrl, method, apiReq, String.class);
+                        long latencyMs = System.currentTimeMillis() - callStart;
+                        data.put("statusCode", apiResp.getStatusCodeValue());
+                        data.put("method", apiMethodStr);
+                        data.put("url", apiUrl);
+                        data.put("responseBody", apiResp.getBody() != null ? apiResp.getBody() : "");
+                        data.put("responseHeaders", apiResp.getHeaders().toSingleValueMap());
+                        data.put("latencyMs", latencyMs);
+                        log.info("[Stage4] API response under fault [{}]: status={}, latency={}ms", svc, apiResp.getStatusCodeValue(), latencyMs);
+                    } catch (Exception apiErr) {
+                        long latencyMs = System.currentTimeMillis() - callStart;
+                        log.warn("[Stage4] API call failed under fault [{}]: {} ({}ms)", svc, apiErr.getMessage(), latencyMs);
+                        data.put("statusCode", 500);
+                        data.put("method", apiMethodStr);
+                        data.put("url", apiUrl);
+                        data.put("responseBody", "Error: " + apiErr.getMessage());
+                        data.put("latencyMs", latencyMs);
+                    }
+
+                    // 4.4) Save result
+                    InterceptReplayResult rr = new InterceptReplayResult();
+                    rr.setTaskId(te.getTaskId());
+                    rr.setExecutionId(executionId);
+                    rr.setServiceName(svc);
+                    String actualFaultType = "unknown";
+                    try {
+                        if (payload != null) {
+                            Object specObj2 = payload.get("spec");
+                            if (specObj2 instanceof Map) {
+                                Object exps = ((Map) specObj2).get("experiments");
+                                if (exps instanceof List && !((List) exps).isEmpty()) {
+                                    Object firstExp = ((List) exps).get(0);
+                                    if (firstExp instanceof Map) {
+                                        actualFaultType = ((Map) firstExp).get("target") + "-" + ((Map) firstExp).get("action");
+                                    }
+                                }
                             }
                         }
+                    } catch (Exception ex) { /* keep default */ }
+                    rr.setFaultType(actualFaultType);
+                    rr.setRequestUrl(asString(data.get("url")));
+                    rr.setRequestMethod(asString(data.get("method")));
+                    rr.setRequestHeaders("{}");
+                    rr.setRequestBody(apiDef.getBodyTemplate());
+                    rr.setResponseStatus(asInt(data.get("statusCode")));
+                    rr.setResponseHeaders(toJson(data.get("responseHeaders")));
+                    rr.setResponseBody(asString(data.get("responseBody")));
+                    interceptReplayResultRepository.save(rr);
+                    taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
+                            "[Stage4] Result: service=" + svc + ", fault=" + actualFaultType +
+                            ", status=" + rr.getResponseStatus() + ", latency=" + data.get("latencyMs") + "ms");
 
-                        // 2) 回放校验 → 收集响应模板供拦截器使用（不再依赖 baggage 拦截）
-                        Map<String,String> headers = new LinkedHashMap<>();
-                        Map<String,Object> replay = proxyClient.replay(executionId, te.getNamespace(), svc, headers);
-                        Map<String,Object> data;
-                        Object dataObj = replay != null ? replay.getOrDefault("data", replay) : null;
-                        if (dataObj instanceof java.util.Map) {
-                            data = (Map<String,Object>) dataObj;
-                        } else if (dataObj instanceof java.util.List) {
-                            java.util.List<?> lst = (java.util.List<?>) dataObj;
-                            if (!lst.isEmpty() && lst.get(0) instanceof java.util.Map) {
-                                data = (Map<String,Object>) lst.get(0);
-                            } else {
-                                data = new LinkedHashMap<>();
-                            }
-                        } else {
-                            data = new LinkedHashMap<>();
-                        }
-                        InterceptReplayResult rr = new InterceptReplayResult();
-                        rr.setTaskId(te.getTaskId());
-                        rr.setExecutionId(executionId);
-                        rr.setServiceName(svc);
-                        rr.setFaultType("remove");
-                        rr.setRequestUrl(asString(data.get("url")));
-                        rr.setRequestMethod(asString(data.get("method")));
-                        rr.setRequestHeaders(toJson(headers));
-                        rr.setRequestBody(null);
-                        rr.setResponseStatus(asInt(data.get("statusCode")));
-                        rr.setResponseHeaders(toJson(data.get("responseHeaders")));
-                        rr.setResponseBody(asString(data.get("responseBody")));
-                        interceptReplayResultRepository.save(rr);
-                        log.info("[Stage4] Replay verified for service={}, status={}", svc, rr.getResponseStatus());
-                        taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
-                                "[Stage4] Replay verified: service="+svc+", status="+rr.getResponseStatus());
-
-                        return new java.util.AbstractMap.SimpleEntry<>(svc, bladeName);
-                    } catch (Exception e) {
-                        log.error("[Stage4] Fault inject/replay failed for service {}: {}", svc, e.getMessage());
-                        taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.ERROR,
-                                "[Stage4] Inject/replay error: service="+svc+", err="+e.getMessage());
-                        throw e;
-                    }
-                }));
-            }
-            pool.shutdown();
-            Map<String,String> bladeNames = new LinkedHashMap<>();
-            for (Future<Map.Entry<String,String>> f : futures) {
-                try { Map.Entry<String,String> en = f.get(); if (en!=null) bladeNames.put(en.getKey(), en.getValue()); }
-                catch (Exception ex) { log.error("[Stage4] Future join error: {}", ex.getMessage()); }
-            }
-            // 恢复全部故障并等待服务恢复
-            for (Map.Entry<String,String> en : bladeNames.entrySet()) {
-                String bn = en.getValue(); String svc = en.getKey();
-                try {
-                    if (bn!=null) {
-                        restTemplate.exchange(faultBaseUrl+"/api/faults/"+bn, HttpMethod.DELETE, HttpEntity.EMPTY,
-                                new ParameterizedTypeReference<Map<String,Object>>() {});
-                        log.info("[Stage4] Recovered fault for service={}, bladeName={}", svc, bn);
-                    }
-                } catch (Exception ex) { log.warn("[Stage4] Recover fault failed for service {}: {}", svc, ex.getMessage()); }
-            }
-            // 并行等待所有服务恢复稳定，避免串行阻塞过久
-            {
-                ExecutorService wpool = Executors.newFixedThreadPool(Math.min(Math.max(1, services.size()), 8));
-                List<Future<Boolean>> wf = new ArrayList<>();
-                for (String svc : services) {
-                    wf.add(wpool.submit(() -> {
-                        boolean ok = kubernetesService.waitForServiceStable(te.getNamespace(), svc, 120_000L);
-                        if (ok) log.info("[Stage4] Service stable: {}", svc);
-                        else log.warn("[Stage4] Service not stable (timeout): {}", svc);
-                        return ok;
-                    }));
-                }
-                wpool.shutdown();
-                for (Future<Boolean> f : wf) { try { f.get(); } catch (Exception e) { log.warn("[Stage4] Wait task error: {}", e.getMessage()); } }
-            }
-
-            // 阶段5：下发拦截器并就绪校验（recordId 改为 executionId 字符串）
-            String recordIdStr = String.valueOf(executionId);
-            List<Map<String,Object>> items = buildInterceptorItems(executionId);
-            proxyClient.interceptorsUpsert(te.getNamespace(), recordIdStr, options.ttlSecForInterceptors, items);
-            te.setInterceptRecordId(recordIdStr);
-            te.setStatus("RULES_READY");
-            taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
-                    "[Stage5] Build interceptors: count="+items.size());
-
-            taskExecutionRepository.save(te);
-            log.info("[Stage5] Interceptors upserted, recordId={}, items={}.", recordIdStr, items);
-
-            long readyDeadline = System.currentTimeMillis() + 1000L * options.waitInterceptorReadySec;
-            taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
-                    "[Stage5] Waiting interceptors ready: timeoutSec="+options.waitInterceptorReadySec);
-
-            while (System.currentTimeMillis() < readyDeadline) {
-                Map<String,Object> st = proxyClient.getInterceptorStatus(recordIdStr);
-                boolean exists = Boolean.TRUE.equals(((Map<?,?>)st.getOrDefault("data", st)).get("exists"));
-                if (exists) break;
-                try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-            }
-            // 不存在则失败
-            {
-                Map<String,Object> st = proxyClient.getInterceptorStatus(recordIdStr);
-                boolean exists = Boolean.TRUE.equals(((Map<?,?>)st.getOrDefault("data", st)).get("exists"));
-                if (!exists) {
+                } catch (Exception e) {
+                    log.error("[Stage4] Failed for service {}: {}", svc, e.getMessage());
                     taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.ERROR,
-                            "[Stage5] Interceptors not ready");
-                    throw new BusinessException("INTERCEPTOR_NOT_READY","拦截器未就绪");
+                            "[Stage4] Error: service=" + svc + ", err=" + e.getMessage());
+                } finally {
+                    // 4.5) ALWAYS recover fault (even on error)
+                    if (bladeName != null) {
+                        try {
+                            restTemplate.exchange(faultBaseUrl + "/api/faults/" + bladeName,
+                                    HttpMethod.DELETE, HttpEntity.EMPTY,
+                                    new ParameterizedTypeReference<Map<String,Object>>() {});
+                            log.info("[Stage4] Recovered fault: service={}, bladeName={}", svc, bladeName);
+                        } catch (Exception ex) {
+                            log.warn("[Stage4] Recover failed: service={}, err={}", svc, ex.getMessage());
+                        }
+                    }
+
+                    // 4.6) Wait for service to stabilize before next iteration
+                    try {
+                        boolean stable = kubernetesService.waitForServiceStable(te.getNamespace(), svc, 60_000L);
+                        if (stable) log.info("[Stage4] Service stable after recovery: {}", svc);
+                        else log.warn("[Stage4] Service not stable after recovery: {}", svc);
+                    } catch (Exception ex) {
+                        log.warn("[Stage4] Stability check failed: {}", ex.getMessage());
+                    }
                 }
-                log.info("[Stage5] Interceptors are ready.");
-                taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
-                        "[Stage5] Interceptors ready");
             }
-            // 阶段5就绪后：并行等待所有目标服务 Pod 再次稳定（拦截器下发可能触发滚动）
-            {
+            taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
+                    "[Stage4] All services processed (serial injection complete)");
+
+            // 阶段5:下发拦截器（仅 legacy/envoy 模式需要，proxy-agent 模式跳过）
+            String recordIdStr = String.valueOf(executionId);
+            if ("legacy".equalsIgnoreCase(proxyEngine)) {
+                try {
+                    List<Map<String,Object>> items = buildInterceptorItems(executionId);
+                    if (!items.isEmpty()) {
+                        proxyClient.interceptorsUpsert(te.getNamespace(), recordIdStr, options.ttlSecForInterceptors, items);
+                    }
+                } catch (Exception interceptErr) {
+                    log.warn("[Stage5] Interceptor upsert failed (non-fatal): {}", interceptErr.getMessage());
+                    taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.WARN,
+                            "[Stage5] Interceptor setup skipped: " + interceptErr.getMessage());
+                }
+                log.info("[Stage5] Interceptor setup completed for recordId={}", recordIdStr);
+
+                // 等待拦截器就绪
+                long readyDeadline = System.currentTimeMillis() + 1000L * options.waitInterceptorReadySec;
+                while (System.currentTimeMillis() < readyDeadline) {
+                    Map<String,Object> st = proxyClient.getInterceptorStatus(recordIdStr);
+                    boolean exists = Boolean.TRUE.equals(((Map<?,?>)st.getOrDefault("data", st)).get("exists"));
+                    if (exists) break;
+                    try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
+
+                // 等待服务稳定（Envoy sidecar 注入可能触发滚动更新）
                 ExecutorService wpool = Executors.newFixedThreadPool(Math.min(Math.max(1, services.size()), 8));
                 List<Future<Boolean>> wf = new ArrayList<>();
                 for (String svc : services) {
@@ -414,10 +488,69 @@ public class ExecutionOrchestrator {
                 for (Future<Boolean> f : wf) { try { if (Boolean.TRUE.equals(f.get())) okCount++; } catch (Exception e) { log.warn("[Stage5] Wait task error: {}", e.getMessage()); } }
                 taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                         "[Stage5] Services stable summary after interceptors: ok="+okCount+"/"+total);
+            } else {
+                // proxy-agent 模式: 从各服务的 proxy-agent 拉取 Stage 4 录制的故障 snapshot，
+                // 构建 baggage 匹配的 intercept 规则，切换到 intercept 模式。
+                log.info("[Stage5] proxy-agent mode: setting up interceptors from recorded fault responses");
+
+                for (String svc : services) {
+                    String recId = serviceRecordingMap.get(svc);
+                    if (recId == null) {
+                        log.warn("[Stage5] No recordingId for svc={}, skipping", svc);
+                        continue;
+                    }
+                    try {
+                        // 1. 拉取 proxy-agent 的 snapshot（Stage 4 录制的故障响应）
+                        List<Map<String,Object>> snapshots = proxyClient.getRecordingSnapshots(recId);
+                        log.info("[Stage5] Pulled {} snapshots from proxy-agent for svc={}", snapshots.size(), svc);
+
+                        // 2. 查询该服务的 baggage token
+                        BaggageMap bm = baggageMapRepository.findByExecutionIdAndServiceName(executionId, svc);
+                        String baggageToken = (bm != null) ? bm.getValue() : "chaos." + svc + "-pod-kill";
+
+                        // 3. 构建 intercept 规则
+                        List<Map<String,Object>> rules = new ArrayList<>();
+                        for (Map<String,Object> snap : snapshots) {
+                            Map<String,Object> rule = new LinkedHashMap<>();
+                            Map<?,?> sig = (Map<?,?>) snap.get("signature");
+                            Map<?,?> resp = (Map<?,?>) snap.get("response");
+                            if (sig == null || resp == null) continue;
+
+                            String snapMethod = String.valueOf(sig.get("method"));
+                            rule.put("path_match", String.valueOf(sig.get("path")));
+                            rule.put("method", snapMethod);
+                            rule.put("baggage_match", baggageToken);
+
+                            if ("GRPC".equals(snapMethod)) {
+                                // gRPC: response.body 已是 Base64 编码的 protobuf（Go json.Marshal 自动 Base64 []byte）
+                                rule.put("status_code", 0); // gRPC OK
+                                rule.put("body_base64", resp.get("body") != null ? String.valueOf(resp.get("body")) : "");
+                            } else {
+                                // HTTP: response.body 是明文字符串
+                                rule.put("status_code", resp.get("status_code"));
+                                rule.put("body", resp.get("body") != null ? String.valueOf(resp.get("body")) : "");
+                            }
+                            rules.add(rule);
+                        }
+
+                        // 4. 推送规则并切换 intercept 模式
+                        if (!rules.isEmpty()) {
+                            proxyClient.switchToIntercept(recId, rules);
+                            log.info("[Stage5] svc={} switched to intercept with {} rules, baggage={}", svc, rules.size(), baggageToken);
+                        } else {
+                            log.warn("[Stage5] No snapshots for svc={}, skipping intercept setup", svc);
+                        }
+                    } catch (Exception e) {
+                        log.warn("[Stage5] Failed to setup intercept for svc={}: {}", svc, e.getMessage());
+                    }
+                }
+                taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
+                        "[Stage5] proxy-agent interceptors configured for " + services.size() + " services");
             }
+            te.setStatus("RULES_READY");
+            taskExecutionRepository.save(te);
 
-
-            // 阶段6：执行所有用例（baseline/单/双），每个用例内请求并发，按批次执行
+            // 阶段6:执行所有用例（baseline/单/双），每个用例内请求并发，按批次执行
             te.setStatus("LOAD_TEST_BASELINE");
             taskExecutionRepository.save(te);
 
@@ -467,15 +600,30 @@ public class ExecutionOrchestrator {
 
             }
 
+            // 清理 proxy-agent（恢复 selector + 删除 Deployment + 删除影子 Service）
+            if (!"legacy".equalsIgnoreCase(proxyEngine) && te.getInterceptRecordId() != null) {
+                log.info("[Cleanup] Cleaning up proxy-agent interceptors...");
+                for (String recId : te.getInterceptRecordId().split(",")) {
+                    try {
+                        proxyClient.cleanupRecording(recId.trim());
+                        log.info("[Cleanup] Cleaned up recording: {}", recId);
+                    } catch (Exception e) {
+                        log.warn("[Cleanup] Failed to cleanup recording {}: {}", recId, e.getMessage());
+                    }
+                }
+                taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
+                        "[Cleanup] proxy-agent interceptors cleaned up");
+            }
+
             te.setStatus("DONE");
             te.setFinishedAt(LocalDateTime.now());
             taskExecutionRepository.save(te);
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                     "[Stage6] Completed: status="+te.getStatus()+", finishedAt="+te.getFinishedAt());
             // 异步触发大模型总结
-            // try { summaryService.summarizeAsync(executionId); } catch (Exception ignore) {
-            //     log.warn("[Summary] Failed to trigger summarize: {}", ignore.getMessage());
-            // }
+            try { summaryService.summarizeAsync(executionId); } catch (Exception ignore) {
+                log.warn("[Summary] Failed to trigger summarize: {}", ignore.getMessage());
+            }
 
         } catch (BusinessException be) {
             te.setStatus("FAILED");
@@ -500,84 +648,184 @@ public class ExecutionOrchestrator {
         }
     }
 
-    // 生成全服务用例：baseline + 单故障(每服务一次) + 双故障(全组合)
+    // 生成全服务用例: baseline + k=1..maxK 的故障组合
+    // 每个 (service, faultType) 是一个独立选项，同一用例中不能选同一服务的两个故障
     private List<EnhancedSimplifiedTestCaseDTO> generateAllServiceCases(Long taskId) {
+        DetectionTask dt = detectionTaskRepository.findById(taskId)
+                .orElseThrow(() -> new BusinessException("DETECTION_TASK_NOT_FOUND","任务不存在: "+taskId));
+        int maxK = (dt.getMaxFaultServices() != null) ? dt.getMaxFaultServices() : 2;
+        return generateCasesWithK(taskId, maxK);
+    }
+
+    private List<EnhancedSimplifiedTestCaseDTO> generateCasesWithK(Long taskId, int maxK) {
         List<ServiceFaultConfig> svcList = faultConfigQueryService.getFaultConfigsByTaskId(taskId);
-        Map<String, ServiceFaultConfig> svcMap = new LinkedHashMap<>();
-        for (ServiceFaultConfig sfc : svcList) svcMap.put(sfc.getServiceName(), sfc);
-        java.util.function.Function<ServiceFaultConfig, EnhancedFaultTargetDTO> buildOne = (sfc) -> {
-            String ns = sfc.getNamespace();
-            String svc = sfc.getServiceName();
-            java.util.List<String> containerValues = (sfc.getContainerNames()!=null)? sfc.getContainerNames() : java.util.Collections.emptyList();
-            java.util.List<String> podValues = (sfc.getNames()!=null)? sfc.getNames() : java.util.Collections.emptyList();
-            java.util.Map<String, Object> def = new java.util.LinkedHashMap<>();
-            java.util.Map<String, Object> exp = new java.util.LinkedHashMap<>();
-            exp.put("scope", "container"); exp.put("target", "container"); exp.put("action", "remove");
-            java.util.List<java.util.Map<String,Object>> matchers = new java.util.ArrayList<>();
-            if (!podValues.isEmpty()) {
-                java.util.Map<String,Object> m1 = new java.util.LinkedHashMap<>();
-                m1.put("name", "names");
-                m1.put("value", podValues);
-                matchers.add(m1);
-            }
-            java.util.Map<String,Object> m2 = new java.util.LinkedHashMap<>();
-            m2.put("name", "namespace");
-            m2.put("value", java.util.Collections.singletonList(ns));
-            matchers.add(m2);
-            if (!containerValues.isEmpty()) {
-                java.util.Map<String,Object> m3 = new java.util.LinkedHashMap<>();
-                m3.put("name", "container-names");
-                m3.put("value", containerValues);
-                matchers.add(m3);
-            }
-            java.util.Map<String,Object> m4 = new java.util.LinkedHashMap<>();
-            m4.put("name", "force");
-            m4.put("value", java.util.Collections.singletonList("true"));
-            matchers.add(m4);
-            java.util.Map<String, Object> expObj = new java.util.LinkedHashMap<>();
-            expObj.putAll(exp); expObj.put("matchers", matchers);
-            java.util.Map<String, Object> spec = new java.util.LinkedHashMap<>();
-            spec.put("experiments", java.util.Collections.singletonList(expObj));
-            def.put("spec", spec);
-            return new EnhancedFaultTargetDTO(ns, svc, def);
-        };
-        List<String> services = new ArrayList<>(svcMap.keySet());
-        List<EnhancedSimplifiedTestCaseDTO> out = new ArrayList<>();
-        out.add(new EnhancedSimplifiedTestCaseDTO(java.util.Collections.emptyList())); // baseline
-        for (String s : services) out.add(new EnhancedSimplifiedTestCaseDTO(java.util.Collections.singletonList(buildOne.apply(svcMap.get(s)))));
-        for (int i=0;i<services.size();i++) {
-            for (int j=i+1;j<services.size();j++) {
-                java.util.List<EnhancedFaultTargetDTO> dualFaults = new java.util.ArrayList<>();
-                dualFaults.add(buildOne.apply(svcMap.get(services.get(i))));
-                dualFaults.add(buildOne.apply(svcMap.get(services.get(j))));
-                out.add(new EnhancedSimplifiedTestCaseDTO(dualFaults));
+
+        // 1. 构建故障选项列表: 每个 (service, faultType) 是一个独立选项
+        List<EnhancedFaultTargetDTO> faultOptions = new ArrayList<>();
+        for (ServiceFaultConfig sfc : svcList) {
+            if (sfc.getFaultConfig() == null) continue;
+            for (ServiceFaultConfig.FaultEntry fe : sfc.getFaultConfig()) {
+                faultOptions.add(buildSingleFaultTarget(sfc, fe));
             }
         }
+        log.info("Fault options: {} (from {} services)", faultOptions.size(),
+                faultOptions.stream().map(EnhancedFaultTargetDTO::getServiceName).distinct().count());
+
+        // 2. 生成用例
+        List<EnhancedSimplifiedTestCaseDTO> out = new ArrayList<>();
+        // BASELINE
+        out.add(new EnhancedSimplifiedTestCaseDTO(java.util.Collections.emptyList()));
+
+        // k=1: 每个选项单独一个用例
+        for (EnhancedFaultTargetDTO opt : faultOptions) {
+            out.add(new EnhancedSimplifiedTestCaseDTO(java.util.Collections.singletonList(opt)));
+        }
+
+        // k=2..maxK: 组合（同一服务不能选两个故障）
+        if (maxK >= 2) {
+            for (int i = 0; i < faultOptions.size(); i++) {
+                for (int j = i + 1; j < faultOptions.size(); j++) {
+                    if (faultOptions.get(i).getServiceName().equals(faultOptions.get(j).getServiceName())) continue;
+                    List<EnhancedFaultTargetDTO> combo = new ArrayList<>();
+                    combo.add(faultOptions.get(i));
+                    combo.add(faultOptions.get(j));
+                    out.add(new EnhancedSimplifiedTestCaseDTO(combo));
+                }
+            }
+        }
+
+        // k=3: 三重组合（如果需要）
+        if (maxK >= 3) {
+            for (int i = 0; i < faultOptions.size(); i++) {
+                for (int j = i + 1; j < faultOptions.size(); j++) {
+                    if (faultOptions.get(i).getServiceName().equals(faultOptions.get(j).getServiceName())) continue;
+                    for (int k = j + 1; k < faultOptions.size(); k++) {
+                        if (faultOptions.get(k).getServiceName().equals(faultOptions.get(i).getServiceName())) continue;
+                        if (faultOptions.get(k).getServiceName().equals(faultOptions.get(j).getServiceName())) continue;
+                        List<EnhancedFaultTargetDTO> combo = new ArrayList<>();
+                        combo.add(faultOptions.get(i));
+                        combo.add(faultOptions.get(j));
+                        combo.add(faultOptions.get(k));
+                        out.add(new EnhancedSimplifiedTestCaseDTO(combo));
+                    }
+                }
+            }
+        }
+
+        log.info("Generated {} test cases: 1 baseline + {} options, maxK={}", out.size(), faultOptions.size(), maxK);
         return out;
+    }
+
+    /**
+     * 为单个 (service, faultType) 构建 ChaosBlade CRD（只含一个 experiment）。
+     */
+    private EnhancedFaultTargetDTO buildSingleFaultTarget(ServiceFaultConfig sfc, ServiceFaultConfig.FaultEntry fe) {
+        String ns = sfc.getNamespace();
+        String svc = sfc.getServiceName();
+        List<String> containerValues = (sfc.getContainerNames() != null) ? sfc.getContainerNames() : Collections.emptyList();
+        List<String> podValues = (sfc.getNames() != null) ? sfc.getNames() : Collections.emptyList();
+        String faultType = (fe.getType() != null) ? fe.getType() : "";
+
+        // scope/target/action
+        Map<String, Object> exp = new LinkedHashMap<>();
+        if (faultType.contains("pod-kill") || faultType.contains("pod_kill")) {
+            exp.put("scope", "pod"); exp.put("target", "pod"); exp.put("action", "delete");
+        } else if (faultType.contains("cpu")) {
+            exp.put("scope", "pod"); exp.put("target", "cpu"); exp.put("action", "fullload");
+        } else if (faultType.contains("network")) {
+            exp.put("scope", "pod"); exp.put("target", "network"); exp.put("action", "delay");
+        } else if (faultType.contains("mem")) {
+            exp.put("scope", "pod"); exp.put("target", "mem"); exp.put("action", "load");
+        } else {
+            exp.put("scope", "container"); exp.put("target", "container"); exp.put("action", "remove");
+        }
+
+        // matchers
+        List<Map<String, Object>> matchers = new ArrayList<>();
+        if (!podValues.isEmpty()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", "names"); m.put("value", podValues);
+            matchers.add(m);
+        }
+        Map<String, Object> m2 = new LinkedHashMap<>();
+        m2.put("name", "namespace"); m2.put("value", Collections.singletonList(ns));
+        matchers.add(m2);
+        if (!containerValues.isEmpty()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", "container-names"); m.put("value", containerValues);
+            matchers.add(m);
+        }
+        Map<String, Object> mLabels = new LinkedHashMap<>();
+        mLabels.put("name", "labels");
+        mLabels.put("value", Collections.singletonList("app.kubernetes.io/component=" + svc));
+        matchers.add(mLabels);
+        // fault-type-specific matchers
+        if (faultType.contains("cpu")) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", "cpu-percent"); m.put("value", Collections.singletonList("100"));
+            matchers.add(m);
+        }
+        if (faultType.contains("network") && faultType.contains("delay")) {
+            Map<String, Object> mt = new LinkedHashMap<>();
+            mt.put("name", "time"); mt.put("value", Collections.singletonList("2000"));
+            matchers.add(mt);
+            Map<String, Object> mi = new LinkedHashMap<>();
+            mi.put("name", "interface"); mi.put("value", Collections.singletonList("eth0"));
+            matchers.add(mi);
+        }
+        if (faultType.contains("mem")) {
+            Map<String, Object> mm = new LinkedHashMap<>();
+            mm.put("name", "mode"); mm.put("value", Collections.singletonList("ram"));
+            matchers.add(mm);
+            Map<String, Object> mp = new LinkedHashMap<>();
+            mp.put("name", "mem-percent"); mp.put("value", Collections.singletonList("95"));
+            matchers.add(mp);
+        }
+        // force 仅对 network 类型有效，mem load 不支持 --force 参数
+        if (faultType.contains("network") || faultType.contains("pod")) {
+            Map<String, Object> mForce = new LinkedHashMap<>();
+            mForce.put("name", "force"); mForce.put("value", Collections.singletonList("true"));
+            matchers.add(mForce);
+        }
+
+        exp.put("matchers", matchers);
+        Map<String, Object> spec = new LinkedHashMap<>();
+        spec.put("experiments", Collections.singletonList(exp));
+        Map<String, Object> def = new LinkedHashMap<>();
+        def.put("spec", spec);
+        // 在 faultDefinition 中记录故障类型，用于 buildCaseId 和 buildBaggageHeader
+        def.put("faultType", faultType);
+        return new EnhancedFaultTargetDTO(ns, svc, def);
     }
 
 
     private String buildCaseId(EnhancedSimplifiedTestCaseDTO c) {
-        if (c.getFaults()==null || c.getFaults().isEmpty()) return "baseline";
-        List<String> svcs = c.getFaults().stream().map(EnhancedFaultTargetDTO::getServiceName).sorted().collect(java.util.stream.Collectors.toList());
-        return String.join("+", svcs);
+        if (c.getFaults() == null || c.getFaults().isEmpty()) return "baseline";
+        List<String> parts = c.getFaults().stream()
+                .map(f -> {
+                    String ft = "";
+                    if (f.getFaultDefinition() != null && f.getFaultDefinition().get("faultType") != null) {
+                        ft = "-" + f.getFaultDefinition().get("faultType");
+                    }
+                    return f.getServiceName() + ft;
+                })
+                .sorted()
+                .collect(java.util.stream.Collectors.toList());
+        return String.join("+", parts);
     }
 
     private String buildBaggageHeader(EnhancedSimplifiedTestCaseDTO c, Long executionId) {
-        if (c.getFaults()==null || c.getFaults().isEmpty()) return null;
-        // 从 baggage_map 获取每个服务的 token 值并拼接
-        List<String> services = c.getFaults().stream().map(EnhancedFaultTargetDTO::getServiceName).distinct().collect(java.util.stream.Collectors.toList());
-        List<BaggageMap> maps = baggageMapRepository.findByExecutionId(executionId);
-        Map<String,String> svcToken = new LinkedHashMap<>();
-        for (BaggageMap bm : maps) svcToken.put(bm.getServiceName(), bm.getValue());
+        if (c.getFaults() == null || c.getFaults().isEmpty()) return null;
+        // 为每个故障选项生成精确的 baggage token: chaos.{svc}-{faultType}
         List<String> toks = new ArrayList<>();
-        for (String svc : services) {
-            String v = svcToken.get(svc);
-            if (v == null || v.trim().isEmpty()) continue;
-            // value 可能为逗号分隔的多个 token；这里全部加入
-            for (String t : v.split(",")) if (t!=null && !t.trim().isEmpty()) toks.add(t.trim());
+        for (EnhancedFaultTargetDTO f : c.getFaults()) {
+            String ft = "";
+            if (f.getFaultDefinition() != null && f.getFaultDefinition().get("faultType") != null) {
+                ft = String.valueOf(f.getFaultDefinition().get("faultType"));
+            }
+            toks.add("chaos." + f.getServiceName() + "-" + ft);
         }
-        return toks.isEmpty()? null : String.join(",", toks);
+        return toks.isEmpty() ? null : String.join(",", toks);
     }
 
     private TestResult executeCase(HttpReqDef def, String baggageHeader, int requestCount, int concurrency) {
@@ -600,12 +848,12 @@ public class ExecutionOrchestrator {
             futures.add(pool.submit(() -> {
                 HttpHeaders rh = new HttpHeaders();
                 for (Map.Entry<String,String> e : headerMap.entrySet()) rh.add(e.getKey(), e.getValue());
-                // baggage 头替换逻辑：若存在则替换，否则按需添加
+                // baggage 头替换逻辑:若存在则替换，否则按需添加
                 if (baggageHeader != null && !baggageHeader.trim().isEmpty()) {
                     if (rh.containsKey("baggage")) rh.set("baggage", baggageHeader);
                     else rh.add("baggage", baggageHeader);
                 } else {
-                    // baseline：确保不携带旧 baggage
+                    // baseline:确保不携带旧 baggage
                     rh.remove("baggage");
                 }
                 Object body = null;
@@ -631,7 +879,7 @@ public class ExecutionOrchestrator {
                 } catch (HttpStatusCodeException ex) {
                     statusCode = ex.getStatusCode().value();
                 } catch (Exception ex) {
-                    //  e9 9d 9e HTTP  e7 8a b6 e6 80 81 e7 b1 bb e5 bc 82 e5 b8 b8 e4 b9 9f e8 ae a1 e4 b8 ba e9 94 99 e8 af af
+                    // e99d9e HTTP e78ab6e68081e7b1bbe5bc82e5b8b8e4b99fe8aea1e4b8bae99499e8afaf
                     statusCode = -1;
                 } finally {
                     long durMs = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - begin);
@@ -678,7 +926,7 @@ public class ExecutionOrchestrator {
     @Transactional
     private void writeBaggageMap(Long taskId, Long executionId, List<EnhancedSimplifiedTestCaseDTO> cases) {
         // 基于该任务的故障配置，按服务生成基于故障类型的 token 列表
-        // 规则：每个服务的 token = join(",", ["chaos."+svc+"-"+type for type in unique types])
+        // 规则:每个服务的 token = join(",", ["chaos."+svc+"-"+type for type in unique types])
         // 若该服务未配置 type，则不为其生成特定后缀（可存空字符串）
         List<String> services = extractAllServices(cases);
         // 查询服务→故障类型集合
@@ -765,17 +1013,10 @@ public class ExecutionOrchestrator {
             com.chaosblade.svc.taskexecutor.entity.TestCase tc = new com.chaosblade.svc.taskexecutor.entity.TestCase();
             tc.setTaskId(taskId);
             tc.setExecutionId(executionId);
-            switch (cnt) {
-                case 0:
-                    tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.BASELINE);
-                    break;
-                case 1:
-                    tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.SINGLE);
-                    break;
-                default:
-                    tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.DUAL);
-                    break;
-            }
+            if (cnt == 0) tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.BASELINE);
+            else if (cnt == 1) tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.SINGLE);
+            else if (cnt == 2) tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.DUAL);
+            else tc.setCaseType(com.chaosblade.svc.taskexecutor.entity.TestCase.CaseType.MULTI);
             tc.setTargetCount(cnt);
             try {
                 String json = om.writeValueAsString(c.getFaults()==null? java.util.Collections.emptyList() : c.getFaults());

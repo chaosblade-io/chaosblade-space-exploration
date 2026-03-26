@@ -2,6 +2,7 @@ package com.chaosblade.svc.taskresource.service;
 
 import com.chaosblade.common.core.dto.PageResponse;
 import com.chaosblade.common.core.exception.BusinessException;
+import com.chaosblade.svc.taskresource.entity.Api;
 import com.chaosblade.svc.taskresource.entity.ApiTopology;
 import com.chaosblade.svc.taskresource.entity.ApiTopologyNode;
 import com.chaosblade.svc.taskresource.entity.ApiTopologyEdge;
@@ -193,7 +194,17 @@ public class ApiTopologyService {
         // 查找该API的拓扑
         List<ApiTopology> topologies = apiTopologyRepository.findByApiId(apiId);
         if (topologies.isEmpty()) {
-            throw new BusinessException("TOPOLOGY_NOT_FOUND", "API拓扑不存在: " + apiId);
+            // Fallback: 查找同系统下任意API的拓扑（共享拓扑）
+            logger.info("No topology for API {}, falling back to system-level topology", apiId);
+            try {
+                Api api = apiService.getApiById(apiId);
+                topologies = apiTopologyRepository.findBySystemId(api.getSystemId());
+            } catch (Exception e) {
+                logger.warn("Failed to find system-level topology fallback for API {}: {}", apiId, e.getMessage());
+            }
+            if (topologies.isEmpty()) {
+                throw new BusinessException("TOPOLOGY_NOT_FOUND", "API拓扑不存在: " + apiId);
+            }
         }
 
         // 取最新的拓扑（假设按创建时间排序）

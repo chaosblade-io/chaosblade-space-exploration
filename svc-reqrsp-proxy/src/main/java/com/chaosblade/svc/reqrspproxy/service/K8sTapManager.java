@@ -55,7 +55,7 @@ public class K8sTapManager {
                     .addToData("envoy.yaml", envoyYaml)
                     .build();
             
-            k8s.configMaps().inNamespace(namespace).resource(cm).createOrReplace();
+            k8s.configMaps().inNamespace(namespace).createOrReplace(cm);
             logger.info("ConfigMap {} created/updated successfully", cmName);
             
         } catch (KubernetesClientException e) {
@@ -205,7 +205,7 @@ public class K8sTapManager {
                 if (service.getMetadata() != null) {
                     service.getMetadata().setManagedFields(null);
                 }
-                k8s.services().inNamespace(namespace).resource(service).replace();
+                k8s.services().inNamespace(namespace).withName(serviceName).patch(service);
                 logger.info("Service {} redirected to port {} successfully", serviceName, targetPort);
             } else {
                 throw new RuntimeException("Service has no ports defined: " + serviceName);

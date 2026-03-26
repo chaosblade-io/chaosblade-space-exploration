@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "space-exploration.fullname" . }}-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+data:
+  # ---- Database ----
+  MYSQL_HOST: {{ include "space-exploration.mysqlHost" . | quote }}
+  MYSQL_PORT: "3306"
+  MYSQL_DATABASE: "spaceexploration"
+  MYSQL_CHAOSBLADE_DATABASE: "chaosblade"
+  SPRING_DATASOURCE_URL: {{ printf "jdbc:mysql://%s:3306/spaceexploration?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai" (include "space-exploration.mysqlHost" .) | quote }}
+  SPRING_DATASOURCE_USERNAME: "root"
+
+  # ---- Redis ----
+  REDIS_HOST: {{ include "space-exploration.redisHost" . | quote }}
+  REDIS_PORT: "6379"
+  SPRING_REDIS_HOST: {{ include "space-exploration.redisHost" . | quote }}
+  SPRING_REDIS_PORT: "6379"
+
+  # ---- Kubernetes API ----
+  K8S_API_URL: {{ .Values.kubernetes.apiUrl | quote }}
+  K8S_IN_CLUSTER: {{ .Values.kubernetes.inCluster | quote }}
+
+  # ---- Proxy agent ----
+  PROXY_AGENT_IMAGE: {{ printf "%s/%s:%s" .Values.registry .Values.proxyAgent.image .Values.imageTag | quote }}
+  PROXY_AGENT_CONTROL_PORT: {{ .Values.proxyAgent.controlPort | quote }}
+
+  # ---- Service discovery (internal DNS) ----
+  SVC_TASK_RESOURCE_URL: {{ printf "http://svc-task-resource.%s.svc.cluster.local:%d" .Values.namespace (int .Values.taskResource.port) | quote }}
+  SVC_TASK_EXECUTOR_URL: {{ printf "http://svc-task-executor.%s.svc.cluster.local:%d" .Values.namespace (int .Values.taskExecutor.port) | quote }}
+  SVC_REQRSP_PROXY_URL: {{ printf "http://svc-reqrsp-proxy.%s.svc.cluster.local:%d" .Values.namespace (int .Values.reqrspProxy.port) | quote }}
+  SVC_RESULT_PROCESSOR_URL: {{ printf "http://svc-result-processor.%s.svc.cluster.local:%d" .Values.namespace (int .Values.resultProcessor.port) | quote }}
+
+  # ---- Inter-service call URLs ----
+  EXECUTOR_BASE_URL: {{ printf "http://svc-task-executor.%s.svc.cluster.local:%d" .Values.namespace (int .Values.taskExecutor.port) | quote }}
+  SCHEDULER_BASE_URL: {{ printf "http://svc-fault-scheduler.%s.svc.cluster.local:8103" .Values.namespace | quote }}
+  TOPOLOGY_BASE_URL: {{ printf "http://svc-k8s-graph.%s.svc.cluster.local:%d" .Values.namespace (int .Values.k8sGraph.port) | quote }}
+  RESOURCE_BASE_URL: {{ printf "http://svc-task-resource.%s.svc.cluster.local:%d" .Values.namespace (int .Values.taskResource.port) | quote }}
+
+  # ---- LLM API ----
+  LLM_API_URL: {{ .Values.llm.apiUrl | quote }}
+  LLM_API_KEY: {{ .Values.llm.apiKey | quote }}
+  LLM_API_MODEL: {{ .Values.llm.model | quote }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "space-exploration.fullname" . }}-db-secret
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: {{ .Values.mysql.rootPassword | quote }}
+  SPRING_DATASOURCE_PASSWORD: {{ .Values.mysql.rootPassword | quote }}

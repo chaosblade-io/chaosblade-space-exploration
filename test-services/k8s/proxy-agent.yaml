@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy-agent
+  namespace: test-services
+  labels:
+    app: proxy-agent
+    chaosblade.io/component: proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: proxy-agent
+  template:
+    metadata:
+      labels:
+        app: proxy-agent
+        chaosblade.io/component: proxy
+    spec:
+      containers:
+        - name: proxy-agent
+          image: 1.94.151.57:85/test/proxy-agent:latest
+          ports:
+            - name: proxy
+              containerPort: 8081
+            - name: control
+              containerPort: 9090
+          env:
+            - name: PROXY_TARGET
+              value: "http://order-svc:8081"
+            - name: PROXY_PORT
+              value: "8081"
+            - name: CONTROL_PORT
+              value: "9090"
+            - name: SNAPSHOT_DIR
+              value: "/data/snapshots"
+            - name: INITIAL_MODE
+              value: "passthrough"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: snapshot-data
+              mountPath: /data/snapshots
+      volumes:
+        - name: snapshot-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxy-agent
+  namespace: test-services
+  labels:
+    app: proxy-agent
+spec:
+  selector:
+    app: proxy-agent
+  ports:
+    - name: proxy
+      port: 8081
+      targetPort: 8081
+    - name: control
+      port: 9090
+      targetPort: 9090

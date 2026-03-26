@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package inventorypb;
+
+option go_package = "test-services/gen/inventorypb";
+
+// InventoryService manages product stock levels.
+service InventoryService {
+  // CheckStock checks whether a product has enough stock.
+  rpc CheckStock(CheckStockRequest) returns (CheckStockResponse);
+  // Deduct reduces the stock of a product by a given quantity.
+  rpc Deduct(DeductRequest) returns (DeductResponse);
+}
+
+message CheckStockRequest {
+  string product_id = 1;
+}
+
+message CheckStockResponse {
+  string product_id = 1;
+  int32  quantity   = 2;
+  bool   available  = 3;
+}
+
+message DeductRequest {
+  string product_id = 1;
+  int32  quantity   = 2;
+}
+
+message DeductResponse {
+  bool  success   = 1;
+  int32 remaining = 2;
+}

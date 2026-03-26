@@ -1,0 +1,15 @@
+apiVersion: v2
+name: chaosblade-space-exploration
+description: >-
+  ChaosBlade Space Exploration - Chaos engineering platform for API-level
+  fault injection, traffic recording/replay, and resilience testing.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: ChaosBlade Team
+keywords:
+  - chaos-engineering
+  - fault-injection
+  - resilience
+  - chaosblade

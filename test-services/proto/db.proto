@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package dbpb;
+
+option go_package = "test-services/gen/dbpb";
+
+// DBService simulates a key-value database.
+service DBService {
+  // Get retrieves a value by key.
+  rpc Get(GetRequest) returns (GetResponse);
+  // Set stores a value by key.
+  rpc Set(SetRequest) returns (SetResponse);
+}
+
+message GetRequest {
+  string key = 1;
+}
+
+message GetResponse {
+  string value = 1;   // JSON-encoded string
+  bool   found = 2;
+}
+
+message SetRequest {
+  string key   = 1;
+  string value = 2;   // JSON-encoded string
+}
+
+message SetResponse {
+  bool success = 1;
+}

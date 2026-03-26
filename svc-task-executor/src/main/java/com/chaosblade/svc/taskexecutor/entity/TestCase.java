@@ -13,7 +13,7 @@ public class TestCase {
     @Column(name = "task_id", nullable = false)
     private Long taskId;
 
-    public enum CaseType { BASELINE, SINGLE, DUAL }
+    public enum CaseType { BASELINE, SINGLE, DUAL, MULTI }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "case_type", nullable = false, length = 16)

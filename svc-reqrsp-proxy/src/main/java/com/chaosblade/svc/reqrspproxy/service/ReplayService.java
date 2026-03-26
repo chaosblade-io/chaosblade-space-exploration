@@ -2,7 +2,9 @@ package com.chaosblade.svc.reqrspproxy.service;
 
 import com.chaosblade.svc.reqrspproxy.dto.ReplayRequest;
 import com.chaosblade.svc.reqrspproxy.dto.ReplayResult;
+import com.chaosblade.svc.reqrspproxy.entity.ProxyInstance;
 import com.chaosblade.svc.reqrspproxy.entity.RequestPattern;
+import com.chaosblade.svc.reqrspproxy.repository.ProxyInstanceRepository;
 import com.chaosblade.svc.reqrspproxy.repository.RequestPatternRepository;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -10,6 +12,7 @@ import io.fabric8.kubernetes.client.LocalPortForward;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -25,13 +28,30 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
- * 请求重放服务
+ * 请求重放服务 — 通过 feature flag 切换新旧实现。
+ *
+ * proxy.engine=new  → proxy-agent（Selector Swap + Control API）
+ * proxy.engine=legacy → Envoy sidecar + 端口转发（原有逻辑）
  */
 @Service
 public class ReplayService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReplayService.class);
 
+    @Value("${proxy.engine:new}")
+    private String proxyEngine;
+
+    // ── 新引擎（proxy-agent）依赖 ──
+    @Autowired
+    private K8sProxyManager proxyManager;
+
+    @Autowired
+    private ProxyControlClient proxyControl;
+
+    @Autowired
+    private ProxyInstanceRepository proxyInstanceRepo;
+
+    // ── 旧引擎（端口转发 + RestTemplate）依赖 ──
     @Autowired private KubernetesClient k8s;
     @Autowired private RequestPatternRepository requestPatternRepository;
 
@@ -42,10 +62,103 @@ public class ReplayService {
             java.util.Arrays.asList(":method", ":scheme", ":authority", ":path")
     );
 
+    private boolean isNewEngine() {
+        return "new".equalsIgnoreCase(proxyEngine);
+    }
+
     /**
      * 基于 execution_id 查询请求模式并重放到指定 service
      */
     public List<ReplayResult> replay(ReplayRequest request) {
+        if (isNewEngine()) {
+            return replayWithProxyAgent(request);
+        } else {
+            return replayWithEnvoy(request);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  新引擎: proxy-agent
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private List<ReplayResult> replayWithProxyAgent(ReplayRequest request) {
+        String ns = request.getNamespace();
+        String svc = request.getServiceName();
+        Long executionId = request.getExecutionId();
+
+        logger.info("[proxy-agent] Replay start: executionId={}, ns={}, svc={}", executionId, ns, svc);
+
+        // 1. 检查是否有运行中的 proxy-agent 实例
+        List<ProxyInstance> existing = proxyInstanceRepo.findByNamespaceAndTargetService(ns, svc);
+        ProxyInstance runningInstance = null;
+        for (ProxyInstance inst : existing) {
+            if (inst.getStatus() == ProxyInstance.Status.RUNNING) {
+                runningInstance = inst;
+                break;
+            }
+        }
+
+        String sessionId = null;
+        boolean needCleanup = false;
+
+        try {
+            if (runningInstance != null) {
+                // proxy 已在运行，复用
+                sessionId = runningInstance.getRecordingId();
+                logger.info("[proxy-agent] Reusing running proxy for {}/{}, sessionId={}", ns, svc, sessionId);
+            } else {
+                // 部署新的 proxy-agent
+                sessionId = "replay-" + System.currentTimeMillis() + "-" +
+                        Integer.toHexString((int) (Math.random() * 0x10000));
+                needCleanup = true;
+
+                int servicePort = proxyManager.getServicePort(ns, svc);
+
+                proxyManager.createShadowService(ns, svc);
+                runningInstance = proxyManager.deployProxy(sessionId, ns, svc, servicePort);
+
+                // Selector Swap 劫持
+                proxyManager.hijackService(sessionId, ns, svc);
+
+                // 等待 kube-proxy 传播
+                Thread.sleep(5000);
+            }
+
+            // 2. 设置 proxy-agent 为 replay 模式
+            // proxy-agent 会自动从其存储的快照进行重放
+            proxyControl.setMode(runningInstance.getProxyPodIp(), runningInstance.getControlPort(), "replay");
+
+            logger.info("[proxy-agent] Replay mode set for {}/{}, proxy will replay from stored snapshots", ns, svc);
+
+            // 3. 构建结果（proxy-agent 自动重放，返回确认信息）
+            ReplayResult result = new ReplayResult(
+                    "proxy-agent://" + runningInstance.getProxyPodIp() + ":" + runningInstance.getProxyPort(),
+                    "PROXY_REPLAY", null);
+            result.setStatusCode(200);
+            result.setResponseHeaders(Collections.emptyMap());
+            result.setResponseBody("Replay mode activated on proxy-agent. " +
+                    "Incoming requests to " + svc + " will receive replayed responses from stored snapshots.");
+
+            return Collections.singletonList(result);
+
+        } catch (Exception e) {
+            logger.error("[proxy-agent] Replay failed: {}", e.getMessage(), e);
+
+            // 如果是我们新部署的 proxy，尽力清理
+            if (needCleanup && sessionId != null) {
+                try { proxyManager.restoreService(sessionId); } catch (Exception ex) { /* ignore */ }
+                try { proxyManager.destroyProxy(sessionId); } catch (Exception ex) { /* ignore */ }
+            }
+
+            throw new RuntimeException("Replay failed: " + e.getMessage(), e);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  旧引擎: Envoy sidecar + 端口转发（原有逻辑不变）
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private List<ReplayResult> replayWithEnvoy(ReplayRequest request) {
         Long executionId = request.getExecutionId();
         String ns = request.getNamespace();
         String svc = request.getServiceName();
@@ -257,4 +370,3 @@ public class ReplayService {
         return urlOrPath.startsWith("/") ? urlOrPath : "/" + urlOrPath;
     }
 }
-

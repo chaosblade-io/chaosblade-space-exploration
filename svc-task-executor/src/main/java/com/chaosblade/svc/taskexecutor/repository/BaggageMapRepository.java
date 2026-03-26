@@ -14,6 +14,8 @@ import java.util.List;
 public interface BaggageMapRepository extends JpaRepository<BaggageMap, Long> {
     List<BaggageMap> findByExecutionId(Long executionId);
 
+    BaggageMap findByExecutionIdAndServiceName(Long executionId, String serviceName);
+
     @Modifying
     @Transactional
     @Query(value = "INSERT INTO baggage_map (execution_id, service_name, value) VALUES (:executionId, :serviceName, :value)\n" +

@@ -1,0 +1,15 @@
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY gen/ gen/
+COPY order-svc/ order-svc/
+
+RUN CGO_ENABLED=0 go build -o /order-svc ./order-svc
+
+FROM alpine:3.19
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /order-svc /order-svc
+ENTRYPOINT ["/order-svc"]

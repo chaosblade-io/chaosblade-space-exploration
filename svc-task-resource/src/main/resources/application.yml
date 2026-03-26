@@ -44,9 +44,9 @@ endpoints:
 
 llm:
   api:
-    url: "https://api.siliconflow.cn/v1/chat/completions"
-    key: "sk-lsbfyvywllhniumluwahhnfjahadzxgeuryhygweymdrtiqf"
-    model: "Qwen/QwQ-32B"
+    url: "https://api.deepseek.com/v1/chat/completions"
+    key: "sk-c4e18be15f4646858ace474b9e6490f9"
+    model: "deepseek-chat"
   timeout:
     ms: 500000
   retries: 3

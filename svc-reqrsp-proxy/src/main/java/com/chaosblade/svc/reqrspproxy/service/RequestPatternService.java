@@ -3,12 +3,17 @@ package com.chaosblade.svc.reqrspproxy.service;
 import com.chaosblade.svc.reqrspproxy.config.RecordingSettings;
 import com.chaosblade.svc.reqrspproxy.dto.*;
 import com.chaosblade.svc.reqrspproxy.entity.HttpReqDef;
+import com.chaosblade.svc.reqrspproxy.entity.ProxyInstance;
+import com.chaosblade.svc.reqrspproxy.entity.ProxySnapshot;
 import com.chaosblade.svc.reqrspproxy.repository.HttpReqDefRepository;
+import com.chaosblade.svc.reqrspproxy.repository.ProxyInstanceRepository;
+import com.chaosblade.svc.reqrspproxy.repository.ProxySnapshotRepository;
 import com.chaosblade.svc.reqrspproxy.entity.RecordingState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -38,7 +43,11 @@ import java.time.format.DateTimeFormatter;
 import com.chaosblade.svc.reqrspproxy.config.RecordingSettings;
 
 /**
- * 请求模式获取服务
+ * 请求模式获取服务 — 通过 feature flag 切换新旧实现。
+ *
+ * proxy.engine=new  → proxy-agent（通过 RecordingService 委托，内部已支持新引擎）
+ * proxy.engine=legacy → Envoy sidecar（原有逻辑）
+ *
  * 核心业务逻辑：根据 reqDefId 获取请求定义，启动录制模式，发起请求，收集请求模式，停止录制
  */
 @Service
@@ -46,6 +55,23 @@ public class RequestPatternService {
 
     private static final Logger logger = LoggerFactory.getLogger(RequestPatternService.class);
 
+    @Value("${proxy.engine:new}")
+    private String proxyEngine;
+
+    // ── 新引擎（proxy-agent）依赖 ──
+    @Autowired
+    private K8sProxyManager proxyManager;
+
+    @Autowired
+    private ProxyControlClient proxyControl;
+
+    @Autowired
+    private ProxySnapshotRepository snapshotRepo;
+
+    @Autowired
+    private ProxyInstanceRepository proxyInstanceRepo;
+
+    // ── 通用依赖 ──
     @Autowired
     private HttpReqDefRepository httpReqDefRepository;
 
@@ -81,6 +107,10 @@ public class RequestPatternService {
 
     @Autowired
     private com.chaosblade.svc.reqrspproxy.repository.RequestPatternRepository requestPatternRepository;
+
+    private boolean isNewEngine() {
+        return "new".equalsIgnoreCase(proxyEngine);
+    }
 
     /**
      * 测试 Redis 连接
@@ -259,12 +289,14 @@ public class RequestPatternService {
                 }
             }
 
-            // 清理相关的 ConfigMap
-            try {
-                logger.info("Cleaning up ConfigMaps for task {}", taskId);
-                cleanupConfigMaps(response.getServiceList(), response.getNamespace());
-            } catch (Exception e) {
-                logger.error("Failed to cleanup ConfigMaps for task {}: {}", taskId, e.getMessage(), e);
+            // 清理相关的 ConfigMap（仅旧引擎需要清理 Envoy ConfigMap）
+            if (!isNewEngine()) {
+                try {
+                    logger.info("Cleaning up ConfigMaps for task {}", taskId);
+                    cleanupConfigMaps(response.getServiceList(), response.getNamespace());
+                } catch (Exception e) {
+                    logger.error("Failed to cleanup ConfigMaps for task {}: {}", taskId, e.getMessage(), e);
+                }
             }
 
             // 收集已有的录制数据并分析
@@ -332,17 +364,34 @@ public class RequestPatternService {
             logger.info("Raw Body: {}", reqDef.getRawBody());
             logger.info("=== 请求定义详情结束 ===");
 
-            // 2. 启动录制模式（应用规则和 Envoy 配置）
-            taskStateManager.updateTaskPhase(taskId, TaskStateManager.TaskPhase.APPLYING_RULES, "为所有服务应用录制规则和 Envoy 配置中...");
-            logger.info("Step 2: Starting recording for services (includes Envoy configuration): {}", request.getServiceList());
+            // 2. 启动录制模式（RecordingService 内部已根据 proxy.engine 切换新旧引擎）
+            String engineLabel = isNewEngine() ? "proxy-agent" : "Envoy";
+            taskStateManager.updateTaskPhase(taskId, TaskStateManager.TaskPhase.APPLYING_RULES,
+                    "为所有服务应用录制规则（" + engineLabel + "）...");
+            logger.info("Step 2: Starting recording for services (engine={}): {}", engineLabel, request.getServiceList());
             recordingIds = startRecordingForServices(request);
             response.setRecordingId(recordingIds.isEmpty() ? null : recordingIds.get(0));
             taskStateManager.saveTaskState(response);
 
-            // 3. 等待滚动更新完成
-            taskStateManager.updateTaskPhase(taskId, TaskStateManager.TaskPhase.ROLLING_UPDATE, "等待服务滚动更新完成...");
-            logger.info("Step 3: Waiting for rolling update to complete...");
-            waitForRollingUpdateComplete(request);
+            if (isNewEngine()) {
+                // 新引擎：重启原始 Deployment，强制 gRPC 长连接重建（经过 proxy-agent）
+                logger.info("Step 3: [proxy-agent] Restarting original deployments to flush gRPC connections");
+                for (String svc : request.getServiceList()) {
+                    try {
+                        recordingService.restartOriginalDeployment(request.getNamespace(), svc);
+                    } catch (Exception e) {
+                        logger.warn("Failed to restart deployment {}: {}", svc, e.getMessage());
+                    }
+                }
+                // 等待所有 Pod 重建完成
+                logger.info("Step 3: Waiting for pods to restart...");
+                try { Thread.sleep(30000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            } else {
+                // 旧引擎：等待 Envoy sidecar 滚动更新完成
+                taskStateManager.updateTaskPhase(taskId, TaskStateManager.TaskPhase.ROLLING_UPDATE, "等待服务滚动更新完成...");
+                logger.info("Step 3: Waiting for rolling update to complete...");
+                waitForRollingUpdateComplete(request);
+            }
 
             // 4. 等待录制启动完成
             taskStateManager.updateTaskPhase(taskId, TaskStateManager.TaskPhase.APPLYING_RULES, "等待录制模式启动完成...");
@@ -371,8 +420,8 @@ public class RequestPatternService {
             try {
                 Path debugDir = createRecordingDebugDir();
                 exportRawDataPerService(debugDir, request.getServiceList(), recordingIds);
-                // 可选：导出容器内 Envoy 生成的 tap 原始 JSON 文件，默认关闭
-                if (recordingSettings.isDebugExportRawEnabled()) {
+                // 可选：导出容器内 Envoy 生成的 tap 原始 JSON 文件，默认关闭（仅旧引擎）
+                if (!isNewEngine() && recordingSettings.isDebugExportRawEnabled()) {
                     for (String recId : recordingIds) {
                         try {
                             RecordingState st = recordingStateService.loadState(recId);
@@ -411,6 +460,16 @@ public class RequestPatternService {
             logger.info("Step 9: Stopping recording...");
             stopAllRecordings(recordingIds);
 
+            // 保存 recordingIds 到 response（proxy-agent 模式下用于跨阶段复用）
+            response.setRecordingIds(recordingIds);
+            // 构建 serviceName → recordingId 映射
+            java.util.Map<String, String> svcRecMap = new java.util.LinkedHashMap<>();
+            for (String recId : recordingIds) {
+                String svcName = recordingService.getServiceName(recId);
+                if (svcName != null) svcRecMap.put(svcName, recId);
+            }
+            response.setServiceRecordingMap(svcRecMap);
+
             // 10. 完成任务
             taskStateManager.setTaskCompleted(taskId, response);
 
@@ -438,11 +497,13 @@ public class RequestPatternService {
             if (recordingIds != null && !recordingIds.isEmpty()) {
                 logger.info("Finalizing resources for task {}: cancelling auto-stop and cleaning states...", taskId);
                 for (String recId : recordingIds) {
-                    try {
-                        // 先停止任何可能的自动停止任务
-                        k8sTapManager.cancelAutoStop(recId);
-                    } catch (Exception e) {
-                        logger.debug("Cancel auto-stop ignored for {}: {}", recId, e.getMessage());
+                    if (!isNewEngine()) {
+                        try {
+                            // 先停止任何可能的自动停止任务（仅旧引擎使用 auto-stop）
+                            k8sTapManager.cancelAutoStop(recId);
+                        } catch (Exception e) {
+                            logger.debug("Cancel auto-stop ignored for {}: {}", recId, e.getMessage());
+                        }
                     }
                     try {
                         // 清理 RecordingState，避免后台任务继续处理已结束的 recording
@@ -787,8 +848,14 @@ public class RequestPatternService {
     private void stopAllRecordings(List<String> recordingIds) {
         for (String recordingId : recordingIds) {
             try {
-                recordingService.stop(recordingId);
-                logger.info("Recording {} stopped successfully", recordingId);
+                // proxy-agent 模式下使用 stopRecordingOnly，保持 proxy-agent 运行用于后续 Stage 4/5/6
+                if ("new".equalsIgnoreCase(proxyEngine)) {
+                    recordingService.stopRecordingOnly(recordingId);
+                    logger.info("Recording {} stopped (proxy-agent kept alive)", recordingId);
+                } else {
+                    recordingService.stop(recordingId);
+                    logger.info("Recording {} stopped successfully", recordingId);
+                }
             } catch (Exception e) {
                 logger.error("Failed to stop recording {}: {}", recordingId, e.getMessage(), e);
             }

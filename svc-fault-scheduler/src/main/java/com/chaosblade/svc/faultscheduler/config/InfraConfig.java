@@ -1,12 +1,10 @@
 package com.chaosblade.svc.faultscheduler.config;
 
 import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -17,47 +15,30 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
  */
 @Configuration
 public class InfraConfig {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(InfraConfig.class);
-    
-    @Value("${kubernetes.api-url}")
-    private String kubernetesApiUrl;
-    
-    @Value("${kubernetes.token}")
-    private String kubernetesToken;
-    
-    @Value("${kubernetes.verify-ssl:false}")
-    private boolean verifySSL;
-    
-    @Value("${kubernetes.connection-timeout:10000}")
-    private int connectionTimeout;
-    
-    @Value("${kubernetes.request-timeout:30000}")
-    private int requestTimeout;
-    
+
     /**
-     * 配置 Kubernetes 客户端
+     * 配置 Kubernetes 客户端 - 使用 in-cluster 自动配置
      */
     @Bean
     public KubernetesClient kubernetesClient() {
-        logger.info("Initializing Kubernetes client with API URL: {}", kubernetesApiUrl);
-        
+        logger.info("Initializing Kubernetes client with in-cluster auto config");
+
         try {
-            Config config = new ConfigBuilder()
-                    .withMasterUrl(kubernetesApiUrl)
-                    .withOauthToken(kubernetesToken)
-                    .withTrustCerts(!verifySSL)
-                    .withConnectionTimeout(connectionTimeout)
-                    .withRequestTimeout(requestTimeout)
-                    .build();
-            
+            // In-cluster auto config
+            Config config = Config.autoConfigure(null);
+            config.setTrustCerts(true);
+            config.setConnectionTimeout(10000);
+            config.setRequestTimeout(30000);
+
             KubernetesClient client = new DefaultKubernetesClient(config);
-            
+
             // 测试连接
             logger.info("Testing Kubernetes connection...");
             String version = client.getKubernetesVersion().getGitVersion();
             logger.info("Successfully connected to Kubernetes cluster, version: {}", version);
-            
+
             return client;
         } catch (Exception e) {
             logger.error("Failed to initialize Kubernetes client", e);

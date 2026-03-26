@@ -52,10 +52,14 @@ public class DetectionTask {
     @Column(name = "api_definition_id")
     private Integer apiDefinitionId;
 
+    @Column(name = "max_fault_services", nullable = false)
+    private Integer maxFaultServices = 2;
+
     public Long getId() { return id; }
     public Long getApiId() { return apiId; }
     public Long getSystemId() { return systemId; }
     public Integer getApiDefinitionId() { return apiDefinitionId; }
     public Integer getRequestNum() { return requestNum; }
+    public Integer getMaxFaultServices() { return maxFaultServices; }
 }
 

@@ -15,6 +15,11 @@
     <name>svc-reqrsp-proxy</name>
     <packaging>jar</packaging>
 
+    <!-- Fabric8 5.12.x is compatible with Spring Boot 2.7 (Jackson 2.13) -->
+    <properties>
+        <fabric8.version>5.12.4</fabric8.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -33,13 +38,9 @@
         <dependency>
             <groupId>io.fabric8</groupId>
             <artifactId>kubernetes-client</artifactId>
-            <version>6.13.4</version>
+            <version>${fabric8.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.fabric8</groupId>
-            <artifactId>kubernetes-client-api</artifactId>
-            <version>6.13.4</version>
-        </dependency>
+        <!-- kubernetes-client-api was separate in 6.x; in 5.x it's bundled in kubernetes-client -->
 
         <!-- Spring Data Redis (Lettuce) -->
         <dependency>
@@ -60,11 +61,10 @@
             <version>0.9.14</version>
         </dependency>
 
-        <!-- Jackson for JSON processing -->
+        <!-- Jackson for JSON processing (use Spring Boot managed version for consistency) -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.17.2</version>
         </dependency>
 
         <!-- Validation -->
