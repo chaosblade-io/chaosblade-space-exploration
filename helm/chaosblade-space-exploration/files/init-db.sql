@@ -159,6 +159,7 @@ CREATE TABLE IF NOT EXISTS `detection_tasks` (
   `fault_configurations_id` bigint DEFAULT NULL,
   `slo_id` bigint DEFAULT NULL,
   `request_num` int NOT NULL,
+  `max_fault_services` int NOT NULL DEFAULT 2 COMMENT '最大故障服务数',
   `api_definition_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_tasks_system` (`system_id`),
@@ -309,7 +310,7 @@ CREATE TABLE IF NOT EXISTS `task_execution` (
   `status` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'INIT',
   `analyze_task_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `record_id` bigint DEFAULT NULL,
-  `intercept_record_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `intercept_record_id` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `started_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `finished_at` datetime DEFAULT NULL,
   `error_code` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -378,18 +379,7 @@ CREATE TABLE IF NOT EXISTS `test_result` (
   KEY `idx_exec_case` (`execution_id`,`test_case_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-SET FOREIGN_KEY_CHECKS = 1;
-
-
--- =============================================
--- 3. chaosblade schema (svc-reqrsp-proxy tables)
--- =============================================
-
-USE `chaosblade`;
-
-SET FOREIGN_KEY_CHECKS = 0;
-
--- fixtures (V3 migration)
+-- fixtures (V3 migration - svc-reqrsp-proxy)
 CREATE TABLE IF NOT EXISTS `fixtures` (
   `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
   `namespace` VARCHAR(100) NOT NULL COMMENT 'Namespace',
@@ -450,3 +440,11 @@ CREATE TABLE IF NOT EXISTS `proxy_snapshot` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+-- =============================================
+-- 3. chaosblade schema (chaosblade-box 专属)
+-- =============================================
+
+CREATE DATABASE IF NOT EXISTS `chaosblade`
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

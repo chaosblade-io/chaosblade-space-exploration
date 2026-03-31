@@ -13,17 +13,11 @@ ENV TZ=Asia/Shanghai \
 
 WORKDIR /app
 
-# Install kubectl for ChaosBlade CRD management
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
-    && curl -LO "https://dl.k8s.io/release/v1.34.0/bin/linux/amd64/kubectl" \
-    && chmod +x kubectl && mv kubectl /usr/local/bin/ \
-    && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
-
 RUN mkdir -p /app/config
 
 # Copy prebuilt JAR from repository (built on host beforehand)
-COPY svc-fault-scheduler/target/*.jar /app/app.jar
+COPY svc-result-processor/target/*.jar /app/app.jar
 
-EXPOSE 8103
+EXPOSE 8104
 
 ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]

@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jre
 
 # 设置工作目录
 WORKDIR /app

@@ -43,6 +43,20 @@ public class ProxyControlClient {
     }
 
     /**
+     * 设置录制过滤器（baggage 过滤 + snapshot 上限）
+     */
+    public void setRecordingFilter(String podIp, int controlPort, String baggageFilter, int maxSnapshots) {
+        String url = controlUrl(podIp, controlPort, "/control/recording-filter");
+        String body = String.format("{\"baggage_filter\":\"%s\",\"max_snapshots\":%d}", baggageFilter, maxSnapshots);
+        try {
+            exchange(url, HttpMethod.PUT, body);
+            logger.info("Recording filter set: podIp={}, baggage={}, maxSnapshots={}", podIp, baggageFilter, maxSnapshots);
+        } catch (Exception e) {
+            logger.warn("Failed to set recording filter on {}:{}: {}", podIp, controlPort, e.getMessage());
+        }
+    }
+
+    /**
      * 获取所有录制快照
      */
     @SuppressWarnings("unchecked")

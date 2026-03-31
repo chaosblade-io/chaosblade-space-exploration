@@ -34,10 +34,14 @@ public class InfraConfig {
 
             KubernetesClient client = new DefaultKubernetesClient(config);
 
-            // 测试连接
+            // 测试连接（跳过版本检测，避免 Fabric8 与高版本 K8s 不兼容）
             logger.info("Testing Kubernetes connection...");
-            String version = client.getKubernetesVersion().getGitVersion();
-            logger.info("Successfully connected to Kubernetes cluster, version: {}", version);
+            try {
+                String version = client.getKubernetesVersion().getGitVersion();
+                logger.info("Successfully connected to Kubernetes cluster, version: {}", version);
+            } catch (Exception versionEx) {
+                logger.warn("Could not fetch K8s version (Fabric8 compatibility issue), but client is initialized: {}", versionEx.getMessage());
+            }
 
             return client;
         } catch (Exception e) {

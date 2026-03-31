@@ -40,6 +40,8 @@ spec:
               value: {{ printf "http://svc-k8s-graph.%s.svc.cluster.local:%d" .Values.namespace (int .Values.k8sGraph.port) | quote }}
             - name: EXECUTOR_BASE_URL
               value: {{ printf "http://svc-task-executor.%s.svc.cluster.local:%d" .Values.namespace (int .Values.taskExecutor.port) | quote }}
+            - name: ENDPOINTS_EXECUTOR_BASE_URL
+              value: {{ printf "http://svc-task-executor.%s.svc.cluster.local:%d" .Values.namespace (int .Values.taskExecutor.port) | quote }}
             - name: LLM_API_URL
               value: {{ .Values.llm.apiUrl | quote }}
             - name: LLM_API_KEY

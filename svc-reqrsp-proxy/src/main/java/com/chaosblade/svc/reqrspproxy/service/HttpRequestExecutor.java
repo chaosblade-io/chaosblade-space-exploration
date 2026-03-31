@@ -256,7 +256,13 @@ public class HttpRequestExecutor {
             } else {
                 urlBuilder.append("&");
             }
-            urlBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+            try {
+                urlBuilder.append(java.net.URLEncoder.encode(entry.getKey(), "UTF-8"))
+                          .append("=")
+                          .append(java.net.URLEncoder.encode(entry.getValue(), "UTF-8"));
+            } catch (java.io.UnsupportedEncodingException e) {
+                urlBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+            }
         }
         
         return urlBuilder.toString();
@@ -331,7 +337,8 @@ public class HttpRequestExecutor {
 
         try {
             WebClient.RequestBodyUriSpec requestUriSpec = webClient.method(HttpMethod.valueOf(method.name()));
-            WebClient.RequestBodySpec requestBodySpec = requestUriSpec.uri(url);
+            // 使用 URI.create 避免 WebClient 将 URL 中的 { } 当成模板变量解析
+            WebClient.RequestBodySpec requestBodySpec = requestUriSpec.uri(java.net.URI.create(url));
 
             // 设置请求头
             WebClient.RequestHeadersSpec<?> requestHeadersSpec = requestBodySpec

@@ -39,6 +39,33 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/control/rules", s.handleRules)
 	s.mux.HandleFunc("/control/rules/", s.handleRuleByID)
 	s.mux.HandleFunc("/control/stats", s.handleStats)
+	s.mux.HandleFunc("/control/recording-filter", s.handleRecordingFilter)
+}
+
+// handleRecordingFilter sets baggage filter and max snapshots for recording mode.
+// PUT /control/recording-filter  {"baggage_filter": "chaos-exec-12", "max_snapshots": 100}
+func (s *Server) handleRecordingFilter(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		BaggageFilter string `json:"baggage_filter"`
+		MaxSnapshots  int    `json:"max_snapshots"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s.engine.SetRecordingFilter(req.BaggageFilter, req.MaxSnapshots)
+	slog.Info("recording filter set", "baggageFilter", req.BaggageFilter, "maxSnapshots", req.MaxSnapshots)
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"baggage_filter": req.BaggageFilter,
+		"max_snapshots":  req.MaxSnapshots,
+	})
 }
 
 // handleHealth returns the proxy health status and current mode.

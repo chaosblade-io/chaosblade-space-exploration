@@ -79,6 +79,15 @@ func (h *proxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // handleRecord forwards the request to the target and records both the
 // request and response as a snapshot.
 func (h *proxyHandler) handleRecord(w http.ResponseWriter, r *http.Request) {
+	// Check baggage filter and snapshot limit BEFORE processing
+	baggageHeader := r.Header.Get("baggage")
+	if !h.engine.ShouldRecord(baggageHeader) {
+		// Skip recording — just proxy the request through
+		h.proxy.ServeHTTP(w, r)
+		h.engine.IncrSkipped()
+		return
+	}
+
 	// Read and buffer the request body so we can both forward it and record it.
 	var reqBody []byte
 	if r.Body != nil {

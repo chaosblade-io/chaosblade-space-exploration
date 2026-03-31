@@ -54,6 +54,12 @@ public class RequestPatternRequest {
      */
     private Integer requestTimeoutSeconds = 120;
 
+    /**
+     * Baggage token 用于过滤测试请求，排除背景流量（如 load-engine）。
+     * 设置后：1) 自动发送请求时注入 baggage header  2) 分析时只取包含此 token 的录制数据
+     */
+    private String baggageToken;
+
     public RequestPatternRequest() {}
 
     public RequestPatternRequest(Long reqDefId, String namespace, List<String> serviceList) {
@@ -132,6 +138,14 @@ public class RequestPatternRequest {
 
     public void setRequestTimeoutSeconds(Integer requestTimeoutSeconds) {
         this.requestTimeoutSeconds = requestTimeoutSeconds;
+    }
+
+    public String getBaggageToken() {
+        return baggageToken;
+    }
+
+    public void setBaggageToken(String baggageToken) {
+        this.baggageToken = baggageToken;
     }
 
     @Override

@@ -1,12 +1,12 @@
 # -- Global settings ----------------------------------------------------------
 namespace: chaosblade
 
-# Image registry (Harbor)
-registry: 1.94.151.57:85/test
+# Image registry (GHCR)
+registry: ghcr.io/chaosblade-io
 imageTag: latest
 imagePullPolicy: IfNotPresent
-# imagePullSecrets:
-#   - name: harbor-secret
+imagePullSecrets:
+  - name: ghcr-secret
 
 # -- Application services -----------------------------------------------------
 
@@ -28,11 +28,11 @@ taskExecutor:
   port: 8102
   resources:
     requests:
-      cpu: 200m
-      memory: 256Mi
-    limits:
       cpu: 500m
-      memory: 512Mi
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
 
 reqrspProxy:
   replicas: 1
@@ -41,11 +41,11 @@ reqrspProxy:
   proxyEngine: new   # "new" = proxy-agent, "legacy" = envoy
   resources:
     requests:
-      cpu: 200m
-      memory: 256Mi
-    limits:
       cpu: 500m
-      memory: 512Mi
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
 
 resultProcessor:
   replicas: 1
@@ -62,7 +62,7 @@ resultProcessor:
 chaosbladeBox:
   enabled: true
   replicas: 1
-  image: chaosblade-box
+  image: box
   port: 7001
   nodePort: 30701
 
@@ -71,7 +71,19 @@ chaosbladeBoxFe:
   replicas: 1
   image: chaosblade-box-fe
   port: 80
-  nodePort: 30080
+  nodePort: 30880
+
+faultScheduler:
+  replicas: 1
+  image: svc-fault-scheduler
+  port: 8103
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
 k8sGraph:
   enabled: true

@@ -65,8 +65,15 @@ public class K8sProxyManager {
         // 使用影子 Service DNS 作为转发目标（兼容 pod-kill 等改变 Pod IP 的故障）
         String proxyTarget = "http://" + targetService + "-original." + namespace + ".svc.cluster.local:" + targetPort;
 
-        logger.info("Deploying proxy-agent: deployment={}, target={}, namespace={}",
-                deploymentName, proxyTarget, namespace);
+        // 避免 control port 与目标服务端口冲突
+        int controlPort = defaultControlPort;
+        if (targetPort == controlPort) {
+            controlPort = controlPort + 1; // 9090 -> 9091
+            logger.info("Control port {} conflicts with target port, using {} instead", defaultControlPort, controlPort);
+        }
+
+        logger.info("Deploying proxy-agent: deployment={}, target={}, namespace={}, controlPort={}",
+                deploymentName, proxyTarget, namespace, controlPort);
 
         // 创建 ProxyInstance 记录
         ProxyInstance instance = new ProxyInstance();
@@ -74,7 +81,7 @@ public class K8sProxyManager {
         instance.setNamespace(namespace);
         instance.setTargetService(targetService);
         instance.setProxyPort(targetPort);
-        instance.setControlPort(defaultControlPort);
+        instance.setControlPort(controlPort);
         instance.setDeploymentName(deploymentName);
         instance.setStatus(ProxyInstance.Status.DEPLOYING);
         proxyInstanceRepo.save(instance);
@@ -105,7 +112,7 @@ public class K8sProxyManager {
                                     .withImage(proxyAgentImage)
                                     .withImagePullPolicy("Always")
                                     .addNewPort().withContainerPort(targetPort).endPort()
-                                    .addNewPort().withContainerPort(defaultControlPort).endPort()
+                                    .addNewPort().withContainerPort(controlPort).endPort()
                                     .addNewEnv().withName("PROXY_TARGET")
                                         .withValue(proxyTarget).endEnv()
                                     .addNewEnv().withName("GRPC_TARGET")
@@ -113,12 +120,15 @@ public class K8sProxyManager {
                                     .addNewEnv().withName("PROXY_PORT")
                                         .withValue(String.valueOf(targetPort)).endEnv()
                                     .addNewEnv().withName("CONTROL_PORT")
-                                        .withValue(String.valueOf(defaultControlPort)).endEnv()
+                                        .withValue(String.valueOf(controlPort)).endEnv()
                                     .addNewEnv().withName("SNAPSHOT_DIR")
                                         .withValue("/data/snapshots").endEnv()
                                     .addNewEnv().withName("INITIAL_MODE")
                                         .withValue("passthrough").endEnv()
                                 .endContainer()
+                                .addNewImagePullSecret()
+                                    .withName("ghcr-secret")
+                                .endImagePullSecret()
                             .endSpec()
                         .endTemplate()
                     .endSpec()
@@ -324,15 +334,30 @@ public class K8sProxyManager {
 
         String namespace = instance.getNamespace();
         String deploymentName = instance.getDeploymentName();
+        String targetService = instance.getTargetService();
 
+        // 1. 恢复 Service selector（防止残留劫持）
+        try {
+            restoreService(recordingId);
+        } catch (Exception e) {
+            logger.warn("Failed to restore service during destroyProxy for {}: {}", recordingId, e.getMessage());
+        }
+
+        // 2. 删除 proxy-agent Deployment
         logger.info("Destroying proxy-agent deployment: {}/{}", namespace, deploymentName);
-
         try {
             k8s.apps().deployments().inNamespace(namespace)
                     .withName(deploymentName).delete();
             logger.info("Deployment {} deleted", deploymentName);
         } catch (Exception e) {
             logger.error("Failed to delete deployment {}", deploymentName, e);
+        }
+
+        // 3. 删除影子 Service
+        try {
+            deleteShadowService(namespace, targetService);
+        } catch (Exception e) {
+            logger.warn("Failed to delete shadow service for {}: {}", targetService, e.getMessage());
         }
 
         instance.setStatus(ProxyInstance.Status.DESTROYED);

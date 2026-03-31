@@ -134,6 +134,11 @@ public class ExecutionOrchestrator {
             analyzeParams.put("requestCount", 1);
             analyzeParams.put("requestTimeoutSeconds", 120);
             analyzeParams.put("excution_id", executionId);
+            // 注入 baggage token 用于区分测试请求和背景流量
+            String analysisBaggageToken = "chaos-exec-" + executionId;
+            analyzeParams.put("baggageToken", analysisBaggageToken);
+            taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
+                    "[Stage2] Baggage token for filtering: " + analysisBaggageToken);
             Map<String,Object> analyzeResp = proxyClient.analyze(analyzeParams);
             String analyzeTaskId = asString(((Map<?,?>)analyzeResp.getOrDefault("data", analyzeResp)).get("taskId"));
             Long recordId = asLong(((Map<?,?>)analyzeResp.getOrDefault("data", analyzeResp)).get("recordId"));
@@ -561,44 +566,66 @@ public class ExecutionOrchestrator {
                     .orElseThrow(() -> new BusinessException("HTTP_REQ_DEF_NOT_FOUND","未找到 http_req_def: id="+httpReqDefId));
 
             int n = Optional.ofNullable(te.getRequestNum()).orElse(1);
-            int batchSize = 18; // 默认批次大小，可后续做配置
-            int perCaseConcurrency = Math.min(8, Math.max(1, n));
-            log.info("[Stage6] Begin executing all cases. totalCases={}, batchSize={}, perCaseConcurrency={}, requestsPerCase={}",
-                    cases.size(), batchSize, perCaseConcurrency, n);
+            int globalConcurrency = 30; // 全局并发请求数
+            int casesPerBatch = 6;      // 每批并行执行的用例数
+            int batchTimeoutSec = 60;   // 每批超时时间
+            log.info("[Stage6] Begin executing all cases. totalCases={}, globalConcurrency={}, casesPerBatch={}, requestsPerCase={}",
+                    cases.size(), globalConcurrency, casesPerBatch, n);
             taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
-                    "[Stage6] Begin: totalCases="+cases.size()+", batchSize="+batchSize+
-                            ", perCaseConcurrency="+perCaseConcurrency+", requestsPerCase="+n);
+                    "[Stage6] Begin: totalCases="+cases.size()+", globalConcurrency="+globalConcurrency+
+                            ", casesPerBatch="+casesPerBatch+", requestsPerCase="+n);
+
+            // 全局共享线程池（30 并发）
+            ExecutorService globalPool = Executors.newFixedThreadPool(globalConcurrency);
 
             List<List<EnhancedSimplifiedTestCaseDTO>> batches = new ArrayList<>();
-            for (int i=0;i<cases.size();i+=batchSize) {
-                batches.add(cases.subList(i, Math.min(i+batchSize, cases.size())));
+            for (int i=0;i<cases.size();i+=casesPerBatch) {
+                batches.add(cases.subList(i, Math.min(i+casesPerBatch, cases.size())));
             }
             int batchNo = 0;
             for (List<EnhancedSimplifiedTestCaseDTO> batch : batches) {
                 batchNo++;
-                log.info("[Stage6] Executing batch {}/{} ({} cases)", batchNo, batches.size(), batch.size());
+                log.info("[Stage6] Executing batch {}/{} ({} cases in parallel)", batchNo, batches.size(), batch.size());
                 taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
-                        "[Stage6] Batch start: "+batchNo+"/"+batches.size()+", cases="+batch.size());
+                        "[Stage6] Batch start: "+batchNo+"/"+batches.size()+", cases="+batch.size()+" (parallel)");
 
+                // 并行提交一批用例
+                List<CompletableFuture<Void>> caseFutures = new ArrayList<>();
                 for (EnhancedSimplifiedTestCaseDTO c : batch) {
                     String caseId = buildCaseId(c);
                     String baggageHeader = buildBaggageHeader(c, executionId);
-                    log.info("[Stage6] Case start: id={}, baggage={}", caseId, baggageHeader);
-                    TestResult tr = executeCase(def, baggageHeader, n, perCaseConcurrency);
-                    tr.setExecutionId(executionId);
                     Long mappedId = (caseIdMap != null) ? caseIdMap.get(caseId) : null;
-                    tr.setTestCaseId(mappedId != null ? mappedId : 0L);
-                    tr.setRequestUrl(def.getUrlTemplate());
-                    tr.setRequestMethod(def.getMethod().name());
-                    // response_code / response_body 不做处理
-                    testResultRepository.save(tr);
-                    log.info("[Stage6] Case done: id={}, p50={}, p95={}, p99={}, errRate={}",
-                            caseId, tr.getP50(), tr.getP95(), tr.getP99(), tr.getErrRate());
+
+                    CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                        log.info("[Stage6] Case start: id={}, baggage={}", caseId, baggageHeader);
+                        TestResult tr = executeCaseWithPool(def, baggageHeader, n, globalPool);
+                        tr.setExecutionId(executionId);
+                        tr.setTestCaseId(mappedId != null ? mappedId : 0L);
+                        tr.setRequestUrl(def.getUrlTemplate());
+                        tr.setRequestMethod(def.getMethod().name());
+                        testResultRepository.save(tr);
+                        log.info("[Stage6] Case done: id={}, p50={}, p95={}, p99={}, errRate={}",
+                                caseId, tr.getP50(), tr.getP95(), tr.getP99(), tr.getErrRate());
+                    });
+                    caseFutures.add(future);
                 }
+
+                // 等待这批用例全部完成
+                try {
+                    CompletableFuture.allOf(caseFutures.toArray(new CompletableFuture[0]))
+                            .get(batchTimeoutSec, TimeUnit.SECONDS);
+                } catch (java.util.concurrent.TimeoutException te2) {
+                    log.warn("[Stage6] Batch {}/{} timed out after {}s, proceeding", batchNo, batches.size(), batchTimeoutSec);
+                } catch (Exception e) {
+                    log.warn("[Stage6] Batch {}/{} error: {}", batchNo, batches.size(), e.getMessage());
+                }
+
                 taskExecutionLogService.append(executionId, TaskExecutionLog.LogLevel.INFO,
                         "[Stage6] Batch done: "+batchNo+"/"+batches.size());
-
             }
+
+            globalPool.shutdown();
+            try { globalPool.awaitTermination(30, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
 
             // 清理 proxy-agent（恢复 selector + 删除 Deployment + 删除影子 Service）
             if (!"legacy".equalsIgnoreCase(proxyEngine) && te.getInterceptRecordId() != null) {
@@ -826,6 +853,85 @@ public class ExecutionOrchestrator {
             toks.add("chaos." + f.getServiceName() + "-" + ft);
         }
         return toks.isEmpty() ? null : String.join(",", toks);
+    }
+
+    /**
+     * 使用全局共享线程池执行用例（并行模式）
+     */
+    private TestResult executeCaseWithPool(HttpReqDef def, String baggageHeader, int requestCount, ExecutorService globalPool) {
+        List<Long> durations = Collections.synchronizedList(new ArrayList<>());
+        final int[] errors = new int[]{0};
+        String requestUrl = def.getUrlTemplate();
+        String requestMethod = def.getMethod().name();
+
+        final Map<String, String> headerMap;
+        Map<String, String> tmp = new LinkedHashMap<>();
+        try {
+            if (def.getHeaders()!=null) tmp = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(def.getHeaders(), new com.fasterxml.jackson.core.type.TypeReference<Map<String,String>>(){});
+        } catch (Exception ignore) {}
+        headerMap = java.util.Collections.unmodifiableMap(tmp);
+
+        List<Future<Void>> futures = new ArrayList<>();
+        for (int i=0; i<requestCount; i++) {
+            futures.add(globalPool.submit(() -> {
+                HttpHeaders rh = new HttpHeaders();
+                for (Map.Entry<String,String> e : headerMap.entrySet()) rh.add(e.getKey(), e.getValue());
+                if (baggageHeader != null && !baggageHeader.trim().isEmpty()) {
+                    if (rh.containsKey("baggage")) rh.set("baggage", baggageHeader);
+                    else rh.add("baggage", baggageHeader);
+                } else {
+                    rh.remove("baggage");
+                }
+                Object body = null;
+                HttpMethod method = HttpMethod.valueOf(def.getMethod().name());
+                HttpEntity<?> reqEntity;
+                if (def.getBodyMode()== HttpReqDef.BodyMode.JSON && def.getBodyTemplate()!=null) {
+                    rh.setContentType(MediaType.APPLICATION_JSON);
+                    body = def.getBodyTemplate();
+                    reqEntity = new HttpEntity<>(body, rh);
+                } else if (def.getBodyMode()== HttpReqDef.BodyMode.RAW && def.getRawBody()!=null) {
+                    MediaType ct = MediaType.parseMediaType(Optional.ofNullable(def.getContentType()).orElse("text/plain"));
+                    rh.setContentType(ct);
+                    body = def.getRawBody();
+                    reqEntity = new HttpEntity<>(body, rh);
+                } else {
+                    reqEntity = new HttpEntity<>(rh);
+                }
+                long begin = System.nanoTime();
+                int statusCode = Integer.MIN_VALUE;
+                try {
+                    ResponseEntity<String> entity = restTemplate.exchange(java.net.URI.create(requestUrl), method, reqEntity, String.class);
+                    statusCode = entity.getStatusCode().value();
+                } catch (HttpStatusCodeException ex) {
+                    statusCode = ex.getStatusCode().value();
+                } catch (Exception ex) {
+                    statusCode = -1;
+                } finally {
+                    long durMs = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - begin);
+                    durations.add(durMs);
+                    if (statusCode < 200 || statusCode >= 400) {
+                        synchronized (errors) { errors[0]++; }
+                    }
+                }
+                return null;
+            }));
+        }
+        for (Future<Void> f : futures) {
+            try { f.get(30, TimeUnit.SECONDS); } catch (Exception ex) { log.warn("[Stage6] Request timeout/failed: {}", ex.getMessage()); }
+        }
+        Collections.sort(durations);
+        long p50 = percentile(durations, 0.50);
+        long p95 = percentile(durations, 0.95);
+        long p99 = percentile(durations, 0.99);
+        java.math.BigDecimal errRate = new java.math.BigDecimal(errors[0] * 100.0 / Math.max(1, requestCount)).setScale(2, java.math.RoundingMode.HALF_UP);
+
+        TestResult tr = new TestResult();
+        tr.setRequestUrl(requestUrl);
+        tr.setRequestMethod(requestMethod);
+        tr.setP50((int)p50); tr.setP95((int)p95); tr.setP99((int)p99);
+        tr.setErrRate(errRate);
+        return tr;
     }
 
     private TestResult executeCase(HttpReqDef def, String baggageHeader, int requestCount, int concurrency) {

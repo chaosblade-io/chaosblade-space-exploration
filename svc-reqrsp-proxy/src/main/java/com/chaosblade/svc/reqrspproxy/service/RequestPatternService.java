@@ -449,6 +449,24 @@ public class RequestPatternService {
                 }
             }
             List<RecordedEntry> recordedEntries = collectAllRecordedData(recordingIds);
+            logger.info("Total collected entries: {}", recordedEntries.size());
+
+            // 7b. Baggage 过滤：只保留包含指定 baggage token 的请求，排除背景流量
+            String baggageToken = request.getBaggageToken();
+            if (baggageToken != null && !baggageToken.isEmpty()) {
+                int beforeSize = recordedEntries.size();
+                recordedEntries = recordedEntries.stream()
+                        .filter(entry -> {
+                            Map<String, String> headers = entry.getRequestHeaders();
+                            if (headers == null) return false;
+                            String baggage = headers.getOrDefault("baggage",
+                                    headers.getOrDefault("Baggage", ""));
+                            return baggage.contains(baggageToken);
+                        })
+                        .collect(java.util.stream.Collectors.toList());
+                logger.info("Baggage filter applied (token={}): {} -> {} entries", baggageToken, beforeSize, recordedEntries.size());
+            }
+
             taskStateManager.updateTaskProgress(taskId, recordedEntries.size(), null);
 
             // 8. 分析请求模式
@@ -582,6 +600,23 @@ public class RequestPatternService {
 
         logger.info("Recording startup completed. Successfully started {} out of {} services",
                 recordingIds.size(), request.getServiceList().size());
+
+        // 设置 recording filter（baggage 过滤 + snapshot 上限）
+        String baggageToken = request.getBaggageToken();
+        int maxSnapshots = 100; // 每个 proxy-agent 最多录制 100 条
+        if (baggageToken != null && !baggageToken.isEmpty()) {
+            for (String recId : recordingIds) {
+                try {
+                    ProxyInstance inst = proxyInstanceRepo.findByRecordingId(recId).orElse(null);
+                    if (inst != null) {
+                        proxyControl.setRecordingFilter(inst.getProxyPodIp(), inst.getControlPort(), baggageToken, maxSnapshots);
+                        logger.info("Recording filter set for {}: baggage={}, maxSnapshots={}", recId, baggageToken, maxSnapshots);
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed to set recording filter for {}: {}", recId, e.getMessage());
+                }
+            }
+        }
 
         // 详细记录每个服务的录制状态
         logger.info("Started recordings: {}", recordingIds);
@@ -881,12 +916,30 @@ public class RequestPatternService {
             // 等待一段时间让录制稳定
             Thread.sleep(request.getRequestDelaySeconds() * 1000L);
 
+            // 如果有 baggageToken，注入到请求头中用于标记测试流量
+            String baggageToken = request.getBaggageToken();
+            if (baggageToken != null && !baggageToken.isEmpty()) {
+                logger.info("Injecting baggage header: {}", baggageToken);
+                String existingHeaders = reqDef.getHeaders();
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    Map<String, String> headerMap = existingHeaders != null && !existingHeaders.isEmpty()
+                            ? mapper.readValue(existingHeaders, new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {})
+                            : new java.util.HashMap<>();
+                    headerMap.put("baggage", baggageToken);
+                    reqDef.setHeaders(mapper.writeValueAsString(headerMap));
+                } catch (Exception e) {
+                    logger.warn("Failed to inject baggage header, setting directly: {}", e.getMessage());
+                    reqDef.setHeaders("{\"baggage\":\"" + baggageToken + "\"}");
+                }
+            }
+
             // 准备请求变量（可以从示例数据中提取）
             Map<String, Object> variables = prepareRequestVariables(reqDef);
 
             // 发起多次请求
             for (int i = 0; i < request.getRequestCount(); i++) {
-                logger.info("Triggering HTTP request {}/{}", i + 1, request.getRequestCount());
+                logger.info("Triggering HTTP request {}/{} (baggage={})", i + 1, request.getRequestCount(), baggageToken);
 
                 Mono<HttpRequestExecutor.HttpRequestResult> resultMono =
                         httpRequestExecutor.executeRequest(reqDef, variables);

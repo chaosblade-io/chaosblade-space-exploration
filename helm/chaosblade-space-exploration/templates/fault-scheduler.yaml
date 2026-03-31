@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-fault-scheduler
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+    {{- include "space-exploration.selectorLabels" (dict "component" "svc-fault-scheduler" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.faultScheduler.replicas }}
+  selector:
+    matchLabels:
+      {{- include "space-exploration.selectorLabels" (dict "component" "svc-fault-scheduler" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "space-exploration.selectorLabels" (dict "component" "svc-fault-scheduler" "context" .) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "space-exploration.serviceAccountName" . }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: svc-fault-scheduler
+          image: {{ include "space-exploration.image" (dict "image" .Values.faultScheduler.image "context" .) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.faultScheduler.port }}
+              name: http
+          envFrom:
+            - configMapRef:
+                name: {{ include "space-exploration.fullname" . }}-config
+            - secretRef:
+                name: {{ include "space-exploration.fullname" . }}-db-secret
+          env:
+            - name: SERVER_PORT
+              value: {{ .Values.faultScheduler.port | quote }}
+          resources:
+            {{- toYaml .Values.faultScheduler.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /hello
+              port: http
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /hello
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-fault-scheduler
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "space-exploration.labels" . | nindent 4 }}
+    {{- include "space-exploration.selectorLabels" (dict "component" "svc-fault-scheduler" "context" .) | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.faultScheduler.port }}
+      targetPort: {{ .Values.faultScheduler.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "space-exploration.selectorLabels" (dict "component" "svc-fault-scheduler" "context" .) | nindent 4 }}

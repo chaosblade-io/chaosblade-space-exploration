@@ -72,11 +72,16 @@ type Engine struct {
 	rules []InterceptRule
 	store SnapshotStore
 
+	// Recording filters
+	baggageFilter string // if set, only record requests containing this baggage token
+	maxSnapshots  int    // max snapshots to store (0 = unlimited)
+
 	// Atomic counters for stats (no lock needed).
 	requestsTotal       atomic.Int64
 	requestsRecorded    atomic.Int64
 	requestsReplayed    atomic.Int64
 	requestsIntercepted atomic.Int64
+	requestsSkipped     atomic.Int64 // skipped due to filter/limit
 
 	ruleCounter int // monotonically increasing ID for rules
 }
@@ -87,6 +92,47 @@ func New(initialMode Mode, store SnapshotStore) *Engine {
 		mode:  initialMode,
 		store: store,
 	}
+}
+
+// SetRecordingFilter sets the baggage filter and max snapshots for recording mode.
+func (e *Engine) SetRecordingFilter(baggageFilter string, maxSnapshots int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.baggageFilter = baggageFilter
+	e.maxSnapshots = maxSnapshots
+	slog.Info("recording filter updated", "baggageFilter", baggageFilter, "maxSnapshots", maxSnapshots)
+}
+
+// GetBaggageFilter returns the current baggage filter.
+func (e *Engine) GetBaggageFilter() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.baggageFilter
+}
+
+// ShouldRecord checks if a request should be recorded based on baggage filter and snapshot limit.
+func (e *Engine) ShouldRecord(baggageHeader string) bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	// Check max snapshots limit
+	if e.maxSnapshots > 0 && e.store.Count() >= e.maxSnapshots {
+		return false
+	}
+
+	// Check baggage filter
+	if e.baggageFilter != "" {
+		if baggageHeader == "" || !strings.Contains(baggageHeader, e.baggageFilter) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// IncrSkipped increments the skipped requests counter.
+func (e *Engine) IncrSkipped() {
+	e.requestsSkipped.Add(1)
 }
 
 // SetMode changes the current operating mode.
