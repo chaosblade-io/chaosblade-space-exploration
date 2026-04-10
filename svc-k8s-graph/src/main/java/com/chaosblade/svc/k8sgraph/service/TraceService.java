@@ -25,10 +25,17 @@ public class TraceService {
      * 获取服务的 Trace 列表
      */
     public TraceListResponse getTraceList(String serviceName, long fromMs, long toMs) {
-        logger.info("Getting trace list for service: {}, from: {}, to: {}", serviceName, fromMs, toMs);
+        return getTraceList(null, serviceName, fromMs, toMs);
+    }
+
+    /**
+     * 获取指定命名空间下服务的 Trace 列表
+     */
+    public TraceListResponse getTraceList(String namespace, String serviceName, long fromMs, long toMs) {
+        logger.info("Getting trace list for service: {}, namespace: {}, from: {}, to: {}", serviceName, namespace, fromMs, toMs);
         
-        JsonNode traceArray = apiClient.getTraceList(serviceName, fromMs, toMs);
-        List<TraceInfo> traces = parseTraceList(traceArray);
+        JsonNode spansArray = apiClient.getTraceList(namespace, serviceName, fromMs, toMs);
+        List<TraceInfo> traces = parseSpansToTraces(spansArray);
         
         return new TraceListResponse(traces);
     }
@@ -36,10 +43,11 @@ public class TraceService {
     /**
      * 获取 Trace 详情（返回原始数据）
      */
-    public Object getTraceDetailRaw(String traceId) {
-        logger.info("Getting trace detail for traceId: {}", traceId);
+    public Object getTraceDetailRaw(String traceId, String namespace, String serviceName, long fromMs, long toMs) {
+        logger.info("Getting trace detail for traceId: {}, namespace: {}, serviceName: {}, from: {}, to: {}", 
+            traceId, namespace, serviceName, fromMs, toMs);
 
-        JsonNode spansArray = apiClient.getTraceDetail(traceId);
+        JsonNode spansArray = apiClient.getTraceDetail(traceId, namespace, serviceName, fromMs, toMs);
 
         if (spansArray == null || spansArray.isMissingNode() ||
             (spansArray.isArray() && spansArray.size() == 0)) {
@@ -65,6 +73,89 @@ public class TraceService {
         }
         
         return traces;
+    }
+
+    /**
+     * 将 Spans 数组转换为 Traces 列表
+     * Coroot 返回的是 spans 数组，需要按 trace_id 分组
+     */
+    private List<TraceInfo> parseSpansToTraces(JsonNode spansArray) {
+        List<TraceInfo> traces = new ArrayList<>();
+        
+        if (spansArray == null || !spansArray.isArray()) {
+            return traces;
+        }
+
+        Map<String, List<JsonNode>> traceGroups = new HashMap<>();
+        for (JsonNode span : spansArray) {
+            String traceId = getTextValue(span, "trace_id", "traceId", "TraceId", "TraceID");
+            if (traceId == null || traceId.isEmpty()) {
+                traceId = "unknown-" + UUID.randomUUID().toString();
+            }
+            traceGroups.computeIfAbsent(traceId, k -> new ArrayList<>()).add(span);
+        }
+
+        for (Map.Entry<String, List<JsonNode>> entry : traceGroups.entrySet()) {
+            TraceInfo trace = buildTraceFromSpans(entry.getKey(), entry.getValue());
+            traces.add(trace);
+        }
+
+        traces.sort((a, b) -> {
+            if (a.getStartTime() == null) return 1;
+            if (b.getStartTime() == null) return -1;
+            return b.getStartTime().compareTo(a.getStartTime());
+        });
+        
+        return traces;
+    }
+
+    /**
+     * 从一组 spans 构建 TraceInfo
+     */
+    private TraceInfo buildTraceFromSpans(String traceId, List<JsonNode> spans) {
+        TraceInfo trace = new TraceInfo();
+        trace.setTraceId(traceId);
+        trace.setSpanCount(spans.size());
+
+        long minStartTime = Long.MAX_VALUE;
+        long maxEndTime = 0;
+        boolean hasError = false;
+        String serviceName = null;
+        String operationName = null;
+
+        for (JsonNode span : spans) {
+            Long startTime = getLongValue(span, "timestamp", "start_time", "startTime", "StartTime");
+            Long duration = getLongValue(span, "duration", "Duration", "duration_ns");
+            
+            if (startTime != null) {
+                minStartTime = Math.min(minStartTime, startTime);
+                long endTime = startTime + (duration != null ? duration : 0);
+                maxEndTime = Math.max(maxEndTime, endTime);
+            }
+
+            if (serviceName == null) {
+                serviceName = getTextValue(span, "service_name", "serviceName", "ServiceName", "Service");
+            }
+            if (operationName == null) {
+                operationName = getTextValue(span, "name", "span_name", "operationName", "OperationName");
+            }
+
+            Boolean spanError = getBoolValue(span, "error", "hasError", "has_error", "Error");
+            if (Boolean.TRUE.equals(spanError)) {
+                hasError = true;
+            }
+        }
+
+        trace.setStartTime(minStartTime == Long.MAX_VALUE ? null : minStartTime);
+        trace.setEndTime(maxEndTime == 0 ? null : maxEndTime);
+        if (minStartTime != Long.MAX_VALUE && maxEndTime > minStartTime) {
+            trace.setDuration(maxEndTime - minStartTime);
+        }
+        trace.setServiceName(serviceName);
+        trace.setOperationName(operationName);
+        trace.setHasError(hasError);
+
+        return trace;
     }
     
     /**

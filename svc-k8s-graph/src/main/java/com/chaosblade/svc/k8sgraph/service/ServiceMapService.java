@@ -15,12 +15,12 @@ import java.util.*;
  */
 @Service
 public class ServiceMapService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(ServiceMapService.class);
-    
+
     @Autowired
     private ObservabilityApiClient apiClient;
-    
+
     /**
      * 获取服务拓扑图数据（全部命名空间）
      */
@@ -46,16 +46,23 @@ public class ServiceMapService {
 
         return mapData;
     }
-    
+
     /**
      * 获取服务的上下游依赖
      */
     public Map<String, List<String>> getServiceDependencies(String serviceName, long fromMs, long toMs) {
-        ServiceMapData mapData = getServiceMap(fromMs, toMs);
-        
+        return getServiceDependencies(null, serviceName, fromMs, toMs);
+    }
+
+    /**
+     * 获取指定命名空间下服务的上下游依赖
+     */
+    public Map<String, List<String>> getServiceDependencies(String namespace, String serviceName, long fromMs, long toMs) {
+        ServiceMapData mapData = getServiceMap(namespace, fromMs, toMs);
+
         List<String> upstream = new ArrayList<>();
         List<String> downstream = new ArrayList<>();
-        
+
         for (ServiceMapEdge edge : mapData.getEdges()) {
             if (edge.getTargetService().equals(serviceName)) {
                 upstream.add(edge.getSourceService());
@@ -64,13 +71,13 @@ public class ServiceMapService {
                 downstream.add(edge.getTargetService());
             }
         }
-        
+
         Map<String, List<String>> result = new HashMap<>();
         result.put("upstream", upstream);
         result.put("downstream", downstream);
         return result;
     }
-    
+
     /**
      * 解析服务拓扑图 - 适配 Coroot API 返回格式
      * Coroot 返回的格式是节点数组，每个节点包含 id, upstreams, downstreams
@@ -95,9 +102,8 @@ public class ServiceMapService {
             String nodeId = node.path("id").asText("");
             if (nodeId.isEmpty()) continue;
 
-            String nodeNamespace = extractNamespace(nodeId);
+            String nodeNamespace = extractNamespace(node);
 
-            // 命名空间过滤：如果指定了filterNamespace，只保留该命名空间的节点
             if (filterNamespace != null && !filterNamespace.isEmpty()
                     && !filterNamespace.equals(nodeNamespace)) {
                 continue;
@@ -116,9 +122,8 @@ public class ServiceMapService {
             String nodeId = node.path("id").asText("");
             if (nodeId.isEmpty()) continue;
 
-            String nodeNamespace = extractNamespace(nodeId);
+            String nodeNamespace = extractNamespace(node);
 
-            // 命名空间过滤
             if (filterNamespace != null && !filterNamespace.isEmpty()
                     && !filterNamespace.equals(nodeNamespace)) {
                 continue;
@@ -203,9 +208,7 @@ public class ServiceMapService {
     private String extractServiceName(String nodeId) {
         if (nodeId == null || nodeId.isEmpty()) return "unknown";
         String[] parts = nodeId.split(":");
-        if (parts.length >= 3) {
-            return parts[2]; // 返回服务名
-        } else if (parts.length >= 1) {
+        if (parts.length >= 1) {
             return parts[parts.length - 1];
         }
         return nodeId;
@@ -213,6 +216,7 @@ public class ServiceMapService {
 
     /**
      * 从节点ID中提取命名空间
+     * ID格式: clusterId:namespace:Type:service-name
      */
     private String extractNamespace(String nodeId) {
         if (nodeId == null || nodeId.isEmpty()) return "default";
@@ -221,6 +225,24 @@ public class ServiceMapService {
             return parts[0];
         }
         return "default";
+    }
+
+    /**
+     * 从节点对象中提取命名空间（优先从labels.ns获取）
+     */
+    private String extractNamespace(JsonNode node) {
+        JsonNode labels = node.path("labels");
+        if (!labels.isMissingNode() && labels.isObject()) {
+            JsonNode nsLabel = labels.path("ns");
+            if (!nsLabel.isMissingNode()) {
+                String ns = nsLabel.asText();
+                if (ns != null && !ns.isEmpty()) {
+                    return ns;
+                }
+            }
+        }
+        String nodeId = node.path("id").asText("");
+        return extractNamespace(nodeId);
     }
 
     /**
@@ -266,7 +288,7 @@ public class ServiceMapService {
             }
         }
     }
-    
+
     /**
      * 计算节点的聚合指标
      */
@@ -275,7 +297,7 @@ public class ServiceMapService {
         long totalErrors = 0;
         double totalLatency = 0;
         int latencyCount = 0;
-        
+
         for (ServiceMapEdge edge : edges) {
             if (edge.getTargetService().equals(node.getServiceName())) {
                 if (edge.getCallCount() != null) totalRequests += edge.getCallCount();
@@ -286,7 +308,7 @@ public class ServiceMapService {
                 }
             }
         }
-        
+
         node.setRequestCount(totalRequests);
         node.setErrorCount(totalErrors);
         if (totalRequests > 0) {
@@ -296,6 +318,6 @@ public class ServiceMapService {
             node.setAvgLatency(totalLatency / latencyCount);
         }
     }
-    
+
 }
 

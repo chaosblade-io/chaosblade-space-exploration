@@ -141,9 +141,10 @@ public class K8sGraphService {
         // 获取指定命名空间的 K8s 资源图
         GraphData graphData = getGraphByNamespaces(namespaces);
 
-        // 添加服务调用关系
         if (serviceMapService != null) {
-            addServiceCallEdges(graphData, fromMs, toMs);
+            String namespaceFilter = (namespaces != null && namespaces.size() == 1) 
+                    ? namespaces.get(0) : null;
+            addServiceCallEdges(graphData, namespaceFilter, fromMs, toMs);
         }
 
         return graphData;
@@ -321,8 +322,15 @@ public class K8sGraphService {
      * 添加服务调用关系边
      */
     private void addServiceCallEdges(GraphData graphData, long fromMs, long toMs) {
+        addServiceCallEdges(graphData, null, fromMs, toMs);
+    }
+
+    /**
+     * 添加服务调用关系边（支持命名空间过滤）
+     */
+    private void addServiceCallEdges(GraphData graphData, String namespace, long fromMs, long toMs) {
         try {
-            ServiceMapData serviceMap = serviceMapService.getServiceMap(fromMs, toMs);
+            ServiceMapData serviceMap = serviceMapService.getServiceMap(namespace, fromMs, toMs);
 
             // 建立服务名到节点ID的映射
             Map<String, String> serviceNameToNodeId = new HashMap<>();

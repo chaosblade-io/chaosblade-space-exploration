@@ -10,14 +10,15 @@ This project consists of multiple microservices designed to demonstrate chaos en
 
 ### Services
 
-| Service | Port | Description | Framework |
-|---------|------|-------------|-----------|
-| svc-task-resource | 8101 | Task resource management service | Spring MVC |
-| svc-task-executor | 8102 | Task execution service | Spring MVC |
-| svc-fault-scheduler | 8103 | Fault injection scheduler | Spring MVC |
-| svc-result-processor | 8104 | Result processing service | Spring MVC |
-| svc-reqrsp-proxy | 8105 | Request/Response proxy service | Spring WebFlux |
-| svc-topo | 8106 | Topology awareness service | Spring MVC |
+| Service             | Port | Description                      | Framework |
+|---------------------|------|----------------------------------|-----------|
+| svc-task-resource   | 8101 | Task resource management service | Spring MVC |
+| svc-task-executor   | 8102 | Task execution service           | Spring MVC |
+| svc-fault-scheduler | 8103 | Fault injection scheduler        | Spring MVC |
+| svc-result-processor | 8104 | Result processing service        | Spring MVC |
+| svc-reqrsp-proxy    | 8105 | Request/Response proxy service   | Spring WebFlux |
+| svc-k8s-graph       | 8106 | Runtime data + deployment config | Spring MVC |
+| svc-topo            | 8107 | Topology awareness service       | Spring MVC |
 
 ### Common Modules
 
@@ -69,7 +70,6 @@ curl http://localhost:8102/hello  # svc-task-executor
 curl http://localhost:8103/hello  # svc-fault-scheduler
 curl http://localhost:8104/hello  # svc-result-processor
 curl http://localhost:8105/hello  # svc-reqrsp-proxy
-curl http://localhost:8106/hello  # svc-topo
 ```
 
 Expected response format:
@@ -192,7 +192,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 ## 全量部署与运维指南（推荐阅读）
 
 > 本节覆盖：架构说明、环境依赖、部署方式（本地/Kubernetes/Docker）、运行与验证、开发指南。所有示例默认端口：
-> - svc-task-resource 8101 | svc-task-executor 8102 | svc-fault-scheduler 8103 | svc-result-processor 8104 | svc-reqrsp-proxy 8105 | svc-topo 8106
+> - svc-task-resource 8101 | svc-task-executor 8102 | svc-fault-scheduler 8103 | svc-result-processor 8104 | svc-reqrsp-proxy 8105
 
 ### 架构说明
 

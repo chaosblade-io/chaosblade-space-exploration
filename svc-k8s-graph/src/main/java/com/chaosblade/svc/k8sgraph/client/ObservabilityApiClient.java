@@ -27,10 +27,10 @@ public class ObservabilityApiClient {
 
     private static final Logger logger = LoggerFactory.getLogger(ObservabilityApiClient.class);
 
-    @Value("${observability.api.base-url:http://1.94.151.57:8003}")
+    @Value("${observability.api.base-url:http://116.63.51.45:30800}")
     private String baseUrl;
 
-    @Value("${observability.api.project-id:f21z1y9i}")
+    @Value("${observability.api.project-id:60hjkbo3}")
     private String projectId;
 
     @Value("${observability.api.cookie:sid=ab46c3ac87b2e6b30a0eba82d0be33f3; coroot_session=eyJpZCI6MX0=.L4mM7jLoBFBkvEE7K27aKr_F8eGhGd2l5pJMZyjr2Rk=}")
@@ -105,41 +105,54 @@ public class ObservabilityApiClient {
 
     /**
      * 获取服务的 Trace 列表
+     * 使用 /api/project/{projectId}/app/{appId}/tracing 端点
      */
     public JsonNode getTraceList(String serviceName, long fromMs, long toMs) {
-        String baseApiUrl = String.format("%s/api/project/%s/overview/traces", baseUrl, projectId);
+        return getTraceList(null, serviceName, fromMs, toMs);
+    }
+
+    /**
+     * 获取指定命名空间下服务的 Trace 列表
+     */
+    public JsonNode getTraceList(String namespace, String serviceName, long fromMs, long toMs) {
+        String appId = buildAppId(namespace, serviceName);
+        String encodedAppId;
+        try {
+            encodedAppId = URLEncoder.encode(appId, StandardCharsets.UTF_8.toString());
+        } catch (Exception e) {
+            encodedAppId = appId.replace(":", "%3A");
+        }
+        
+        String url = String.format("%s/api/project/%s/app/%s/tracing", baseUrl, projectId, encodedAppId);
 
         try {
-            // 使用 TraceRequestQuery 构建请求
-            TraceRequestQuery traceRequestQuery = new TraceRequestQuery();
-            traceRequestQuery.setView("traces");
-
-            TraceRequestFilter filter = new TraceRequestFilter("ServiceName", "=", serviceName);
-            traceRequestQuery.setFilters(Collections.singletonList(filter));
-
-            String queryJson = objectMapper.writeValueAsString(traceRequestQuery);
-            String encodedQuery = URLEncoder.encode(queryJson, StandardCharsets.UTF_8.toString());
-
-            // 直接拼接 URL，避免 UriComponentsBuilder 的二次编码
-            String requestUrl = baseApiUrl + "?query=" + encodedQuery + "&from=" + fromMs + "&to=" + toMs;
+            String requestUrl = url + "?trace=otel::-:-:&from=" + fromMs + "&to=" + toMs;
 
             logger.info("Fetching trace list for service {}: from={}, to={}", serviceName, fromMs, toMs);
             logger.debug("Request URL: {}", requestUrl);
 
-            // 使用 URI 对象发起请求，避免再次编码
             ResponseEntity<String> response = doGetWithUri(new URI(requestUrl));
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode traceListNode = root.path("data").path("traces").path("traces");
-                logger.info("Found {} traces for service {}",
-                    traceListNode.isArray() ? traceListNode.size() : 0, serviceName);
-                return traceListNode;
+                JsonNode spansNode = root.path("data").path("spans");
+                logger.info("Found {} spans for service {}",
+                    spansNode.isArray() ? spansNode.size() : 0, serviceName);
+                return spansNode;
             }
         } catch (Exception e) {
             logger.error("Failed to fetch trace list for service {}: {}", serviceName, e.getMessage(), e);
         }
         return objectMapper.createArrayNode();
+    }
+
+    /**
+     * 构建应用 ID
+     * 格式: projectId:namespace:Deployment:serviceName
+     */
+    private String buildAppId(String namespace, String serviceName) {
+        String ns = (namespace != null && !namespace.isEmpty()) ? namespace : "default";
+        return projectId + ":" + ns + ":Deployment:" + serviceName;
     }
 
     /**
@@ -229,26 +242,29 @@ public class ObservabilityApiClient {
     /**
      * 获取 Trace 详情
      * @param traceId trace ID
+     * @param namespace 命名空间
+     * @param serviceName 服务名
+     * @param fromMs 开始时间（毫秒时间戳）
+     * @param toMs 结束时间（毫秒时间戳）
      * @return trace 详情的 span 数组
      */
-    public JsonNode getTraceDetail(String traceId) {
-        String baseApiUrl = String.format("%s/api/project/%s/overview/traces", baseUrl, projectId);
+    public JsonNode getTraceDetail(String traceId, String namespace, String serviceName, long fromMs, long toMs) {
+        String appId = buildAppId(namespace, serviceName);
+        String encodedAppId;
+        try {
+            encodedAppId = URLEncoder.encode(appId, StandardCharsets.UTF_8.toString());
+        } catch (Exception e) {
+            encodedAppId = appId.replace(":", "%3A");
+        }
+        
+        String url = String.format("%s/api/project/%s/app/%s/tracing", baseUrl, projectId, encodedAppId);
 
         try {
-            TraceRequestQuery traceRequestQuery = new TraceRequestQuery();
-            traceRequestQuery.setView("traces");
-            traceRequestQuery.setFilters(Collections.emptyList());
-            traceRequestQuery.setTraceId(traceId);
+            // 使用提供的时间范围
+            String requestUrl = url + "?trace=otel:" + traceId + ":-:-:&from=" + fromMs + "&to=" + toMs;
 
-            String queryJson = objectMapper.writeValueAsString(traceRequestQuery);
-            String encodedQuery = URLEncoder.encode(queryJson, StandardCharsets.UTF_8.toString());
-
-            // 添加时间范围（最近1小时）
-            long toMs = System.currentTimeMillis();
-            long fromMs = toMs - 3600_000;
-            String requestUrl = baseApiUrl + "?query=" + encodedQuery + "&from=" + fromMs + "&to=" + toMs;
-
-            logger.info("Fetching trace detail for traceId: {}", traceId);
+            logger.info("Fetching trace detail for traceId: {}, service: {}, from: {}, to: {}", 
+                traceId, serviceName, fromMs, toMs);
             logger.debug("Request URL: {}", requestUrl);
 
             ResponseEntity<String> response = doGetWithUri(new URI(requestUrl));
@@ -256,37 +272,25 @@ public class ObservabilityApiClient {
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode tracesNode = root.path("data").path("traces");
-
-                // 优先尝试 trace 字段（单个trace详情）
-                JsonNode traceNode = tracesNode.path("trace");
-                if (traceNode.isArray() && traceNode.size() > 0) {
-                    logger.info("Found trace detail at: data.traces.trace, size: {}", traceNode.size());
-                    return traceNode;
+                JsonNode spansNode = root.path("data").path("spans");
+                if (spansNode.isArray() && spansNode.size() > 0) {
+                    logger.info("Found {} spans for traceId {}", spansNode.size(), traceId);
+                    return spansNode;
                 }
-
-                // 回退到 traces 字段（trace列表）
-                JsonNode tracesList = tracesNode.path("traces");
-                if (tracesList.isArray() && tracesList.size() > 0) {
-                    logger.info("Found traces at: data.traces.traces, size: {}", tracesList.size());
-                    // 过滤出匹配 traceId 的 traces
-                    if (traceId != null && !traceId.isEmpty()) {
-                        for (JsonNode trace : tracesList) {
-                            String tid = trace.path("trace_id").asText("");
-                            if (traceId.equals(tid)) {
-                                // 找到匹配的trace，返回包含单个trace的数组
-                                return objectMapper.createArrayNode().add(trace);
-                            }
-                        }
-                    }
-                    return tracesList;
-                }
-
-                logger.warn("No trace data found for traceId: {}", traceId);
+                logger.warn("No spans found for traceId: {}", traceId);
             }
         } catch (Exception e) {
             logger.error("Failed to fetch trace detail for traceId {}: {}", traceId, e.getMessage(), e);
         }
         return objectMapper.createArrayNode();
+    }
+
+    /**
+     * 获取 Trace 详情（兼容旧接口，不传 serviceName 和时间范围）
+     */
+    public JsonNode getTraceDetail(String traceId) {
+        long toMs = System.currentTimeMillis();
+        long fromMs = toMs - 3600_000; // 默认最近1小时
+        return getTraceDetail(traceId, "default", "unknown", fromMs, toMs);
     }
 }

@@ -157,16 +157,21 @@ public class K8sGraphController {
 
     /**
      * 获取服务调用拓扑图
-     * GET /api/k8s-graph/service-map?from={fromMs}&to={toMs}
+     * GET /api/k8s-graph/service-map?from={fromMs}&to={toMs}&namespace={namespace}
+     *
+     * @param from 开始时间（毫秒时间戳）
+     * @param to 结束时间（毫秒时间戳）
+     * @param namespace 可选，命名空间过滤，不传则返回所有命名空间
      */
     @GetMapping("/service-map")
     public ApiResponse<ServiceMapData> getServiceMap(
             @RequestParam long from,
-            @RequestParam long to) {
-        logger.info("GET /api/k8s-graph/service-map - from={}, to={}", from, to);
+            @RequestParam long to,
+            @RequestParam(required = false) String namespace) {
+        logger.info("GET /api/k8s-graph/service-map - from={}, to={}, namespace={}", from, to, namespace);
 
         try {
-            ServiceMapData mapData = serviceMapService.getServiceMap(from, to);
+            ServiceMapData mapData = serviceMapService.getServiceMap(namespace, from, to);
             return ApiResponse.success(mapData);
         } catch (Exception e) {
             logger.error("Failed to fetch service map: {}", e.getMessage(), e);
@@ -329,17 +334,18 @@ public class K8sGraphController {
 
     /**
      * 获取服务的 Trace 列表
-     * GET /api/k8s-graph/traces?serviceName={serviceName}&from={fromMs}&to={toMs}
+     * GET /api/k8s-graph/traces?serviceName={serviceName}&from={fromMs}&to={toMs}&namespace={namespace}
      */
     @GetMapping("/traces")
     public ApiResponse<TraceListResponse> getTraceList(
             @RequestParam String serviceName,
             @RequestParam long from,
-            @RequestParam long to) {
-        logger.info("GET /api/k8s-graph/traces - serviceName={}, from={}, to={}", serviceName, from, to);
+            @RequestParam long to,
+            @RequestParam(required = false) String namespace) {
+        logger.info("GET /api/k8s-graph/traces - serviceName={}, from={}, to={}, namespace={}", serviceName, from, to, namespace);
 
         try {
-            TraceListResponse response = traceService.getTraceList(serviceName, from, to);
+            TraceListResponse response = traceService.getTraceList(namespace, serviceName, from, to);
             return ApiResponse.success(response);
         } catch (Exception e) {
             logger.error("Failed to fetch trace list: {}", e.getMessage(), e);
@@ -349,14 +355,24 @@ public class K8sGraphController {
 
     /**
      * 获取 Trace 详情（返回原始数据）
-     * GET /api/k8s-graph/traces/{traceId}
+     * GET /api/k8s-graph/traces/{traceId}?serviceName={serviceName}&namespace={namespace}&from={fromMs}&to={toMs}
      */
     @GetMapping("/traces/{traceId}")
-    public ApiResponse<Object> getTraceDetail(@PathVariable String traceId) {
-        logger.info("GET /api/k8s-graph/traces/{}", traceId);
+    public ApiResponse<Object> getTraceDetail(
+            @PathVariable String traceId,
+            @RequestParam String serviceName,
+            @RequestParam(required = false) String namespace,
+            @RequestParam(required = false) Long from,
+            @RequestParam(required = false) Long to) {
+        logger.info("GET /api/k8s-graph/traces/{} - serviceName={}, namespace={}, from={}, to={}", 
+            traceId, serviceName, namespace, from, to);
 
         try {
-            Object trace = traceService.getTraceDetailRaw(traceId);
+            // 如果未提供时间范围，使用默认值（最近1小时）
+            long toMs = (to != null) ? to : System.currentTimeMillis();
+            long fromMs = (from != null) ? from : toMs - 3600_000;
+            
+            Object trace = traceService.getTraceDetailRaw(traceId, namespace, serviceName, fromMs, toMs);
             if (trace == null) {
                 return ApiResponse.error("404", "Trace not found: " + traceId);
             }

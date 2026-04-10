@@ -136,7 +136,7 @@ public class RiskAnalysisService {
             // 获取服务调用拓扑（最近1小时）
             long toMs = System.currentTimeMillis();
             long fromMs = toMs - 3600_000;
-            ServiceMapData serviceMap = serviceMapService.getServiceMap(fromMs, toMs);
+            ServiceMapData serviceMap = serviceMapService.getServiceMap(request.getNamespace(), fromMs, toMs);
 
             // 构建 Prompt
             String prompt = promptBuilder.buildServiceTopologyRiskPrompt(request.getNamespace(), serviceMap);

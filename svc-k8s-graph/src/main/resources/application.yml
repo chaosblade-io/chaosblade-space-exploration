@@ -89,7 +89,7 @@ risk:
 # ChaosBlade Box配置
 chaosblade:
   box:
-    base-url: "http://1.94.151.57:7001"
+    base-url: "http://116.63.51.45:30701"
     username: "root"
     password: "1234"
     namespace: "default"

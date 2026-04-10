@@ -235,7 +235,7 @@ public class ServiceDetailService {
             // 获取业务层面关系（使用默认时间范围：最近1小时）
             long now = System.currentTimeMillis();
             long oneHourAgo = now - 60 * 60 * 1000;
-            collectBusinessRelations(relations, serviceName, oneHourAgo, now);
+            collectBusinessRelations(relations, serviceName, namespace, oneHourAgo, now);
 
         } catch (Exception e) {
             logger.error("Failed to get service relations: {}", e.getMessage(), e);
@@ -355,14 +355,14 @@ public class ServiceDetailService {
     /**
      * 收集业务层面关系（服务调用）
      */
-    private void collectBusinessRelations(ServiceRelations relations, String serviceName, long fromMs, long toMs) {
+    private void collectBusinessRelations(ServiceRelations relations, String serviceName, String namespace, long fromMs, long toMs) {
         try {
-            Map<String, List<String>> dependencies = serviceMapService.getServiceDependencies(serviceName, fromMs, toMs);
+            Map<String, List<String>> dependencies = serviceMapService.getServiceDependencies(namespace, serviceName, fromMs, toMs);
             relations.setUpstreamServices(dependencies.get("upstream"));
             relations.setDownstreamServices(dependencies.get("downstream"));
 
             // 获取详细的调用边信息
-            ServiceMapData mapData = serviceMapService.getServiceMap(fromMs, toMs);
+            ServiceMapData mapData = serviceMapService.getServiceMap(namespace, fromMs, toMs);
             for (ServiceMapEdge edge : mapData.getEdges()) {
                 if (edge.getSourceService().equals(serviceName) || edge.getTargetService().equals(serviceName)) {
                     relations.addBusinessEdge(edge);
